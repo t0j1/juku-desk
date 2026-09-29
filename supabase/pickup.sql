@@ -1011,3 +1011,22 @@ begin
     execute format('grant execute on function %s to service_role', f.sig);
   end loop;
 end $$;
+
+------------------------------------------------------------
+-- 11. Realtime（管理画面の通知用）
+--     予約と打診の変更を、ログイン中の管理者の画面にすぐ届ける。届く行は RLS で管理者だけに絞られる。
+------------------------------------------------------------
+do $$
+declare
+  t text;
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    raise notice 'supabase_realtime が無いため、Realtime の設定はしていません。';
+    return;
+  end if;
+  foreach t in array array['pickup_reservations', 'pickup_proposals'] loop
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;

@@ -70,6 +70,7 @@ async function init() {
   $("ev-month").value = `${cur.y}-${pad(cur.m + 1)}`;
   await loadTypes();
   await refreshEvents();
+  if (typeof initPickupAdmin === "function") await initPickupAdmin();   // 送迎予約の通知（admin-reservations.js）
 }
 
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {

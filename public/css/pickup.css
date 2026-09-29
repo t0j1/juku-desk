@@ -1,0 +1,33 @@
+/* 送迎予約（生徒用）。style.css の上に重ねる。スマホ（LINE の中）で開く前提 */
+.pickup { max-width: 560px; }
+.pickup header p { margin-bottom: 16px; }
+.pickup .glass { margin-bottom: 16px; }
+.who { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; margin: 0 0 12px; }
+
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.slot {
+  font: inherit; color: var(--text); cursor: pointer; min-height: 56px; padding: 6px 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  background: rgba(255, 255, 255, .9); border: 1px solid rgba(75, 79, 179, .35); border-radius: 12px;
+}
+.slot .t { font-weight: 700; font-size: 1.05rem; }
+.slot .sub { font-size: .72rem; color: var(--muted); }
+.slot.group { border-color: #1f4fa0; }
+.slot.group .sub { color: #1f4fa0; font-weight: 700; }
+.slot[aria-checked=true] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.slot[aria-checked=true] .sub { color: #fff; }
+.slot:disabled { cursor: not-allowed; opacity: .5; background: #eceef2; }
+
+.summary { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0 0 12px; }
+.summary dt { font-weight: 700; color: var(--muted); font-size: .9rem; }
+.summary dd { margin: 0; font-weight: 700; }
+.done-msg { font-size: 1.1rem; font-weight: 700; color: #1d6b3a; margin: 0 0 8px; }
+
+.res-card { padding: 12px 14px; margin-bottom: 10px; border-radius: 14px; background: rgba(255, 255, 255, .75); border: 1px solid var(--border); display: grid; gap: 6px; }
+.res-card.st-rejected, .res-card.st-cancelled { opacity: .75; }
+.res-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.res-time { font-size: 1.05rem; font-weight: 700; }
+.res-note { font-size: .88rem; color: var(--muted); }
+.res-card .btn.small { justify-self: start; }
+.proposal { padding: 10px 12px; border-radius: 12px; background: #e3eeff; border: 1px solid #1f4fa0; }
+.proposal p { margin: 0 0 8px; }

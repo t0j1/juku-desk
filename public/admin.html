@@ -8,17 +8,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=5">
-<link rel="stylesheet" href="css/admin.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/admin.css?v=7">
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div><h1>碩学館 管理画面</h1><p><a href="index.html">← 閲覧ページへ</a></p></div>
-    <div id="who" hidden><span class="badge">ログイン中</span> <span id="who-mail"></span> <button class="btn small" id="logout" type="button">ログアウト</button></div>
+    <div><h1>碩学館 管理画面</h1><p><a href="index.html" target="_blank" rel="noopener">閲覧ページを開く（別タブ）↗</a></p></div>
+    <div id="who" hidden><span class="badge">ログイン中</span> <span id="who-mail"></span>
+      <button class="btn small" id="notify-toggle" type="button" aria-pressed="false">🔕 通知オフ</button>
+      <button class="btn small" id="logout" type="button">ログアウト</button></div>
   </header>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <!-- 音の通知を使えるようにする案内（ブラウザの決まりで、1回クリックが必要） -->
+  <button type="button" id="sound-unlock" class="sound-unlock" hidden>🔔 ここをクリックすると、予約が入ったときに音が鳴るようになります</button>
 
   <!-- ログイン -->
   <section id="login" class="glass narrow" hidden>
@@ -35,8 +39,11 @@
   <div id="app" hidden>
     <nav class="tabs" id="tabs">
       <button type="button" data-tab="events" class="active">予定</button>
+      <button type="button" data-tab="pickups">送迎予約 <span class="tab-badge" id="pk-badge" hidden></span></button>
       <button type="button" data-tab="repeat">繰り返し登録</button>
       <button type="button" data-tab="range">期間登録</button>
+      <button type="button" data-tab="students">生徒</button>
+      <button type="button" data-tab="pickup-settings">送迎設定</button>
       <button type="button" data-tab="types">種別の色</button>
       <button type="button" data-tab="csv">CSV</button>
       <button type="button" data-tab="log">変更履歴</button>
@@ -60,6 +67,29 @@
         <button class="btn small" id="sel-clear" type="button">選択解除</button>
       </div>
       <div id="ev-list" class="tablewrap"></div>
+    </section>
+
+    <!-- 送迎予約 -->
+    <section class="glass panel" id="tab-pickups" hidden>
+      <div class="bar">
+        <div class="seg" role="group" aria-label="表示の切り替え">
+          <button type="button" data-view="pending" class="active" aria-pressed="true">承認待ち <span id="pk-count"></span></button>
+          <button type="button" data-view="day" aria-pressed="false">日ごとの予約</button>
+        </div>
+        <span class="spacer"></span>
+        <span id="rt-state" class="rt-state" title="新しい予約をすぐに受け取れるかどうか"></span>
+        <button class="btn small" id="pk-refresh" type="button">更新</button>
+      </div>
+      <div id="pk-pending"></div>
+      <div id="pk-day" hidden>
+        <div class="bar">
+          <button class="btn small" id="pk-prev" type="button">‹ 前日</button>
+          <input type="date" id="pk-date" aria-label="表示する日">
+          <button class="btn small" id="pk-next" type="button">翌日 ›</button>
+          <button class="btn small" id="pk-today" type="button">今日</button>
+        </div>
+        <div id="pk-day-body"></div>
+      </div>
     </section>
 
     <!-- 繰り返し登録 -->
@@ -110,6 +140,60 @@
         <label>備考<input id="g-note" type="text"></label>
         <label class="check"><input id="g-pub" type="checkbox"> 公開する（オフなら下書きとして登録）</label>
         <button class="btn primary" type="submit">登録する</button>
+      </form>
+    </section>
+
+    <!-- 生徒（送迎予約） -->
+    <section class="glass panel" id="tab-students" hidden>
+      <div class="bar">
+        <h2 style="margin:0">生徒</h2><span class="spacer"></span>
+        <label class="check-inline"><input type="checkbox" id="st-show-inactive"> 退塾した生徒も表示</label>
+        <button class="btn primary" id="st-add" type="button">＋ 生徒を追加</button>
+      </div>
+      <p class="hint">送迎を予約できるのは、ここに登録した在籍中の生徒だけです。「登録コード」を発行して生徒に渡すと、生徒が自分の LINE と結び付けます（コードは1回だけ使えます）。</p>
+      <div id="st-list" class="tablewrap"></div>
+    </section>
+
+    <!-- 送迎設定 -->
+    <section class="glass panel" id="tab-pickup-settings" hidden>
+      <h2>送迎可能時間帯</h2>
+      <p class="hint">曜日ごとに、送迎できる時間帯を登録します。最終便は「終了時刻 − 1便の所要時間」です（例：16:00〜21:00・15分なら 20:45）。</p>
+      <div id="av-list" class="tablewrap"></div>
+      <h3>時間帯を追加</h3>
+      <form id="av-form" class="form">
+        <fieldset><legend>曜日</legend>
+          <div class="checks" id="av-wd"></div>
+          <div class="bar" style="margin:8px 0 0">
+            <button type="button" class="btn small" data-wd="1,2,3,4,5">月〜金</button>
+            <button type="button" class="btn small" data-wd="6">土</button>
+            <button type="button" class="btn small" data-wd="">クリア</button>
+          </div>
+        </fieldset>
+        <div class="cols">
+          <label>開始時刻<input id="av-start" type="time" required></label>
+          <label>終了時刻<input id="av-end" type="time" required></label>
+        </div>
+        <label>定員（人）<input id="av-cap" type="number" min="1" max="8" value="3" required></label>
+        <button class="btn primary" type="submit">追加する</button>
+      </form>
+      <hr>
+      <h2>送迎の設定</h2>
+      <form id="ps-form" class="form">
+        <label>乗車場所<input id="ps-place" type="text" maxlength="40" required></label>
+        <div class="cols">
+          <label>時刻の刻み<select id="ps-slot"><option value="5">5分</option><option value="10">10分</option><option value="15">15分</option><option value="30">30分</option></select></label>
+          <label>1便の所要時間（分）<input id="ps-trip" type="number" min="5" max="120" required></label>
+        </div>
+        <div class="cols">
+          <label>受付の締め切り（送迎の何分前まで）<input id="ps-lead" type="number" min="0" max="1440" required></label>
+          <label>何日先まで予約できるか（日）<input id="ps-adv" type="number" min="1" max="365" required></label>
+        </div>
+        <div class="cols">
+          <label>相乗りで許容する時刻のずれ（分）<input id="ps-tol" type="number" min="0" max="60" required></label>
+          <label>定員の既定値（人）<input id="ps-cap" type="number" min="1" max="8" required></label>
+        </div>
+        <label>管理者への通知先メールアドレス（任意）<input id="ps-mail" type="email" autocomplete="email"></label>
+        <button class="btn primary" type="submit">保存</button>
       </form>
     </section>
 
@@ -165,6 +249,105 @@
   </form>
 </dialog>
 
+<!-- 送迎の通知（ボタンを押すまで音が繰り返し鳴る） -->
+<dialog id="pk-alert" class="pk-alert" aria-labelledby="pk-alert-title">
+  <h3 id="pk-alert-title">🚗 新しい送迎予約が入りました</h3>
+  <ul id="pk-alert-list"></ul>
+  <div class="cols">
+    <button class="btn" type="button" id="pk-alert-close">閉じる</button>
+    <button class="btn primary" type="button" id="pk-alert-open">送迎予約を開く</button>
+  </div>
+</dialog>
+
+<!-- 送迎予約の承認（時刻・便を選ぶ） -->
+<dialog id="pk-approve-dlg">
+  <div class="form">
+    <h3>時刻・便を選んで承認</h3>
+    <p id="pa-who" class="hint"></p>
+    <fieldset>
+      <legend>新しい便として承認</legend>
+      <div class="bar" style="margin:0">
+        <label class="check-inline">出発時刻 <input type="time" id="pa-time" required></label>
+        <button class="btn primary small" type="button" id="pa-new">この時刻で承認</button>
+      </div>
+      <p class="hint" style="margin:6px 0 0">希望時刻から変える場合は、生徒に連絡してから承認してください。</p>
+    </fieldset>
+    <fieldset id="pa-groups-box">
+      <legend>この日の便に入れて承認</legend>
+      <div id="pa-groups"></div>
+    </fieldset>
+    <button class="btn" type="button" id="pa-cancel">キャンセル</button>
+  </div>
+</dialog>
+
+<!-- 送迎予約の却下 -->
+<dialog id="pk-reject-dlg">
+  <form id="pk-reject-form" class="form" method="dialog">
+    <h3>予約を却下</h3>
+    <p id="pr-who" class="hint"></p>
+    <label>理由（生徒に伝わります）
+      <select id="pr-reason">
+        <option>その時間は満席のため</option>
+        <option>その時間は送迎ができないため</option>
+        <option>車の都合がつかないため</option>
+        <option value="">その他（下に入力）</option>
+      </select></label>
+    <label>その他の理由<input type="text" id="pr-other" maxlength="100"></label>
+    <div class="cols">
+      <button class="btn" id="pr-cancel" type="button">キャンセル</button>
+      <button class="btn primary danger-bg" type="submit">却下する</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 生徒の追加・編集 -->
+<dialog id="st-dlg">
+  <form id="st-form" class="form" method="dialog">
+    <h3 id="st-dlg-title">生徒</h3>
+    <label>名前<input id="s-name" type="text" maxlength="50" autocomplete="off" required></label>
+    <div class="cols">
+      <label>学年<select id="s-grade"><option>高1</option><option>高2</option><option>高3</option><option value="">その他</option></select></label>
+      <label>電話番号<input id="s-phone" type="tel" autocomplete="off"></label>
+    </div>
+    <label class="check"><input id="s-active" type="checkbox"> 在籍中（オフにすると予約できなくなります。データは残ります）</label>
+    <div class="cols">
+      <button class="btn" id="st-cancel" type="button">キャンセル</button>
+      <button class="btn primary" type="submit">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 登録コード -->
+<dialog id="code-dlg">
+  <h3>登録コード</h3>
+  <p id="code-for" class="hint"></p>
+  <p class="code-big" id="code-value"></p>
+  <p class="hint">このコードは、この画面を閉じると二度と表示できません（再発行はできます）。</p>
+  <label class="form">生徒に送る文面<textarea id="code-text" rows="6" readonly></textarea></label>
+  <div class="cols">
+    <button class="btn" id="code-copy" type="button">文面をコピー</button>
+    <button class="btn primary" id="code-close" type="button">閉じる</button>
+  </div>
+</dialog>
+
+<!-- 送迎時間帯の編集 -->
+<dialog id="av-dlg">
+  <form id="av-edit-form" class="form" method="dialog">
+    <h3>送迎時間帯の編集</h3>
+    <label>曜日<select id="ae-dow"></select></label>
+    <div class="cols">
+      <label>開始時刻<input id="ae-start" type="time" required></label>
+      <label>終了時刻<input id="ae-end" type="time" required></label>
+    </div>
+    <label>定員（人）<input id="ae-cap" type="number" min="1" max="8" required></label>
+    <label class="check"><input id="ae-active" type="checkbox"> 有効</label>
+    <div class="cols">
+      <button class="btn" id="av-cancel" type="button">キャンセル</button>
+      <button class="btn primary" type="submit">保存</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- 予定の追加・編集 -->
 <dialog id="ev-dlg">
   <form id="ev-form" class="form" method="dialog">
@@ -186,8 +369,11 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js?v=5"></script>
-<script src="js/common.js?v=5"></script>
-<script src="js/admin.js?v=5"></script>
+<script src="js/config.js?v=6"></script>
+<script src="js/common.js?v=6"></script>
+<script src="js/pickup-common.js?v=1"></script>
+<script src="js/admin.js?v=6"></script>
+<script src="js/admin-pickup.js?v=1"></script>
+<script src="js/admin-reservations.js?v=2"></script>
 </body>
 </html>

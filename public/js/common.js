@@ -64,3 +64,11 @@ function normTime(s) {
   if (!m || +m[1] > 23 || +(m[2] || 0) > 59) return null;
   return `${pad(+m[1])}:${pad(+(m[2] || 0))}`;
 }
+
+// 開発用 DB につながっているときは、画面の隅に目印を出す（本番と取り違えないように）
+if (typeof SUPABASE_ENV === "string" && SUPABASE_ENV === "dev") {
+  const tag = document.createElement("div");
+  tag.textContent = "開発DB";
+  tag.style.cssText = "position:fixed;right:8px;bottom:8px;z-index:9999;padding:2px 8px;border-radius:6px;background:#c27a00;color:#fff;font:700 12px/1.6 sans-serif;pointer-events:none";
+  document.body.appendChild(tag);
+}

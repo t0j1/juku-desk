@@ -5,3 +5,6 @@
 /admin.html
   X-Frame-Options: DENY
   X-Robots-Tag: noindex, nofollow
+
+/pickup.html
+  X-Robots-Tag: noindex, nofollow

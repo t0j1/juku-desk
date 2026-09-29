@@ -23,7 +23,7 @@ hr { border: none; border-top: 1px solid rgba(75, 79, 179, .2); margin: 20px 0; 
 .form label { display: grid; gap: 4px; font-weight: 700; font-size: .9rem; }
 .form label.check { display: flex; align-items: center; gap: 8px; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-input[type=text], input[type=email], input[type=password], input[type=date], input[type=time], input[type=month], select, textarea, input[type=file] {
+input[type=text], input[type=email], input[type=password], input[type=number], input[type=tel], input[type=date], input[type=time], input[type=month], select, textarea, input[type=file] {
   font: inherit; font-weight: 400; color: var(--text); padding: 10px 12px; min-height: 44px; max-width: 100%;
   background: rgba(255, 255, 255, .9); border: 1px solid rgba(75, 79, 179, .35); border-radius: 12px;
 }
@@ -93,3 +93,60 @@ tr.selected td { background: #e3f2fd; }
 #ev-bulk-fields { display: flex; flex-direction: column; gap: 12px; }
 .bulk-field { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid rgba(75, 79, 179, .25); border-radius: 12px; background: #f9f9f9; }
 .bulk-field input:disabled, .bulk-field select:disabled { opacity: .45; }
+
+/* ---- 送迎：予約の状態（色だけでなく文字でも区別する） ---- */
+.pst { display: inline-block; font-size: .78rem; font-weight: 700; padding: 1px 10px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.pst-pending   { color: #6b5200; background: #fff4cc; border-color: #b38600; }
+.pst-proposing { color: #1f4fa0; background: #e3eeff; border-color: #1f4fa0; }
+.pst-approved  { color: #1d6b3a; background: #e3f5e8; border-color: #1d6b3a; }
+.pst-rejected  { color: #4a4f5e; background: #eceef2; border-color: #8a8f9e; }
+.pst-cancelled { color: #8a1c2b; background: #fde6e8; border-color: #b3273a; }
+
+/* ---- 送迎：生徒・送迎設定 ---- */
+.check-inline { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: .9rem; cursor: pointer; }
+tr.inactive td { color: var(--muted); background: rgba(255, 255, 255, .35); }
+.line-ok { color: #1d6b3a; font-weight: 700; }
+.line-wait { color: #6b5200; }
+.line-none { color: var(--muted); }
+.code-big { font-size: 2rem; font-weight: 700; letter-spacing: .12em; text-align: center; margin: 8px 0; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+#code-text { width: 100%; font-size: .9rem; }
+
+/* ---- 送迎予約：タブ・切り替え・便 ---- */
+.tab-badge { display: inline-block; min-width: 1.5em; margin-left: 4px; padding: 0 6px; border-radius: 999px; background: #b3273a; color: #fff; font-size: .75rem; line-height: 1.5; text-align: center; }
+.seg { display: inline-flex; border: 1px solid rgba(75, 79, 179, .35); border-radius: 999px; overflow: hidden; background: #fff; }
+.seg button { font: inherit; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 8px 16px; min-height: 40px; cursor: pointer; }
+.seg button.active { background: var(--accent); color: #fff; }
+.rt-state { font-size: .8rem; color: var(--muted); }
+.rt-state.ok { color: #1d6b3a; }
+.urgent { display: inline-block; font-size: .75rem; font-weight: 700; color: #fff; background: #b3273a; border-radius: 999px; padding: 0 8px; }
+.join { color: #1f4fa0; font-weight: 700; }
+.muted { color: var(--muted); }
+.day-summary { margin: 0 0 8px; }
+#pk-day-body h3 { margin: 18px 0 8px; }
+.trip { background: rgba(255, 255, 255, .8); border: 1px solid var(--border); border-left: 6px solid #1d6b3a; border-radius: 14px; padding: 10px 14px; margin-bottom: 10px; }
+.trip.proposing { border-left-color: #1f4fa0; }
+.trip header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.trip-time { font-size: 1.2rem; }
+.trip .seats { font-weight: 700; }
+.trip ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.trip li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(75, 79, 179, .12); }
+.closed { margin-top: 16px; }
+.closed ul { margin: 8px 0 0; padding-left: 1.2em; }
+.pa-group { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid rgba(75, 79, 179, .12); }
+#pk-approve-dlg, #pk-reject-dlg { width: min(520px, 94vw); }
+.btn.danger-bg { background: #b3273a; border-color: #b3273a; color: #fff; }
+
+/* ---- 送迎の通知（画面中央・ボタンを押すまで音が鳴る） ---- */
+.pk-alert { width: min(480px, 92vw); border: 3px solid #b38600; background: #fff; }
+.pk-alert::backdrop { background: rgba(40, 30, 0, .45); }
+.pk-alert h3 { font-size: 1.3rem; color: #6b5200; }
+.pk-alert ul { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; max-height: 50vh; overflow-y: auto; }
+.pk-alert li { padding: 10px 12px; border-radius: 12px; background: #fff4cc; border-left: 6px solid #b38600; font-size: 1rem; }
+.pk-alert li.cancel { background: #fde6e8; border-left-color: #b3273a; }
+.pk-alert li.expired { background: #eceef2; border-left-color: #8a8f9e; }
+@media (prefers-reduced-motion: no-preference) {
+  .pk-alert[open] { animation: pk-shake .5s ease-out; }
+  @keyframes pk-shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+}
+.sound-unlock { position: sticky; top: 0; z-index: 40; display: block; width: 100%; margin: 0 0 12px; padding: 12px 16px; cursor: pointer;
+  font: inherit; font-weight: 700; color: #6b5200; background: #fff4cc; border: 2px solid #b38600; border-radius: 14px; text-align: left; }
