@@ -37,7 +37,11 @@ scripts/backup.mjs      自動バックアップ本体（検証つき）／backu
 1. SQL Editor で `supabase/pickup.sql` の中身をすべて貼り付けて **Run**（`schema.sql` のあとに。何度実行しても壊れません）。
 2. 期限切れの予約を自動で「却下（期限切れ）」にするため、pg_cron を使います。
    実行結果に「pg_cron の登録に失敗しました」と出た場合は、**Integrations → Cron** で有効にしてから、もう一度実行してください。
-3. 設計は `docs/pickup-plan.md`、DB のテストは `npm i --no-save @electric-sql/pglite && node scripts/pickup-db.test.mjs` です。
+3. 設計は `docs/pickup-plan.md`。テストは次のとおりです。
+   - DB だけ（手元）: `npm i --no-save @electric-sql/pglite && node scripts/pickup-db.test.mjs`
+   - Edge Function の本体・共通時刻の提案（手元）: `node --test scripts/pickup-api.test.mjs scripts/pickup-common.test.mjs`
+   - 通しのテスト（開発用 Supabase に対して。生徒2人の登録 → 予約 → 相乗り → 確定 → 後片付け）:
+     `.env.dev` に開発用の `ADMIN_EMAIL=` と `ADMIN_PASSWORD=` を書いてから `node scripts/pickup-e2e.mjs`（`.env.dev` は Git に入りません）
 
 ### 3. 管理者ユーザーを作る
 1. **Authentication → Users → Add user → Create new user**。
