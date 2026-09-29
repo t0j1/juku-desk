@@ -9,7 +9,7 @@ crons = ["0 3 */3 * *"]
 
 [vars]
 # 自分の Project URL に書き換えてください（公開情報なのでコミットして構いません）
-SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co"
+SUPABASE_URL = "https://qhdbpccbkhggyaussnkp.supabase.co"
 
 # SUPABASE_ANON_KEY は次のコマンドで登録します（ファイルには書きません）:
 #   npx wrangler secret put SUPABASE_ANON_KEY
