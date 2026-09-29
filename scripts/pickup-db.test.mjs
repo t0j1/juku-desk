@@ -192,6 +192,31 @@ r = (await admin(`select status, reject_reason from pickup_reservations where st
 assert.deepEqual(r, { status: "rejected", reject_reason: "期限切れ" });
 ok("期限切れ：承認されないまま時刻を過ぎた予約は却下（期限切れ）");
 
+// ---- 人数（定員は人数の合計で数える） ----
+const d6 = (await db.query(`select (pickup_now()::date + 6)::text d`)).rows[0].d;
+const subN = (n, d, t, size) => svc(`select submit_pickup_reservation($1, $2, $3, '', $4) id`, [cid[n], d, t, size]).then(r => r[0].id);
+const remainingAt = async (d, t) => (await anonSlots(d)).find(s => s.slot === t)?.remaining;
+const q1 = await subN("A", d6, "17:00", 2);
+assert.equal(await remainingAt(d6, "17:00"), 1, "2名の予約で残り1名");
+await fails(subN("B", d6, "17:00", 2), /残り1名/, "残りより多い人数");
+await fails(subN("B", d6, "17:00", 9), /1〜8名/, "9名");
+await fails(subN("B", d6, "17:00", 0), /1〜8名/, "0名");
+const q2 = await subN("B", d6, "17:00", 1);
+assert.equal(await remainingAt(d6, "17:00"), 0);
+await fails(subN("C", d6, "17:00", 1), /満席/, "人数の合計で満席");
+assert.equal((await svc(`select * from my_pickup_reservations($1)`, [cid.A])).find(r => r.id === q1).party_size, 2);
+// 相乗り：2名＋1名＝3名（定員3）なら確定できる
+await admin(`select * from admin_propose_carpool(array[$1, $2]::uuid[], '17:00')`, [q1, q2]);
+const gq = (await admin(`select group_id, status from pickup_reservations where id = $1`, [q1]))[0];
+assert.equal(gq.status, "approved");
+// 満員の便には1名でも入れない
+const q3 = await subN("C", d6, "17:30", 1);
+await fails(admin(`select admin_approve_reservation($1, null, $2)`, [q3, gq.group_id]), /残り0名/, "満員の便に追加");
+// 相乗り：2名＋2名＝4名は定員オーバー
+const q4 = await subN("D", d6, "18:00", 2), q5 = await subN("E", d6, "18:15", 2);
+await fails(admin(`select * from admin_propose_carpool(array[$1, $2]::uuid[], '18:10')`, [q4, q5]), /合計4名/, "相乗りの定員オーバー");
+ok("人数：定員は人数の合計で数える（予約・承認・相乗り）");
+
 // ---- 変更履歴 ----
 const logs = (await admin(`select table_name, count(*)::int c from audit_log group by 1 order by 1`));
 assert.ok(logs.some(l => l.table_name === "pickup_reservations") && logs.some(l => l.table_name === "students"));

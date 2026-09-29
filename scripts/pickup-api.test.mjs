@@ -103,6 +103,18 @@ test("予約: 入力の形式を確かめてから、生徒の連絡先IDで DB 
   }
 });
 
+test("予約: 人数は1〜8の整数だけ。省略なら1名", async () => {
+  const { post, calls } = setup({ rpcImpl: { submit_pickup_reservation: () => ({ data: "r1", error: null }) } });
+  const base = { action: "submit", email: "a@example.com", date: "2026-10-01", time: "17:00" };
+  await post(base);
+  assert.equal(calls.at(-1).args.p_party_size, 1);
+  await post({ ...base, party_size: 3 });
+  assert.equal(calls.at(-1).args.p_party_size, 3);
+  await post({ ...base, party_size: "2" });
+  assert.equal(calls.at(-1).args.p_party_size, 2);
+  for (const bad of [0, 9, 1.5, "abc", -1]) assert.equal((await post({ ...base, party_size: bad })).status, 400, `人数 ${bad}`);
+});
+
 test("DB の利用者向けエラー（PT400）はそのまま、それ以外は伏せて 500", async () => {
   const user = setup({ rpcImpl: { submit_pickup_reservation: () => ({ data: null, error: { code: "PT400", message: "その時刻は満席になりました。" } }) } });
   const a = await user.post({ action: "submit", email: "a@example.com", date: "2026-10-01", time: "17:00" });

@@ -58,6 +58,7 @@
           <legend>時刻（勝瑞駅を出る時刻）</legend>
           <div id="slots" class="slots" role="radiogroup" aria-label="時刻"></div>
         </fieldset>
+        <label id="size-box" hidden>人数（本人を含む）<select id="b-size"></select></label>
         <label>備考（任意）<textarea id="b-notes" rows="2" maxlength="300" placeholder="例：電車が遅れたら連絡します"></textarea></label>
         <button class="btn primary" type="submit" id="to-confirm" disabled>確認へ</button>
       </form>
@@ -67,6 +68,7 @@
         <dl class="summary">
           <dt>日付</dt><dd id="c-date"></dd>
           <dt>時刻</dt><dd id="c-time"></dd>
+          <dt>人数</dt><dd id="c-size"></dd>
           <dt>乗車場所</dt><dd id="c-place"></dd>
           <dt>備考</dt><dd id="c-notes"></dd>
         </dl>
@@ -96,6 +98,6 @@
 <script src="js/config.js?v=6"></script>
 <script src="js/common.js?v=6"></script>
 <script src="js/pickup-common.js?v=1"></script>
-<script src="js/pickup.js?v=1"></script>
+<script src="js/pickup.js?v=2"></script>
 </body>
 </html>

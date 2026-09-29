@@ -111,6 +111,9 @@ create table if not exists public.pickup_reservations (
   updated_at    timestamptz not null default now(),
   constraint pickup_res_approved check (status <> 'approved' or (approved_time is not null and group_id is not null))
 );
+-- 乗る人数（本人を含む）。定員は予約の件数ではなく、この合計で数える
+alter table public.pickup_reservations add column if not exists party_size int not null default 1
+  constraint pickup_res_party_size check (party_size between 1 and 8);
 create index if not exists pickup_res_date_idx  on public.pickup_reservations (pickup_date, status);
 create index if not exists pickup_res_group_idx on public.pickup_reservations (group_id);
 -- 同じ生徒が同じ日に、有効な予約を2件持てない
@@ -258,9 +261,9 @@ begin
   )
   select grid.st,
          coalesce(same.max_capacity, grid.max_capacity),
-         ((select count(*) from public.pickup_reservations r
+         ((select coalesce(sum(r.party_size), 0) from public.pickup_reservations r
             where same.id is not null and r.group_id = same.id and r.status in ('pending', 'approved'))
-        + (select count(*) from public.pickup_reservations r
+        + (select coalesce(sum(r.party_size), 0) from public.pickup_reservations r
             where r.pickup_date = p_date and r.pickup_time = grid.st and r.status = 'pending' and r.group_id is null))::int,
          same.id
   from grid
@@ -562,8 +565,21 @@ begin
 end;
 $$;
 
--- 予約する
-create or replace function public.submit_pickup_reservation(p_contact_id uuid, p_date date, p_time time, p_notes text default '')
+-- 便に乗る人数の合計（未承認の打診中も含む）
+create or replace function public.pickup_group_load(p_group uuid)
+returns int
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(sum(party_size), 0)::int from public.pickup_reservations
+  where group_id = p_group and status in ('pending', 'approved');
+$$;
+
+-- 予約する（人数の引数を足したので、前の形の関数は消す）
+drop function if exists public.submit_pickup_reservation(uuid, date, time, text);
+create or replace function public.submit_pickup_reservation(p_contact_id uuid, p_date date, p_time time, p_notes text default '', p_party_size int default 1)
 returns uuid
 language plpgsql
 security definer
@@ -577,10 +593,14 @@ begin
   perform public.pickup_lock_date(p_date);
   select * into sl from public.pickup_slots_internal(p_date) s where s.slot_time = p_time;
   if not found then perform public.pickup_fail('その日時は予約できません。時刻を選び直してください。'); end if;
+  if p_party_size is null or p_party_size < 1 or p_party_size > 8 then perform public.pickup_fail('人数は1〜8名で選んでください。'); end if;
   if sl.used >= sl.capacity then perform public.pickup_fail('その時刻は満席になりました。別の時刻を選んでください。'); end if;
+  if sl.used + p_party_size > sl.capacity then
+    perform public.pickup_fail(format('その時刻は残り%s名です。人数を減らすか、別の時刻を選んでください。', sl.capacity - sl.used));
+  end if;
   begin
-    insert into public.pickup_reservations (student_id, contact_id, pickup_date, pickup_time, notes)
-    values (sid, p_contact_id, p_date, p_time, left(coalesce(p_notes, ''), 300))
+    insert into public.pickup_reservations (student_id, contact_id, pickup_date, pickup_time, notes, party_size)
+    values (sid, p_contact_id, p_date, p_time, left(coalesce(p_notes, ''), 300), p_party_size)
     returning id into rid;
   exception when unique_violation then
     perform public.pickup_fail('この日はすでに予約があります。変更する場合は、先に今の予約を取り消してください。');
@@ -590,9 +610,10 @@ end;
 $$;
 
 -- 自分の予約（今日以降）と、回答待ちの打診
+drop function if exists public.my_pickup_reservations(uuid);
 create or replace function public.my_pickup_reservations(p_contact_id uuid)
 returns table (id uuid, pickup_date date, pickup_time text, approved_time text, status text, reject_reason text, notes text,
-               proposal_id uuid, proposed_time text, proposal_expires_at timestamptz, can_cancel boolean)
+               proposal_id uuid, proposed_time text, proposal_expires_at timestamptz, can_cancel boolean, party_size int)
 language sql
 stable
 security definer
@@ -602,7 +623,8 @@ as $$
          p.id, to_char(p.proposed_time, 'HH24:MI'), p.expires_at,
          r.status in ('pending', 'approved')
            and r.pickup_date + coalesce(r.approved_time, r.pickup_time)
-               > public.pickup_now() + make_interval(mins => (select min_lead_minutes from public.pickup_settings where id = 1))
+               > public.pickup_now() + make_interval(mins => (select min_lead_minutes from public.pickup_settings where id = 1)),
+         r.party_size
   from public.pickup_reservations r
   left join public.pickup_proposals p
     on p.reservation_id = r.id and p.group_id = r.group_id and p.response = 'waiting' and p.expires_at > now() and r.status = 'pending'
@@ -783,14 +805,17 @@ begin
     select * into g from public.pickup_groups
      where id = p_group and pickup_date = r.pickup_date and status = 'confirmed' for update;
     if not found then perform public.pickup_fail('その便には追加できません。'); end if;
-    if (select count(*) from public.pickup_reservations where group_id = g.id and status in ('pending', 'approved')) >= g.max_capacity then
-      perform public.pickup_fail('その便は満席です。');
+    if public.pickup_group_load(g.id) + r.party_size > g.max_capacity then
+      perform public.pickup_fail(format('その便は残り%s名で、%s名は乗れません。', greatest(g.max_capacity - public.pickup_group_load(g.id), 0), r.party_size));
     end if;
     update public.pickup_reservations set group_id = g.id, status = 'approved', approved_time = g.approved_time where id = r.id;
     return g.id;
   end if;
 
   t := coalesce(p_time, r.pickup_time);
+  if r.party_size > public.pickup_capacity_at(r.pickup_date, t) then
+    perform public.pickup_fail(format('%s名は、1便の定員（%s名）を超えています。', r.party_size, public.pickup_capacity_at(r.pickup_date, t)));
+  end if;
   begin
     insert into public.pickup_groups (pickup_date, approved_time, trip_minutes, max_capacity, status)
     values (r.pickup_date, t, (select trip_minutes from public.pickup_settings where id = 1),
@@ -833,6 +858,7 @@ as $$
 declare
   d date;
   n int := coalesce(array_length(p_reservation_ids, 1), 0);
+  riders int;
   g public.pickup_groups;
   gid uuid;
   t time := p_time;
@@ -849,11 +875,14 @@ begin
        where x.id = any(p_reservation_ids) and x.pickup_date = d and x.status = 'pending' and x.group_id is null) <> n then
     perform public.pickup_fail('同じ日の、未承認（調整中でない）の予約だけを選んでください。');
   end if;
+  select sum(x.party_size) into riders from public.pickup_reservations x where x.id = any(p_reservation_ids);
 
   if p_group is null then
     if t is null then perform public.pickup_fail('時刻を入力してください。'); end if;
     if n < 2 then perform public.pickup_fail('相乗りには2件以上の予約を選んでください。'); end if;
-    if n > public.pickup_capacity_at(d, t) then perform public.pickup_fail('定員を超えています。'); end if;
+    if riders > public.pickup_capacity_at(d, t) then
+      perform public.pickup_fail(format('合計%s名で、定員（%s名）を超えています。', riders, public.pickup_capacity_at(d, t)));
+    end if;
     begin
       insert into public.pickup_groups (pickup_date, approved_time, trip_minutes, max_capacity, status)
       values (d, t, (select trip_minutes from public.pickup_settings where id = 1), public.pickup_capacity_at(d, t), 'proposing')
@@ -867,8 +896,8 @@ begin
     if t is not null and t <> g.approved_time then perform public.pickup_fail('既存の便に追加するときは、時刻は変えられません。'); end if;
     t := g.approved_time;
     gid := g.id;
-    if (select count(*) from public.pickup_reservations x where x.group_id = gid and x.status in ('pending', 'approved')) + n > g.max_capacity then
-      perform public.pickup_fail('定員を超えています。');
+    if public.pickup_group_load(gid) + riders > g.max_capacity then
+      perform public.pickup_fail(format('その便は残り%s名で、合計%s名は乗れません。', greatest(g.max_capacity - public.pickup_group_load(gid), 0), riders));
     end if;
   end if;
 

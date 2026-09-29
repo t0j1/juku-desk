@@ -123,12 +123,13 @@ async function main() {
   // 3. 15分違いで予約
   const { day, t1, t2 } = await findDate();
   const [A, B] = STUDENTS;
-  A.res = (await student(A, "submit", { date: day, time: t1, notes: "E2E" })).id;
+  A.res = (await student(A, "submit", { date: day, time: t1, notes: "E2E", party_size: 2 })).id;   // A は2名で予約
   B.res = (await student(B, "submit", { date: day, time: t2 })).id;
   await rejects(student(A, "submit", { date: day, time: t2 }), /すでに予約/, "同じ日の2件目");
   const pend = await rest("GET", `pickup_reservations?select=id,status,group_id&id=in.(${A.res},${B.res})`);
   assert.ok(pend.every(r => r.status === "pending" && !r.group_id));
-  ok(`生徒：${day} ${t1} と ${t2} で予約（未承認）`);
+  assert.equal((await student(A, "mine")).reservations.find(r => r.id === A.res).party_size, 2);
+  ok(`生徒：${day} ${t1}（2名）と ${t2}（1名）で予約（未承認）`);
 
   // 4. 他人の予約は取り消せない・anon ではテーブルを読めない
   await rejects(student(A, "cancel", { id: B.res }), /取り消せません/, "他人の予約の取り消し");
@@ -170,8 +171,8 @@ async function main() {
   const [grp] = await rest("GET", `pickup_groups?select=status,approved_time,max_capacity&id=eq.${(await rest("GET", `pickup_reservations?select=group_id&id=eq.${A.res}`))[0].group_id}`);
   assert.equal(grp.status, "confirmed"); assert.equal(grp.approved_time.slice(0, 5), sg.best);
   const slot = (await rpc("get_pickup_slots", { p_date: day }, false)).find(s => s.slot === sg.best);
-  if (slot) { assert.equal(slot.is_group, true); assert.equal(slot.remaining, grp.max_capacity - 2); }
-  ok(`確定：2人とも ${sg.best} 発で承認、予約フォームには「相乗り便・残り${grp.max_capacity - 2}」`);
+  if (slot) { assert.equal(slot.is_group, true); assert.equal(slot.remaining, Math.max(grp.max_capacity - 3, 0)); }
+  ok(`確定：2人とも ${sg.best} 発で承認、乗車は合計3名（予約フォームの残りは ${Math.max(grp.max_capacity - 3, 0)}名）`);
 
   // 8. 取り消し → 1人になっても便は残る → 2人とも取り消すと便も取り消し
   await student(A, "cancel", { id: A.res });

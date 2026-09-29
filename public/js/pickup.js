@@ -112,6 +112,7 @@ function resetBooking() {
   $("b-date").min = info.today; $("b-date").max = info.max_date;
   $("b-date").value = ""; $("b-notes").value = "";
   $("slot-box").hidden = true; $("slots").innerHTML = "";
+  $("size-box").hidden = true;
   setMsg("date-msg", `${fmtDay(info.today)} 〜 ${fmtDay(info.max_date)} の間で選べます。`);
   chosen = null; updateConfirmButton();
 }
@@ -120,7 +121,7 @@ const updateConfirmButton = () => { $("to-confirm").disabled = !($("b-date").val
 async function loadSlots() {
   const date = $("b-date").value;
   chosen = null; updateConfirmButton();
-  $("slots").innerHTML = ""; $("slot-box").hidden = true;
+  $("slots").innerHTML = ""; $("slot-box").hidden = true; $("size-box").hidden = true;
   if (!date) return;
   if (date < info.today || date > info.max_date) { setMsg("date-msg", `${fmtDay(info.today)} 〜 ${fmtDay(info.max_date)} の間で選んでください。`); return; }
   const dow = new Date(date + "T00:00:00").getDay();
@@ -135,7 +136,7 @@ async function loadSlots() {
   setMsg("date-msg", open ? `${fmtDay(date)}：時刻を選んでください。` : "この日はすべて満席です。");
   $("slots").innerHTML = data.map(s => {
     const sub = s.remaining === 0 ? "満席" : s.is_group ? `相乗り便・残り${s.remaining}` : `残り${s.remaining}`;
-    return `<button type="button" class="slot${s.is_group ? " group" : ""}" role="radio" aria-checked="false" data-t="${esc(s.slot)}"${s.remaining === 0 ? " disabled" : ""}>
+    return `<button type="button" class="slot${s.is_group ? " group" : ""}" role="radio" aria-checked="false" data-t="${esc(s.slot)}" data-rem="${s.remaining}"${s.remaining === 0 ? " disabled" : ""}>
       <span class="t">${esc(s.slot)}</span><span class="sub">${sub}</span></button>`;
   }).join("");
   $("slot-box").hidden = false;
@@ -146,6 +147,11 @@ $("slots").addEventListener("click", ev => {
   const b = ev.target.closest(".slot"); if (!b || b.disabled) return;
   chosen = b.dataset.t;
   $("slots").querySelectorAll(".slot").forEach(x => x.setAttribute("aria-checked", String(x === b)));
+  // 人数はその時刻の残りまで（最大8名）。前に選んだ人数が選べれば、そのまま残す
+  const max = Math.min(+b.dataset.rem, 8), prev = +$("b-size").value || 1;
+  $("b-size").innerHTML = Array.from({ length: max }, (_, i) => `<option value="${i + 1}">${i + 1}名${i === 0 ? "（本人のみ）" : ""}</option>`).join("");
+  $("b-size").value = String(Math.min(prev, max));
+  $("size-box").hidden = false;
   updateConfirmButton();
 });
 
@@ -154,6 +160,7 @@ $("book-form").addEventListener("submit", ev => {
   if (!chosen) return;
   $("c-date").textContent = fmtDay($("b-date").value);
   $("c-time").textContent = `${chosen} 発`;
+  $("c-size").textContent = `${$("b-size").value}名`;
   $("c-place").textContent = info.place;
   $("c-notes").textContent = $("b-notes").value.trim() || "（なし）";
   setMsg("book-msg", "");
@@ -165,7 +172,7 @@ $("back").onclick = () => { $("confirm").hidden = true; $("book-form").hidden = 
 $("submit").onclick = async () => {
   const btn = $("submit"); btn.disabled = true; setMsg("book-msg", "");
   try {
-    await api("submit", { date: $("b-date").value, time: chosen, notes: $("b-notes").value.trim() });
+    await api("submit", { date: $("b-date").value, time: chosen, notes: $("b-notes").value.trim(), party_size: +$("b-size").value });
     $("confirm").hidden = true; $("done").hidden = false;
     $("done-note").textContent = DEV ? "承認されると、メールでお知らせします（開発中）。" : "承認されると、LINE でお知らせします。";
     await refreshMine();
@@ -186,7 +193,7 @@ async function refreshMine() {
     if (!reservations.length) { box.innerHTML = `<p class="status">今後の予約はありません。</p>`; return; }
     box.innerHTML = reservations.map(r => {
       const st = pickupStatusOf(r);
-      const time = r.approved_time ? `${r.approved_time} 発` : `${r.pickup_time} 発（希望）`;
+      const time = (r.approved_time ? `${r.approved_time} 発` : `${r.pickup_time} 発（希望）`) + `・${r.party_size || 1}名`;
       const proposal = r.proposal_id ? `<div class="proposal" data-pid="${esc(r.proposal_id)}">
           <p>ほかの生徒との相乗りのため、<strong>${esc(r.proposed_time)}</strong> 発に変更できますか？</p>
           <div class="cols"><button class="btn primary" type="button" data-act="accept">変更してよい</button>

@@ -3,7 +3,7 @@
 // admin.js / admin-pickup.js のあとに読み込む。新しい予約は Realtime ですぐに受け取り、つながらないときは15秒ごとの確認で拾う。
 
 const RES_SELECT = "*, students(name, grade, phone)";
-const GROUP_SELECT = "*, pickup_reservations(id, status, pickup_time, students(name, grade))";
+const GROUP_SELECT = "*, pickup_reservations(id, status, pickup_time, party_size, students(name, grade))";
 const NOTIFY_KEY = "pickup_notify_on";
 const POLL_MS = 15000;
 
@@ -30,7 +30,11 @@ const addDays = (k, n) => { const d = parseYMD(k); d.setDate(d.getDate() + n); r
 const nameOf = r => (r.students ? `${r.students.name}さん` : "（生徒不明）");
 const gradeOf = r => (r.students?.grade ? `（${r.students.grade}）` : "");
 const activeMembers = g => (g.pickup_reservations || []).filter(m => m.status === "pending" || m.status === "approved");
-const seatsLeft = g => g.max_capacity - activeMembers(g).length;
+const sizeOf = r => r.party_size || 1;                               // 乗る人数（本人を含む）
+const sumSize = rows => rows.reduce((n, r) => n + sizeOf(r), 0);
+const loadOf = g => sumSize(activeMembers(g));                        // 便に乗る人数の合計
+const seatsLeft = g => g.max_capacity - loadOf(g);
+const sizeText = r => (sizeOf(r) > 1 ? `・${sizeOf(r)}名` : "");
 const tripEnd = g => fromMin(toMin(hhmm(g.approved_time)) + g.trip_minutes);
 const minutesUntil = r => (r.pickup_date === todayJST() ? toMin(hhmm(r.pickup_time)) - nowJSTMin() : Infinity);
 
@@ -122,11 +126,14 @@ function setBadge(n) {
 // ---------- 「予定」タブに重ねる送迎（admin.js の refreshEvents から呼ばれる） ----------
 async function fetchMonthPickups(from, to) {
   const groups = must(await db.from("pickup_groups")
-    .select("id, pickup_date, approved_time, trip_minutes, pickup_reservations(status, students(name))")
+    .select("id, pickup_date, approved_time, trip_minutes, pickup_reservations(status, party_size, students(name))")
     .eq("status", "confirmed").gte("pickup_date", from).lte("pickup_date", to)
     .order("pickup_date").order("approved_time"));
   return groups
-    .map(g => ({ ...g, riders: (g.pickup_reservations || []).filter(r => r.status === "approved").map(r => r.students?.name || "（不明）") }))
+    .map(g => {
+      const on = (g.pickup_reservations || []).filter(r => r.status === "approved");
+      return { ...g, riders: on.map(r => `${r.students?.name || "（不明）"}さん${sizeOf(r) > 1 ? `（${sizeOf(r)}名）` : ""}`), total: sumSize(on) };
+    })
     .filter(g => g.riders.length);
 }
 function pickupRowHTML(g) {
@@ -134,7 +141,7 @@ function pickupRowHTML(g) {
     <td class="chk"></td>
     <td>${fmtDay(g.pickup_date)}</td>
     <td><span class="chip pickup-chip"><span class="sym" aria-hidden="true">🚗</span>送迎</span></td>
-    <td>送迎 ${g.riders.map(n => esc(n) + "さん").join(", ")}（${g.riders.length}名）</td>
+    <td>送迎 ${g.riders.map(esc).join(", ")}（${g.total}名）</td>
     <td>${hhmm(g.approved_time)}–${tripEnd(g)}</td>
     <td><span class="state readonly" title="送迎予約タブで管理します">管理画面のみ</span></td>
     <td class="actions"><button type="button" class="btn small" data-act="open-pickup">送迎予約で開く</button></td></tr>`;
@@ -156,7 +163,7 @@ function riderHTML(r, { sub, check = false, extra = "", actions = "" }) {
     ${check ? `<label class="chk-label"><input type="checkbox" class="cp-check" aria-label="${esc(nameOf(r))}を相乗り調整に選ぶ"${cpSelected.has(r.id) ? " checked" : ""}></label>` : ""}
     <span class="avatar" aria-hidden="true">${esc(initialOf(r))}</span>
     <div class="rider-info">
-      <div><span class="rider-name">${esc(r.students?.name || "（生徒不明）")} さん</span>${r.students?.grade ? `<span class="grade-tag">${esc(r.students.grade)}</span>` : ""}${extra}</div>
+      <div><span class="rider-name">${esc(r.students?.name || "（生徒不明）")} さん</span>${r.students?.grade ? `<span class="grade-tag">${esc(r.students.grade)}</span>` : ""}${sizeOf(r) > 1 ? `<span class="grade-tag party">${sizeOf(r)}名</span>` : ""}${extra}</div>
       <div class="rider-sub">${sub}${phone ? ` · <a href="tel:${esc(phone)}">${esc(phone)}</a>` : ""}</div>
       ${r.notes ? `<div class="rider-note">📝 ${esc(r.notes)}</div>` : ""}
     </div>
@@ -170,9 +177,9 @@ function pendingRiderHTML(r, groups, check = false) {
   const extra = (left <= 60 ? ` <span class="urgent">⚠ あと${Math.max(left, 0)}分</span>` : "")
     + (g ? ` <span class="join">${hhmm(g.approved_time)} の便に相乗り（残り${seatsLeft(g)}席）</span>` : "");
   return riderHTML(r, {
-    sub: `希望 ${hhmm(r.pickup_time)} · 受付 ${receivedAt(r)}`, check, extra,
+    sub: `希望 ${hhmm(r.pickup_time)}${sizeText(r)} · 受付 ${receivedAt(r)}`, check, extra,
     actions: `${callBtn(r)}
-      <button type="button" class="btn small primary" data-act="approve"${g && seatsLeft(g) <= 0 ? ' disabled title="同じ時刻の便が満席です"' : ""}>承認</button>
+      <button type="button" class="btn small primary" data-act="approve"${g && seatsLeft(g) < sizeOf(r) ? ' disabled title="同じ時刻の便に、この人数は乗れません"' : ""}>承認</button>
       <button type="button" class="btn small" data-act="approve-choose">時刻・便を選ぶ</button>
       <button type="button" class="btn small danger" data-act="reject">却下</button>`,
   });
@@ -249,15 +256,15 @@ async function approve(r, time, groupId) {
 
 function openApproveDialog(r, groups) {
   approving = r;
-  $("pa-who").textContent = `${fmtDay(r.pickup_date)} ${nameOf(r)}${gradeOf(r)}　希望 ${hhmm(r.pickup_time)} 発`;
+  $("pa-who").textContent = `${fmtDay(r.pickup_date)} ${nameOf(r)}${gradeOf(r)}　希望 ${hhmm(r.pickup_time)} 発${sizeText(r)}`;
   $("pa-time").value = hhmm(r.pickup_time);
   const same = groups.filter(g => g.pickup_date === r.pickup_date && g.status === "confirmed");
   $("pa-groups-box").hidden = !same.length;
   $("pa-groups").innerHTML = same.map(g => {
     const left = seatsLeft(g);
     const differs = hhmm(g.approved_time) !== hhmm(r.pickup_time);
-    return `<div class="pa-group"><span><strong>${hhmm(g.approved_time)}</strong>〜${tripEnd(g)}　${activeMembers(g).map(m => esc(m.students?.name || "")).join("・")}さん（${activeMembers(g).length}/${g.max_capacity}名）</span>
-      <span class="actions">${left <= 0 ? `<button type="button" class="btn small" disabled>満席</button>` : `
+    return `<div class="pa-group"><span><strong>${hhmm(g.approved_time)}</strong>〜${tripEnd(g)}　${activeMembers(g).map(m => esc(m.students?.name || "")).join("・")}さん（${loadOf(g)}/${g.max_capacity}名）</span>
+      <span class="actions">${left < sizeOf(r) ? `<button type="button" class="btn small" disabled>${left <= 0 ? "満席" : `残り${left}名`}</button>` : `
         ${differs ? `<button type="button" class="btn small" data-propose-gid="${g.id}" title="生徒に ${hhmm(g.approved_time)} 発でよいか聞きます">打診する</button>` : ""}
         <button type="button" class="btn small primary" data-gid="${g.id}" title="${differs ? "電話などで確認済みのとき" : ""}">この便に入れる</button>`}</span></div>`;
   }).join("");
@@ -361,7 +368,7 @@ async function refreshDay() {
   const inGroup = id => dayRows.filter(r => r.group_id === id && (r.status === "approved" || r.status === "pending"));
   const waiting = dayRows.filter(r => r.status === "pending" && !r.group_id);
   const closed = dayRows.filter(r => r.status === "rejected" || r.status === "cancelled");
-  const riders = dayGroups.reduce((n, g) => n + inGroup(g.id).length, 0);
+  const riders = dayGroups.reduce((n, g) => n + sumSize(inGroup(g.id)), 0);
   const seats = dayGroups.reduce((n, g) => n + g.max_capacity, 0);
   const waitingIds = new Set(waiting.map(r => r.id));
   [...cpSelected].forEach(id => { if (!waitingIds.has(id)) cpSelected.delete(id); });   // 日付を変えたら選択は外す
@@ -383,18 +390,19 @@ async function refreshDay() {
   const trips = dayGroups.length ? `<div class="trips">${dayGroups.map(g => {
     const members = inGroup(g.id);
     const summary = g.status === "proposing" ? proposalSummary({ ...g, pickup_reservations: members }, dayProposals.filter(p => p.group_id === g.id)) : null;
-    const pct = Math.min(100, Math.round(members.length / g.max_capacity * 100));
+    const load = sumSize(members);
+    const pct = Math.min(100, Math.round(load / g.max_capacity * 100));
     return `<article class="trip ${g.status}" data-gid="${g.id}">
       <div class="trip-top">
         <span class="trip-time">${hhmm(g.approved_time)}</span>
         <span class="trip-arrive">発 → ${tripEnd(g)} 着</span>
         ${pickupBadge(g.status === "proposing" ? "proposing" : "approved")}
-        <div class="trip-load"><span>乗車 <strong>${members.length}/${g.max_capacity}</strong></span>
-          <span class="bar-track" role="img" aria-label="定員 ${g.max_capacity}名中 ${members.length}名"><span class="bar-fill" style="width:${pct}%"></span></span></div>
+        <div class="trip-load"><span>乗車 <strong>${load}/${g.max_capacity}</strong></span>
+          <span class="bar-track" role="img" aria-label="定員 ${g.max_capacity}名中 ${load}名"><span class="bar-fill" style="width:${pct}%"></span></span></div>
       </div>
       ${summary ? `<p class="trip-note">相乗りの打診中：${summary.text}${summary.needsAction ? ` <span class="urgent">要対応</span>` : ""}</p>` : ""}
       <ul class="riders">${members.map(r => riderHTML(r, {
-        sub: `希望 ${hhmm(r.pickup_time)}`,
+        sub: `希望 ${hhmm(r.pickup_time)}${sizeText(r)}`,
         extra: r.status === "pending" && answerOf(r) ? ` <span class="answer ${answerOf(r)}">${ANSWER[answerOf(r)]}</span>` : "",
         actions: `${callBtn(r)}<button type="button" class="btn small danger" data-act="cancel-res">取り消す</button>`,
       })).join("")}</ul>
@@ -453,15 +461,16 @@ async function openCarpoolDialog() {
   const busy = dayGroups.map(g => [hhmm(g.approved_time), tripEnd(g)]);
   const sg = suggestTime(times, { tolerance: ps.tolerance_minutes, step: 5, window: win, busy, trip: ps.trip_minutes });
 
-  $("cp-summary").textContent = `${fmtDay(d)}　${cpRows.length}名（定員 ${cap}名）${cpRows.length > cap ? "　⚠ 定員を超えています" : ""}`;
-  $("cp-members").innerHTML = `<thead><tr><th>生徒</th><th>希望時刻</th><th>電話番号</th></tr></thead><tbody>${cpRows.map(r =>
-    `<tr><td><strong>${esc(nameOf(r))}</strong>${esc(gradeOf(r))}</td><td>${hhmm(r.pickup_time)}</td><td>${esc(r.students?.phone || "")}</td></tr>`).join("")}</tbody>`;
+  const total = sumSize(cpRows);
+  $("cp-summary").textContent = `${fmtDay(d)}　${cpRows.length}件・合計${total}名（定員 ${cap}名）${total > cap ? "　⚠ 定員を超えています" : ""}`;
+  $("cp-members").innerHTML = `<thead><tr><th>生徒</th><th>希望時刻</th><th>人数</th><th>電話番号</th></tr></thead><tbody>${cpRows.map(r =>
+    `<tr><td><strong>${esc(nameOf(r))}</strong>${esc(gradeOf(r))}</td><td>${hhmm(r.pickup_time)}</td><td>${sizeOf(r)}名</td><td>${esc(r.students?.phone || "")}</td></tr>`).join("")}</tbody>`;
   $("cp-suggest").innerHTML = sg.candidates.length
     ? `<p><strong>共通時刻の提案</strong>（希望から ±${ps.tolerance_minutes}分・ほかの便と重ならない時刻）：${sg.from}〜${sg.to}</p>
        <div class="cp-cands">${sg.candidates.map(c => `<button type="button" class="slot-chip${c === sg.best ? " best" : ""}" data-t="${c}">${c}${c === sg.best ? "（おすすめ）" : ""}</button>`).join("")}</div>`
     : `<p class="msg">希望から ±${ps.tolerance_minutes}分以内に、ほかの便と重ならない共通の時刻がありません。時刻を直接入力してください。</p>`;
   $("cp-time").value = sg.best || times[0];
-  $("cp-send").disabled = cpRows.length > cap;
+  $("cp-send").disabled = total > cap;
   $("cp-msg").textContent = "";
   $("pk-carpool-dlg").showModal();
 }
@@ -634,7 +643,7 @@ async function onNewPending(r) {
   if (knownPending.has(r.id)) return;
   knownPending.add(r.id);
   const who = r.students ? nameOf(r) : await studentName(r.student_id);
-  notify({ kind: "new", title: "🚗 新しい送迎予約", body: `${who}　${fmtDay(r.pickup_date)} ${hhmm(r.pickup_time)} 発`, view: "pending", tag: r.id });
+  notify({ kind: "new", title: "🚗 新しい送迎予約", body: `${who}　${fmtDay(r.pickup_date)} ${hhmm(r.pickup_time)} 発${sizeText(r)}`, view: "pending", tag: r.id });
 }
 
 async function onReservationUpdate(r) {

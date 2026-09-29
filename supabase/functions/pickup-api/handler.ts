@@ -34,6 +34,14 @@ function need(v: unknown, re: RegExp, label: string): string {
   return s;
 }
 
+// 乗る人数（本人を含む）。省略なら1名。1〜8 の整数以外は受け付けない
+function partySize(v: unknown): number {
+  if (v === undefined || v === null || v === "") return 1;
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isInteger(n) || n < 1 || n > 8) throw new UserError("人数は1〜8名で選んでください。");
+  return n;
+}
+
 export function makeHandler(deps: Deps) {
   const log = deps.log ?? console.error;
   const isDev = deps.appEnv === "dev";
@@ -96,6 +104,7 @@ export function makeHandler(deps: Deps) {
         p_date: need(body.date, DATE_RE, "日付"),
         p_time: need(body.time, TIME_RE, "時刻"),
         p_notes: str(body.notes, 300),
+        p_party_size: partySize(body.party_size),
       });
       return { id };
     },
