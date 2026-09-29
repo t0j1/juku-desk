@@ -8,3 +8,8 @@
 
 /pickup.html
   X-Robots-Tag: noindex, nofollow
+
+/pickup-respond.html
+  X-Robots-Tag: noindex, nofollow
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=6">
-<link rel="stylesheet" href="css/admin.css?v=7">
+<link rel="stylesheet" href="css/admin.css?v=9">
 </head>
 <body>
 <div class="wrap">
@@ -56,6 +56,7 @@
         <input type="month" id="ev-month" aria-label="表示する月">
         <button class="btn small" id="ev-next" type="button">次月 ›</button>
         <span class="spacer"></span>
+        <label class="check-inline" title="確定した送迎の便を、読み取り専用で一緒に表示します（閲覧ページには出ません）"><input type="checkbox" id="ev-show-pickup" checked> 🚗 送迎も表示</label>
         <button class="btn primary" id="ev-add" type="button">＋ 予定を追加</button>
       </div>
       <div id="ev-select-bar" class="selection-bar" role="region" aria-label="選択中の予定の操作" hidden>
@@ -280,6 +281,31 @@
   </div>
 </dialog>
 
+<!-- 相乗り調整 -->
+<dialog id="pk-carpool-dlg">
+  <div class="form">
+    <h3>相乗り調整</h3>
+    <p id="cp-summary" class="hint"></p>
+    <div class="tablewrap"><table id="cp-members"></table></div>
+    <div id="cp-suggest"></div>
+    <label class="check-inline">出発時刻 <input type="time" id="cp-time" step="300" required></label>
+    <p class="hint">希望時刻と同じ人には打診せず、そのまま承認扱いになります。全員が「変更してよい」と答えると、自動で確定します。回答の期限は送迎の10分前です。</p>
+    <p id="cp-msg" class="msg" role="alert"></p>
+    <div class="cols">
+      <button class="btn" type="button" id="cp-cancel">キャンセル</button>
+      <button class="btn primary" type="button" id="cp-send">打診する</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- 打診の回答リンク（開発用。本番は LINE で自動送信） -->
+<dialog id="pk-links-dlg">
+  <h3>回答用のリンク</h3>
+  <p class="hint" id="lk-hint"></p>
+  <div id="lk-list"></div>
+  <button class="btn primary full" type="button" id="lk-close">閉じる</button>
+</dialog>
+
 <!-- 送迎予約の却下 -->
 <dialog id="pk-reject-dlg">
   <form id="pk-reject-form" class="form" method="dialog">
@@ -371,9 +397,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js?v=6"></script>
 <script src="js/common.js?v=6"></script>
-<script src="js/pickup-common.js?v=1"></script>
-<script src="js/admin.js?v=6"></script>
+<script src="js/pickup-common.js?v=2"></script>
+<script src="js/admin.js?v=7"></script>
 <script src="js/admin-pickup.js?v=1"></script>
-<script src="js/admin-reservations.js?v=2"></script>
+<script src="js/admin-reservations.js?v=4"></script>
 </body>
 </html>

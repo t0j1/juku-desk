@@ -150,3 +150,25 @@ tr.inactive td { color: var(--muted); background: rgba(255, 255, 255, .35); }
 }
 .sound-unlock { position: sticky; top: 0; z-index: 40; display: block; width: 100%; margin: 0 0 12px; padding: 12px 16px; cursor: pointer;
   font: inherit; font-weight: 700; color: #6b5200; background: #fff4cc; border: 2px solid #b38600; border-radius: 14px; text-align: left; }
+
+/* ---- 「予定」タブに重ねる送迎（読み取り専用） ---- */
+tr.pickup-row td { background: rgba(227, 245, 232, .55); }
+.pickup-chip { --c: #1d6b3a; display: inline-block; }
+.state.readonly { cursor: default; color: var(--muted); border-color: rgba(84, 90, 122, .4); }
+
+/* ---- 相乗り調整 ---- */
+.adjusting { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.linklike { font: inherit; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.trip-note { margin: 6px 0 0; font-size: .9rem; color: #1f4fa0; }
+.trip-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(31, 79, 160, .35); }
+.answer { display: inline-block; margin-left: 6px; font-size: .75rem; font-weight: 700; padding: 0 8px; border-radius: 999px; border: 1px solid; }
+.answer.waiting { color: #6b5200; border-color: #b38600; background: #fff4cc; }
+.answer.accepted { color: #1d6b3a; border-color: #1d6b3a; background: #e3f5e8; }
+.answer.declined, .answer.expired { color: #8a1c2b; border-color: #b3273a; background: #fde6e8; }
+.cp-bar { position: static; }
+#pk-carpool-dlg, #pk-links-dlg { width: min(560px, 94vw); }
+.cp-cands { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+.slot-chip { font: inherit; font-weight: 700; cursor: pointer; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(75, 79, 179, .35); background: #fff; color: var(--text); }
+.slot-chip.best { border-color: #1d6b3a; color: #1d6b3a; }
+.lk-item { display: grid; gap: 4px; padding: 8px 0; border-bottom: 1px solid rgba(75, 79, 179, .15); }
+.lk-item input { width: 100%; font-size: .8rem; }

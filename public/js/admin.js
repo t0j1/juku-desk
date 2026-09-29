@@ -88,9 +88,14 @@ const selRows = () => [...selected].map(id => listRows().get(id)).filter(Boolean
 async function refreshEvents() {
   const [y, m] = $("ev-month").value.split("-").map(Number);
   cur = { y, m: m - 1 };
-  const data = must(await db.from("events").select("*")
-    .gte("event_date", monthStart(cur.y, cur.m)).lte("event_date", monthEnd(cur.y, cur.m))
-    .order("event_date").order("start_time", { ascending: true, nullsFirst: true }));
+  const [data, pickups] = await Promise.all([
+    db.from("events").select("*")
+      .gte("event_date", monthStart(cur.y, cur.m)).lte("event_date", monthEnd(cur.y, cur.m))
+      .order("event_date").order("start_time", { ascending: true, nullsFirst: true }).then(must),
+    // 確定した送迎の便（admin-reservations.js）。読み取り専用の行として混ぜて表示する
+    $("ev-show-pickup").checked && typeof fetchMonthPickups === "function"
+      ? fetchMonthPickups(monthStart(cur.y, cur.m), monthEnd(cur.y, cur.m)) : [],
+  ]);
   const rows = new Map(data.map(e => [e.id, e]));
   $("ev-list")._rows = rows;
   // 月を切り替えたら選択をクリア。同じ月の再読み込みなら、残っている予定の選択だけ引き継ぐ
@@ -99,11 +104,15 @@ async function refreshEvents() {
   else [...selected].forEach(id => { if (!rows.has(id)) selected.delete(id); });
   shownMonth = month;
 
-  if (!data.length) { $("ev-list").innerHTML = `<p class="status">この月の予定はありません。</p>`; updateSelectionUI(); return; }
+  if (!data.length && !pickups.length) { $("ev-list").innerHTML = `<p class="status">この月の予定はありません。</p>`; updateSelectionUI(); return; }
+  // 日付 → 開始時刻（時刻なしが先）の順に、予定と送迎を並べる
+  const sortKey = (d, t) => `${d} ${t ? hhmm(t) : "00:00-"}`;
+  const items = [...data.map(e => ({ key: sortKey(e.event_date, e.start_time), e })), ...pickups.map(p => ({ key: sortKey(p.pickup_date, p.approved_time), p }))]
+    .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
   $("ev-list").innerHTML = `<table><thead><tr>
     <th class="chk"><label class="chk-label" title="全て選択"><input type="checkbox" id="ev-check-all"><span class="vh">全て選択</span></label></th>
     <th>日付</th><th>種別</th><th>内容</th><th>時間</th><th>状態</th><th>操作</th></tr></thead><tbody>${
-    data.map(e => `<tr class="${e.is_published ? "" : "draft"}" data-id="${e.id}">
+    items.map(({ e, p }) => p ? pickupRowHTML(p) : `<tr class="${e.is_published ? "" : "draft"}" data-id="${e.id}">
       <td class="chk"><label class="chk-label"><input type="checkbox" class="row-check" aria-label="${esc(fmtDate(e.event_date))} ${esc(e.type)} ${esc(e.title)} を選択"></label></td>
       <td>${fmtDate(e.event_date)}</td>
       <td><button type="button" class="chip-btn" data-act="pick-type" title="同じ種別の予定をすべて選択">${chipHTML({ type: e.type, title: e.type }, typeMap)}</button></td>
@@ -160,6 +169,7 @@ $("ev-list").addEventListener("change", ev => {
 
 $("ev-list").addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]"); if (!b) return;
+  if (b.dataset.act === "open-pickup") { openPickupsTab("day", b.closest("tr").dataset.pickupDate); return; }
   const id = b.closest("tr").dataset.id, e = listRows().get(id);
   guard(async () => {
     if (b.dataset.act === "pick-type") pickType(e.type);
