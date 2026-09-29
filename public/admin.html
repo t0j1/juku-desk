@@ -7,25 +7,18 @@
 <title>碩学館 管理画面</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=6">
 <link rel="stylesheet" href="css/admin.css?v=9">
+<link rel="stylesheet" href="css/admin-theme.css?v=1">
 </head>
-<body>
+<body class="admin-ui">
 <div class="wrap">
-  <header class="top">
-    <div><h1>碩学館 管理画面</h1><p><a href="index.html" target="_blank" rel="noopener">閲覧ページを開く（別タブ）↗</a></p></div>
-    <div id="who" hidden><span class="badge">ログイン中</span> <span id="who-mail"></span>
-      <button class="btn small" id="notify-toggle" type="button" aria-pressed="false">🔕 通知オフ</button>
-      <button class="btn small" id="logout" type="button">ログアウト</button></div>
-  </header>
-
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-  <!-- 音の通知を使えるようにする案内（ブラウザの決まりで、1回クリックが必要） -->
-  <button type="button" id="sound-unlock" class="sound-unlock" hidden>🔔 ここをクリックすると、予約が入ったときに音が鳴るようになります</button>
 
   <!-- ログイン -->
-  <section id="login" class="glass narrow" hidden>
+  <section id="login" class="glass narrow login-card" hidden>
+    <div class="brand"><span class="brand-mark" aria-hidden="true">碩</span><span class="brand-text"><strong>碩学館</strong><small>Admin Console</small></span></div>
     <h2>ログイン</h2>
     <form id="login-form" class="form">
       <label>メールアドレス<input id="login-mail" type="email" autocomplete="username" required></label>
@@ -35,19 +28,41 @@
     </form>
   </section>
 
-  <!-- 管理 -->
-  <div id="app" hidden>
-    <nav class="tabs" id="tabs">
-      <button type="button" data-tab="events" class="active">予定</button>
-      <button type="button" data-tab="pickups">送迎予約 <span class="tab-badge" id="pk-badge" hidden></span></button>
-      <button type="button" data-tab="repeat">繰り返し登録</button>
-      <button type="button" data-tab="range">期間登録</button>
-      <button type="button" data-tab="students">生徒</button>
-      <button type="button" data-tab="pickup-settings">送迎設定</button>
-      <button type="button" data-tab="types">種別の色</button>
-      <button type="button" data-tab="csv">CSV</button>
-      <button type="button" data-tab="log">変更履歴</button>
-    </nav>
+  <!-- 管理（左：サイドバー / 右：各ページ） -->
+  <div id="app" class="shell" hidden>
+    <aside class="sidebar" id="sidebar" aria-label="メニュー">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">碩</span>
+        <span class="brand-text"><strong>碩学館</strong><small>Admin Console</small></span>
+      </div>
+      <nav class="tabs" id="tabs">
+        <button type="button" data-tab="events" class="active"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="3"/></svg><span class="nav-label">予定</span></button>
+        <button type="button" data-tab="pickups"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14M6 17l1.5-6.5A2 2 0 0 1 9.4 9h5.2a2 2 0 0 1 1.9 1.5L18 17"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/><path d="M4 13h16"/></svg><span class="nav-label">送迎予約</span> <span class="tab-badge" id="pk-badge" hidden></span></button>
+        <button type="button" data-tab="repeat"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg><span class="nav-label">繰り返し登録</span></button>
+        <button type="button" data-tab="range"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 10h18M7 15h10"/></svg><span class="nav-label">期間登録</span></button>
+        <button type="button" data-tab="students"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg><span class="nav-label">生徒</span></button>
+        <button type="button" data-tab="pickup-settings"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span class="nav-label">送迎設定</span></button>
+        <button type="button" data-tab="types"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A5.6 5.6 0 0 0 22 9.8C22 5.5 17.5 2 12 2z"/></svg><span class="nav-label">種別の色</span></button>
+        <button type="button" data-tab="csv"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span class="nav-label">CSV</span></button>
+        <button type="button" data-tab="log"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="nav-label">変更履歴</span></button>
+      </nav>
+      <a class="side-link" href="index.html" target="_blank" rel="noopener">閲覧ページを開く（別タブ）↗</a>
+      <div id="who" class="user-card" hidden>
+        <span class="user-mail" id="who-mail"></span>
+        <div class="user-actions">
+          <button class="btn small" id="notify-toggle" type="button" aria-pressed="false">🔕 通知オフ</button>
+          <button class="btn small" id="logout" type="button">ログアウト</button>
+        </div>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim" hidden></div>
+
+    <main class="main">
+      <div class="mobile-bar">
+        <button type="button" class="icon-btn" id="menu-toggle" aria-controls="sidebar" aria-expanded="false" aria-label="メニューを開く">☰</button>
+        <span class="brand-mark small" aria-hidden="true">碩</span><strong>碩学館</strong>
+      </div>
+      <button type="button" id="sound-unlock" class="sound-unlock" hidden>🔔 ここをクリックすると、予約が入ったときに音が鳴るようになります</button>
 
     <!-- 予定 -->
     <section class="glass panel" id="tab-events">
@@ -71,23 +86,31 @@
     </section>
 
     <!-- 送迎予約 -->
-    <section class="glass panel" id="tab-pickups" hidden>
-      <div class="bar">
-        <div class="seg" role="group" aria-label="表示の切り替え">
-          <button type="button" data-view="pending" class="active" aria-pressed="true">承認待ち <span id="pk-count"></span></button>
-          <button type="button" data-view="day" aria-pressed="false">日ごとの予約</button>
+    <section class="panel page" id="tab-pickups" hidden>
+      <header class="page-head">
+        <div>
+          <p class="crumb">送迎予約 / <span id="pk-crumb">承認待ち</span></p>
+          <h1 class="page-title" id="pk-title">承認待ち</h1>
         </div>
-        <span class="spacer"></span>
-        <span id="rt-state" class="rt-state" title="新しい予約をすぐに受け取れるかどうか"></span>
-        <button class="btn small" id="pk-refresh" type="button">更新</button>
-      </div>
+        <div class="page-head-right">
+          <span id="rt-state" class="rt-state" title="新しい予約をすぐに受け取れるかどうか"></span>
+          <div class="seg" role="group" aria-label="表示の切り替え">
+            <button type="button" data-view="pending" class="active" aria-pressed="true">承認待ち <span id="pk-count"></span></button>
+            <button type="button" data-view="day" aria-pressed="false">日ごとの予約</button>
+          </div>
+          <button class="icon-btn" id="pk-refresh" type="button" title="更新" aria-label="更新">↻</button>
+        </div>
+      </header>
       <div id="pk-pending"></div>
       <div id="pk-day" hidden>
-        <div class="bar">
-          <button class="btn small" id="pk-prev" type="button">‹ 前日</button>
-          <input type="date" id="pk-date" aria-label="表示する日">
-          <button class="btn small" id="pk-next" type="button">翌日 ›</button>
-          <button class="btn small" id="pk-today" type="button">今日</button>
+        <div class="card week-card">
+          <button class="chev" id="pk-prev" type="button" aria-label="前の週">‹</button>
+          <div class="week-days" id="pk-week" role="group" aria-label="日付を選ぶ"></div>
+          <button class="chev" id="pk-next" type="button" aria-label="次の週">›</button>
+          <div class="week-tools">
+            <button class="btn small" id="pk-today" type="button">今日</button>
+            <input type="date" id="pk-date" aria-label="日付を指定">
+          </div>
         </div>
         <div id="pk-day-body"></div>
       </div>
@@ -226,6 +249,7 @@
       <div class="bar"><h2 style="margin:0">変更履歴（最新100件）</h2><span class="spacer"></span><button class="btn small" id="log-refresh" type="button">更新</button></div>
       <div id="log-list"></div>
     </section>
+    </main>
   </div>
 </div>
 
@@ -400,6 +424,7 @@
 <script src="js/pickup-common.js?v=2"></script>
 <script src="js/admin.js?v=7"></script>
 <script src="js/admin-pickup.js?v=1"></script>
-<script src="js/admin-reservations.js?v=4"></script>
+<script src="js/admin-reservations.js?v=5"></script>
+<script src="js/admin-shell.js?v=1"></script>
 </body>
 </html>

@@ -75,6 +75,17 @@ function setView(v) {
   });
   $("pk-pending").hidden = v !== "pending";
   $("pk-day").hidden = v !== "day";
+  updatePickupHead();
+}
+const WEEKDAY = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
+function updatePickupHead() {
+  $("pk-crumb").textContent = pkView === "pending" ? "承認待ち" : "日ごとの予約";
+  if (pkView === "pending") {
+    $("pk-title").innerHTML = `承認待ち<small>${pendingRows.length}件</small>`;
+  } else {
+    const dt = parseYMD($("pk-date").value || todayJST());
+    $("pk-title").innerHTML = `${dt.getMonth() + 1}月${dt.getDate()}日<small>${WEEKDAY[dt.getDay()]}</small>`;
+  }
 }
 function openPickupsTab(view, date) {
   document.querySelector('#tabs button[data-tab="pickups"]').click();   // タブの切り替えは admin.js の処理に任せる
@@ -99,6 +110,7 @@ async function fetchGroups(dates) {
 function applyPending(rows) {
   pendingRows = rows;
   setBadge(rows.length);
+  if (pkView === "pending") updatePickupHead();
 }
 function setBadge(n) {
   const b = $("pk-badge");
@@ -129,6 +141,43 @@ function pickupRowHTML(g) {
 }
 $("ev-show-pickup").addEventListener("change", () => guard(refreshEvents));
 
+// ---------- 表示の部品（乗客の行・空の表示） ----------
+const PHONE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
+const CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const initialOf = r => (r.students?.name || "?").trim().charAt(0);
+const receivedAt = r => new Date(r.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const emptyOk = text => `<div class="empty-ok"><span class="ok-mark">${CHECK_SVG}</span>${esc(text)}</div>`;
+const callBtn = r => (r.students?.phone ? `<a class="btn small btn-call" href="tel:${esc(r.students.phone)}">${PHONE_SVG}発信</a>` : "");
+
+// 乗客（生徒）1人の行。便・未承認・承認待ちで共通
+function riderHTML(r, { sub, check = false, extra = "", actions = "" }) {
+  const phone = r.students?.phone;
+  return `<li class="rider${check ? "" : " no-check"}${cpSelected.has(r.id) ? " selected" : ""}" data-id="${r.id}">
+    ${check ? `<label class="chk-label"><input type="checkbox" class="cp-check" aria-label="${esc(nameOf(r))}を相乗り調整に選ぶ"${cpSelected.has(r.id) ? " checked" : ""}></label>` : ""}
+    <span class="avatar" aria-hidden="true">${esc(initialOf(r))}</span>
+    <div class="rider-info">
+      <div><span class="rider-name">${esc(r.students?.name || "（生徒不明）")} さん</span>${r.students?.grade ? `<span class="grade-tag">${esc(r.students.grade)}</span>` : ""}${extra}</div>
+      <div class="rider-sub">${sub}${phone ? ` · <a href="tel:${esc(phone)}">${esc(phone)}</a>` : ""}</div>
+      ${r.notes ? `<div class="rider-note">📝 ${esc(r.notes)}</div>` : ""}
+    </div>
+    <div class="rider-actions">${actions}</div>
+  </li>`;
+}
+// 未承認の予約の行（承認・時刻や便を選ぶ・却下）
+function pendingRiderHTML(r, groups, check = false) {
+  const left = minutesUntil(r);
+  const g = sameTimeGroup(r, groups);
+  const extra = (left <= 60 ? ` <span class="urgent">⚠ あと${Math.max(left, 0)}分</span>` : "")
+    + (g ? ` <span class="join">${hhmm(g.approved_time)} の便に相乗り（残り${seatsLeft(g)}席）</span>` : "");
+  return riderHTML(r, {
+    sub: `希望 ${hhmm(r.pickup_time)} · 受付 ${receivedAt(r)}`, check, extra,
+    actions: `${callBtn(r)}
+      <button type="button" class="btn small primary" data-act="approve"${g && seatsLeft(g) <= 0 ? ' disabled title="同じ時刻の便が満席です"' : ""}>承認</button>
+      <button type="button" class="btn small" data-act="approve-choose">時刻・便を選ぶ</button>
+      <button type="button" class="btn small danger" data-act="reject">却下</button>`,
+  });
+}
+
 // ---------- 承認待ち ----------
 async function refreshPending() {
   applyPending(await fetchPending());
@@ -138,17 +187,21 @@ async function refreshPending() {
       .eq("status", "proposing").gte("pickup_date", todayJST()).order("pickup_date").order("approved_time").then(must),
   ]);
   pendingGroups = groups; proposingGroups = proposing;
-  const box = $("pk-pending");
-  const table = pendingRows.length
-    ? `<div class="tablewrap"><table><thead><tr><th>日付</th><th>希望時刻</th><th>生徒</th><th>電話番号</th><th>備考</th><th>受付</th><th>操作</th></tr></thead><tbody>${
-        pendingRows.map(r => pendingRowHTML(r, pendingGroups)).join("")}</tbody></table></div>`
-    : `<p class="status">承認待ちの予約はありません。</p>`;
-  const adjusting = proposingGroups.length ? `<h3>相乗りの調整中（${proposingGroups.length}便）</h3><ul class="adjusting">${proposingGroups.map(g => {
-      const answers = proposalSummary(g, g.pickup_proposals || []);
-      return `<li><button type="button" class="linklike" data-open-day="${esc(g.pickup_date)}">${fmtDay(g.pickup_date)} ${hhmm(g.approved_time)} 発</button>
-        ${activeMembers(g).map(m => esc(m.students?.name || "") + "さん").join("・")}　${answers.text}${answers.needsAction ? ` <span class="urgent">要対応</span>` : ""}</li>`;
-    }).join("")}</ul>` : "";
-  box.innerHTML = table + adjusting;
+  const dates = [...new Set(pendingRows.map(r => r.pickup_date))];
+  const list = pendingRows.length
+    ? dates.map(d => `<section class="date-group"><p class="date-label">${fmtDay(d)}</p><ul class="riders">${
+        pendingRows.filter(r => r.pickup_date === d).map(r => pendingRiderHTML(r, pendingGroups)).join("")}</ul></section>`).join("")
+    : emptyOk("承認待ちの予約はありません");
+  const adjusting = proposingGroups.length ? `<section class="card adjusting">
+      <div class="card-head"><h2>相乗りの調整中</h2><span class="count">${proposingGroups.length}便</span></div>
+      <ul>${proposingGroups.map(g => {
+        const answers = proposalSummary(g, g.pickup_proposals || []);
+        return `<li><button type="button" class="linklike" data-open-day="${esc(g.pickup_date)}">${fmtDay(g.pickup_date)} ${hhmm(g.approved_time)} 発</button>
+          ${activeMembers(g).map(m => esc(m.students?.name || "") + "さん").join("・")}　${answers.text}${answers.needsAction ? ` <span class="urgent">要対応</span>` : ""}</li>`;
+      }).join("")}</ul></section>` : "";
+  $("pk-pending").innerHTML = `<section class="card">
+      <div class="card-head"><h2>承認待ちの予約</h2><span class="count">${pendingRows.length}件</span></div>${list}</section>${adjusting}`;
+  updatePickupHead();
 }
 // 打診の回答状況 { text: "承認2・待ち1", needsAction: 辞退か期限切れがある }
 function proposalSummary(g, proposals) {
@@ -166,26 +219,6 @@ $("pk-pending").addEventListener("click", ev => {
 function sameTimeGroup(r, groups) {
   return groups.find(g => g.pickup_date === r.pickup_date && g.status === "confirmed" && hhmm(g.approved_time) === hhmm(r.pickup_time));
 }
-function pendingRowHTML(r, groups, withDate = true, withCheck = false) {
-  const left = minutesUntil(r);
-  const urgent = left <= 60 ? `<span class="urgent">⚠ あと${Math.max(left, 0)}分</span>` : "";
-  const g = sameTimeGroup(r, groups);
-  const join = g ? `<br><small class="join">${hhmm(g.approved_time)} の便に相乗り（残り${seatsLeft(g)}席）</small>` : "";
-  return `<tr data-id="${r.id}"${cpSelected.has(r.id) ? ' class="selected"' : ""}>
-    ${withCheck ? `<td class="chk"><label class="chk-label"><input type="checkbox" class="cp-check" aria-label="${esc(nameOf(r))}を相乗り調整に選ぶ"${cpSelected.has(r.id) ? " checked" : ""}></label></td>` : ""}
-    ${withDate ? `<td>${fmtDay(r.pickup_date)}</td>` : ""}
-    <td><strong>${hhmm(r.pickup_time)}</strong> ${urgent}${join}</td>
-    <td><strong>${esc(nameOf(r))}</strong>${esc(gradeOf(r))}</td>
-    <td>${r.students?.phone ? `<a href="tel:${esc(r.students.phone)}">${esc(r.students.phone)}</a>` : ""}</td>
-    <td>${esc(r.notes)}</td>
-    <td><small>${new Date(r.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small></td>
-    <td class="actions">
-      <button type="button" class="btn small primary" data-act="approve"${g && seatsLeft(g) <= 0 ? " disabled title=\"同じ時刻の便が満席です\"" : ""}>承認</button>
-      <button type="button" class="btn small" data-act="approve-choose">時刻・便を選ぶ</button>
-      <button type="button" class="btn small danger" data-act="reject">却下</button>
-    </td></tr>`;
-}
-
 // 承認待ち・日ごとの予約で共通の操作
 function onReservationAction(ev, rows, groups) {
   const b = ev.target.closest("[data-act]"); if (!b) return;
@@ -277,66 +310,116 @@ async function adminCancel(r) {
 }
 
 // ---------- 日ごとの予約 ----------
-function shiftDay(n) { $("pk-date").value = addDays($("pk-date").value || todayJST(), n); guard(refreshDay); }
-$("pk-prev").onclick = () => shiftDay(-1);
-$("pk-next").onclick = () => shiftDay(1);
+// 週のストリップ：月曜はじまりの7日。‹ › で1週間ずつ動かす
+const weekStartOf = k => addDays(k, -((parseYMD(k).getDay() + 6) % 7));
+function shiftWeek(n) { $("pk-date").value = addDays($("pk-date").value || todayJST(), 7 * n); guard(refreshDay); }
+$("pk-prev").onclick = () => shiftWeek(-1);
+$("pk-next").onclick = () => shiftWeek(1);
 $("pk-today").onclick = () => { $("pk-date").value = todayJST(); guard(refreshDay); };
 $("pk-date").onchange = () => { if ($("pk-date").value) guard(refreshDay); };
+$("pk-week").addEventListener("click", ev => {
+  const b = ev.target.closest("[data-date]"); if (!b) return;
+  $("pk-date").value = b.dataset.date; guard(refreshDay);
+});
+
+function renderWeek(start, selectedDay, counts) {
+  const today = todayJST();
+  $("pk-week").innerHTML = Array.from({ length: 7 }, (_, i) => {
+    const k = addDays(start, i), dt = parseYMD(k), c = counts.get(k) || { approved: 0, pending: 0 };
+    const dots = [...Array(Math.min(c.approved, 3)).fill(""), ...Array(Math.min(c.pending, Math.max(0, 3 - c.approved))).fill("pending")];
+    const cls = ["day", k === selectedDay ? "selected" : "", k === today ? "today" : "", dt.getDay() === 0 ? "sun" : dt.getDay() === 6 ? "sat" : ""].filter(Boolean).join(" ");
+    const label = `${dt.getMonth() + 1}月${dt.getDate()}日（${DOW[dt.getDay()]}）　承認 ${c.approved}件・未承認 ${c.pending}件`;
+    return `<button type="button" class="${cls}" data-date="${k}" aria-pressed="${k === selectedDay}" aria-label="${label}">
+      <span class="dow">${DOW[dt.getDay()]}</span><span class="num">${dt.getDate()}</span>
+      <span class="dots">${dots.map(x => `<i class="${x}"></i>`).join("")}</span></button>`;
+  }).join("");
+}
 
 async function refreshDay() {
   const d = $("pk-date").value || todayJST();
-  const [res, grp] = await Promise.all([
+  $("pk-date").value = d;
+  const start = weekStartOf(d);
+  const [res, grp, wk] = await Promise.all([
     db.from("pickup_reservations").select(RES_SELECT).eq("pickup_date", d).order("pickup_time").order("created_at"),
     fetchGroups([d]),
+    // 週のストリップの点（1件＝1つ）に使う件数
+    db.from("pickup_reservations").select("pickup_date, status").gte("pickup_date", start).lte("pickup_date", addDays(start, 6)).in("status", ["pending", "approved"]),
   ]);
   dayRows = must(res); dayGroups = grp;
+  const counts = new Map();
+  must(wk).forEach(r => {
+    const c = counts.get(r.pickup_date) || { approved: 0, pending: 0 };
+    c[r.status === "approved" ? "approved" : "pending"]++;
+    counts.set(r.pickup_date, c);
+  });
   const pids = dayGroups.map(g => g.id);
   dayProposals = pids.length ? must(await db.from("pickup_proposals").select("*").in("group_id", pids)) : [];
   applyPending(await fetchPending());
+  renderWeek(start, d, counts);
+  updatePickupHead();
 
   const inGroup = id => dayRows.filter(r => r.group_id === id && (r.status === "approved" || r.status === "pending"));
   const waiting = dayRows.filter(r => r.status === "pending" && !r.group_id);
   const closed = dayRows.filter(r => r.status === "rejected" || r.status === "cancelled");
   const riders = dayGroups.reduce((n, g) => n + inGroup(g.id).length, 0);
-
+  const seats = dayGroups.reduce((n, g) => n + g.max_capacity, 0);
   const waitingIds = new Set(waiting.map(r => r.id));
   [...cpSelected].forEach(id => { if (!waitingIds.has(id)) cpSelected.delete(id); });   // 日付を変えたら選択は外す
 
+  // KPI
+  const kpis = `<div class="kpis">
+    <section class="card kpi"><span class="kpi-label">便</span>
+      <div class="kpi-bottom"><span class="kpi-value">${dayGroups.length}<small>本</small></span></div></section>
+    <section class="card kpi"><span class="kpi-label">乗車</span>
+      <div class="kpi-bottom"><span class="kpi-value">${riders}<small>名</small></span>${seats ? `<span class="kpi-foot">定員 ${seats}名中</span>` : ""}</div></section>
+    <section class="card kpi"><span class="kpi-label">未承認</span>
+      <div class="kpi-bottom"><span class="kpi-value">${waiting.length}<small>件</small></span>
+        ${waiting.length ? `<span class="kpi-foot warn">● 承認を待っています</span>` : `<span class="kpi-foot ok">✓ すべて処理済み</span>`}</div></section>
+  </div>`;
+
+  // 便
   const answerOf = r => { const p = dayProposals.find(x => x.reservation_id === r.id && x.group_id === r.group_id); return p ? effectiveResponse(p) : null; };
   const ANSWER = { waiting: "回答待ち", accepted: "✓ 変更してよい", declined: "✗ できない", expired: "期限切れ（未回答）" };
-  const groupsHTML = dayGroups.length ? dayGroups.map(g => {
+  const trips = dayGroups.length ? `<div class="trips">${dayGroups.map(g => {
     const members = inGroup(g.id);
     const summary = g.status === "proposing" ? proposalSummary({ ...g, pickup_reservations: members }, dayProposals.filter(p => p.group_id === g.id)) : null;
+    const pct = Math.min(100, Math.round(members.length / g.max_capacity * 100));
     return `<article class="trip ${g.status}" data-gid="${g.id}">
-      <header><strong class="trip-time">${hhmm(g.approved_time)} 発</strong><span class="muted">〜${tripEnd(g)}</span>
-        ${g.status === "proposing" ? pickupBadge("proposing") : pickupBadge("approved")}
-        <span class="spacer"></span><span class="seats">${members.length}/${g.max_capacity}名</span></header>
+      <div class="trip-top">
+        <span class="trip-time">${hhmm(g.approved_time)}</span>
+        <span class="trip-arrive">発 → ${tripEnd(g)} 着</span>
+        ${pickupBadge(g.status === "proposing" ? "proposing" : "approved")}
+        <div class="trip-load"><span>乗車 <strong>${members.length}/${g.max_capacity}</strong></span>
+          <span class="bar-track" role="img" aria-label="定員 ${g.max_capacity}名中 ${members.length}名"><span class="bar-fill" style="width:${pct}%"></span></span></div>
+      </div>
       ${summary ? `<p class="trip-note">相乗りの打診中：${summary.text}${summary.needsAction ? ` <span class="urgent">要対応</span>` : ""}</p>` : ""}
-      <ul>${members.map(r => `<li data-id="${r.id}">
-        <span><strong>${esc(nameOf(r))}</strong>${esc(gradeOf(r))}
-        ${hhmm(r.pickup_time) !== hhmm(g.approved_time) ? `<small class="muted">（希望 ${hhmm(r.pickup_time)}）</small>` : ""}
-        ${r.status === "pending" && answerOf(r) ? `<span class="answer ${answerOf(r)}">${ANSWER[answerOf(r)]}</span>` : ""}
-        ${r.students?.phone ? `<a href="tel:${esc(r.students.phone)}"><small>${esc(r.students.phone)}</small></a>` : ""}
-        ${r.notes ? `<br><small>📝 ${esc(r.notes)}</small>` : ""}</span>
-        <button type="button" class="btn small danger" data-act="cancel-res">取り消す</button></li>`).join("")}</ul>
+      <ul class="riders">${members.map(r => riderHTML(r, {
+        sub: `希望 ${hhmm(r.pickup_time)}`,
+        extra: r.status === "pending" && answerOf(r) ? ` <span class="answer ${answerOf(r)}">${ANSWER[answerOf(r)]}</span>` : "",
+        actions: `${callBtn(r)}<button type="button" class="btn small danger" data-act="cancel-res">取り消す</button>`,
+      })).join("")}</ul>
       ${g.status === "proposing" ? `<div class="trip-actions">
         <button type="button" class="btn small primary" data-gact="confirm_all" title="電話などで全員に確認できたとき">電話で確認済みとして確定</button>
         ${summary?.needsAction ? `<button type="button" class="btn small" data-gact="drop_declined">辞退・未回答の人を外す</button>` : ""}
         <button type="button" class="btn small danger" data-gact="cancel">調整をやめる</button></div>` : ""}
     </article>`;
-  }).join("") : `<p class="status">この日の便はまだありません。</p>`;
+  }).join("")}</div>` : `<p class="empty-note">この日の便はまだありません。<br>未承認の予約を承認すると、便ができます。</p>`;
 
-  $("pk-day-body").innerHTML = `
-    <p class="day-summary"><strong>${fmtDay(d)}</strong>　便 ${dayGroups.length}本・乗車 ${riders}名・未承認 ${waiting.length}件</p>
-    <h3>便</h3>${groupsHTML}
-    <h3>未承認</h3>${waiting.length ? `
-      <div class="selection-bar cp-bar"${cpSelected.size ? "" : " hidden"}><span class="count">選択中: <strong>${cpSelected.size}</strong>件</span>
+  // 未承認
+  const unapproved = waiting.length ? `
+      <div class="cp-bar"${cpSelected.size ? "" : " hidden"}><span class="count">選択中 <strong>${cpSelected.size}</strong>件</span>
         <button type="button" class="btn small primary" id="cp-open"${cpSelected.size >= 2 ? "" : " disabled"}>相乗り調整</button>
         <span class="hint" style="margin:0">2件以上選ぶと、共通の時刻を提案できます</span></div>
-      <div class="tablewrap"><table><thead><tr><th class="chk"><span class="vh">選択</span></th><th>希望時刻</th><th>生徒</th><th>電話番号</th><th>備考</th><th>受付</th><th>操作</th></tr></thead><tbody>${
-      waiting.map(r => pendingRowHTML(r, dayGroups, false, true)).join("")}</tbody></table></div>` : `<p class="status">未承認の予約はありません。</p>`}
-    ${closed.length ? `<details class="closed"><summary>却下・キャンセル（${closed.length}件）</summary><ul>${closed.map(r =>
-      `<li>${hhmm(r.pickup_time)}　${esc(nameOf(r))}　${pickupBadge(r.status)}${r.reject_reason ? `　<small>${esc(r.reject_reason)}</small>` : ""}</li>`).join("")}</ul></details>` : ""}`;
+      <ul class="riders">${waiting.map(r => pendingRiderHTML(r, dayGroups, true)).join("")}</ul>`
+    : emptyOk("未承認の予約はありません");
+  const closedHTML = closed.length ? `<details class="closed"><summary>却下・キャンセル（${closed.length}件）</summary><ul>${closed.map(r =>
+    `<li>${hhmm(r.pickup_time)}　${esc(nameOf(r))}　${pickupBadge(r.status)}${r.reject_reason ? `　<small>${esc(r.reject_reason)}</small>` : ""}</li>`).join("")}</ul></details>` : "";
+
+  $("pk-day-body").innerHTML = `${kpis}
+    <div class="lower">
+      <section class="card"><div class="card-head"><h2>便</h2><span class="count">${dayGroups.length}本</span></div>${trips}</section>
+      <section class="card"><div class="card-head"><h2>未承認</h2>${waiting.length ? `<span class="count">${waiting.length}件</span>` : ""}</div>${unapproved}${closedHTML}</section>
+    </div>`;
 }
 $("pk-day-body").addEventListener("click", ev => {
   if (ev.target.closest("#cp-open")) { openCarpoolDialog(); return; }
@@ -346,7 +429,7 @@ $("pk-day-body").addEventListener("click", ev => {
 });
 $("pk-day-body").addEventListener("change", ev => {
   if (!ev.target.classList.contains("cp-check")) return;
-  const id = ev.target.closest("tr").dataset.id;
+  const id = ev.target.closest("[data-id]").dataset.id;
   if (ev.target.checked) cpSelected.add(id); else cpSelected.delete(id);
   guard(refreshDay);
 });
@@ -588,7 +671,7 @@ function subscribeRealtime() {
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "pickup_proposals" }, p => guard(() => onProposalUpdate(p.new)))
     .subscribe(status => {
       const ok = status === "SUBSCRIBED";
-      state.textContent = ok ? "● リアルタイム受信中" : "○ 15秒ごとに確認中";
+      state.textContent = ok ? "リアルタイム受信中" : "15秒ごとに確認中";   // 丸い印は CSS で付ける
       state.classList.toggle("ok", ok);
     });
 }
