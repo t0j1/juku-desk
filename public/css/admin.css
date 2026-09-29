@@ -82,13 +82,14 @@ tr.selected td { background: #e3f2fd; }
 .chip-btn:hover { border-color: var(--accent); }
 
 .selection-bar {
-  position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  margin-bottom: 12px; padding: 10px 14px; border-radius: 16px;
-  background: var(--glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow);
+  position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; flex-wrap: wrap;
+  margin-bottom: 12px; padding: 1rem; gap: 1rem; border-radius: 16px;
+  background: #f5f5f5; border: 1px solid var(--border); box-shadow: var(--shadow);
 }
+.sel-all { display: flex; align-items: center; gap: 6px; font-weight: 700; cursor: pointer; min-height: 36px; }
 .selection-bar .count { font-weight: 700; margin-right: 6px; }
 
 #ev-bulk-dlg { width: min(520px, 94vw); }
-#ev-bulk-fields { display: grid; gap: 12px; }
-.bulk-field { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid rgba(75, 79, 179, .25); border-radius: 12px; background: rgba(255, 255, 255, .5); }
+#ev-bulk-fields { display: flex; flex-direction: column; gap: 12px; }
+.bulk-field { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid rgba(75, 79, 179, .25); border-radius: 12px; background: #f9f9f9; }
 .bulk-field input:disabled, .bulk-field select:disabled { opacity: .45; }

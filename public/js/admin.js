@@ -120,13 +120,23 @@ function updateSelectionUI() {
   $("sel-count").textContent = selected.size;
   $("ev-select-bar").hidden = selected.size === 0;
   const all = $("ev-check-all");
-  if (all) { all.checked = ids.length > 0 && n === ids.length; all.indeterminate = n > 0 && n < ids.length; }
+  for (const box of [all, $("sel-all")]) {
+    if (!box) continue;
+    box.checked = ids.length > 0 && n === ids.length;
+    box.indeterminate = n > 0 && n < ids.length;
+  }
   $("ev-list").querySelectorAll("tr[data-id]").forEach(tr => {
     const on = selected.has(tr.dataset.id);
     tr.classList.toggle("selected", on);
     tr.querySelector(".row-check").checked = on;
   });
 }
+
+function setAll(on) {
+  listRows().forEach((_, id) => (on ? selected.add(id) : selected.delete(id)));
+  updateSelectionUI();
+}
+$("sel-all").addEventListener("change", e => setAll(e.target.checked));
 
 function pickType(type) {
   const same = [...listRows().values()].filter(e => e.type === type).map(e => e.id);
@@ -139,10 +149,8 @@ function pickType(type) {
 
 $("ev-list").addEventListener("change", ev => {
   const t = ev.target;
-  if (t.id === "ev-check-all") {
-    listRows().forEach((_, id) => (t.checked ? selected.add(id) : selected.delete(id)));
-    updateSelectionUI();
-  } else if (t.classList.contains("row-check")) {
+  if (t.id === "ev-check-all") setAll(t.checked);
+  else if (t.classList.contains("row-check")) {
     const id = t.closest("tr").dataset.id;
     if (t.checked) selected.add(id); else selected.delete(id);
     updateSelectionUI();
@@ -206,7 +214,8 @@ function openBulkEditDialog() {
   const rows = selRows(); if (!rows.length) return;
   const kinds = [...new Set(rows.map(r => r.type))];
   if (kinds.length > 1) { toast(`種別が混在しているため一括編集できません（${kinds.join("、")}）。同じ種別だけを選んでください。`, true); return; }
-  $("bulk-summary").innerHTML = `${chipHTML({ type: kinds[0], title: kinds[0] }, typeMap)} <strong>${rows.length} 件</strong>を編集します。変更する項目にチェックを入れてください。`;
+  $("bulk-title").textContent = `『${kinds[0]}』の一括編集`;
+  $("bulk-summary").innerHTML = `${chipHTML({ type: kinds[0], title: kinds[0] }, typeMap)} <strong>${rows.length}件</strong>の予定を編集します。変更する項目にチェックを入れてください。`;
   $("b-start").value = commonValue(rows, r => hhmm(r.start_time));
   $("b-end").value = commonValue(rows, r => hhmm(r.end_time));
   $("b-title").value = commonValue(rows, r => r.title);
