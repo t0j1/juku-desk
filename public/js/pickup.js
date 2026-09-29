@@ -174,6 +174,7 @@ $("submit").onclick = async () => {
   try {
     await api("submit", { date: $("b-date").value, time: chosen, notes: $("b-notes").value.trim(), party_size: +$("b-size").value });
     $("confirm").hidden = true; $("done").hidden = false;
+    celebrateCat();   // 猫が出てくる（pickup-cat.js）
     $("done-note").textContent = DEV ? "承認されると、メールでお知らせします（開発中）。" : "承認されると、LINE でお知らせします。";
     await refreshMine();
   } catch (e) {
