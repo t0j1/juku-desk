@@ -23,6 +23,10 @@ jobs:
         with:
           node-version: 22
 
+      # 検証ロジック自体のテスト（壊したデータで検証が失敗することの確認）。失敗したら以降は実行しない
+      - name: Self-test verification
+        run: node --test scripts/backup.test.mjs
+
       # backup ブランチ用の作業ディレクトリを用意（main とは履歴の無い専用ブランチ）
       - name: Prepare backup branch
         run: |
@@ -35,7 +39,7 @@ jobs:
             git -C ../backup-wt rm -rf -q .
           fi
 
-      # 取得・検証に失敗すると、ここで止まる（何も書かれず、push もされない）
+      # 取得・検証（件数・CSV往復・形式・急減）に失敗すると、ここで止まる（既存のバックアップは無変更、push もされない）
       - name: Take backup
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

@@ -3,11 +3,15 @@
 // 使い方: node scripts/backup.mjs --out <保存先フォルダ> [--keep 12]
 // 環境変数: SUPABASE_URL, SUPABASE_ANON_KEY（service_role は使わない）
 //
-// 安全策: 取得・検証がすべて成功するまで、ファイルは1つも書かない／消さない。
-//         API エラーや 0 件のときは exit 1 で終了する（空のバックアップで正常なデータを消さない）。
+// 安全策:
+//  - まず一時フォルダに書き出し、読み直して検証する（件数・CSV往復・形式・急減チェック）。
+//  - 検証を通ったときだけ --out に移す。失敗時は --out に一切触れない（既存のバックアップは無傷）。
+//  - 検証の中身は scripts/backup-lib.mjs、テストは scripts/backup.test.mjs。
 
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildFiles, loadCommon, verifyBackup } from "./backup-lib.mjs";
 
 const PAGE = 1000;
 
@@ -27,13 +31,16 @@ function parseArgs(argv) {
   return a;
 }
 
+const api = (base, key, path, extra = {}) =>
+  fetch(`${base}/rest/v1/${path}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Range-Unit": "items", ...extra },
+    signal: AbortSignal.timeout(30_000),
+  });
+
 async function fetchAll(base, key, table, select, order) {
   const rows = [];
   for (let from = 0; ; from += PAGE) {
-    const res = await fetch(`${base}/rest/v1/${table}?select=${select}&order=${order}`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}`, "Range-Unit": "items", Range: `${from}-${from + PAGE - 1}` },
-      signal: AbortSignal.timeout(30_000),
-    });
+    const res = await api(base, key, `${table}?select=${select}&order=${order}`, { Range: `${from}-${from + PAGE - 1}` });
     if (!res.ok) fail(`${table} の取得に失敗しました（HTTP ${res.status}）: ${(await res.text()).slice(0, 200)}`);
     const data = await res.json();
     if (!Array.isArray(data)) fail(`${table} の応答が配列ではありません。`);
@@ -42,51 +49,83 @@ async function fetchAll(base, key, table, select, order) {
   }
 }
 
-const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-const toCSV = rows => "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n") + "\r\n";
-const hhmm = t => (t ? String(t).slice(0, 5) : "");
+// DB 側の総件数（別クエリ）。取得件数との突き合わせ用
+async function countRows(base, key, table) {
+  const res = await api(base, key, `${table}?select=*`, { Range: "0-0", Prefer: "count=exact" });
+  if (!res.ok) fail(`${table} の件数取得に失敗しました（HTTP ${res.status}）`);
+  const m = (res.headers.get("content-range") || "").match(/\/(\d+)$/);
+  if (!m) fail(`${table} の総件数を取得できませんでした（Content-Range なし）。`);
+  return Number(m[1]);
+}
+
 const jstDate = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+const datesIn = names => [...new Set(names.map(f => f.match(/^backup-(\d{4}-\d{2}-\d{2})\./)?.[1]).filter(Boolean))].sort();
+
+// 直前のバックアップ（今日の日付以外で最新のもの）の件数
+async function previousCounts(out, today) {
+  let names;
+  try { names = await readdir(out); } catch { return null; }
+  const prevDate = datesIn(names).filter(d => d < today).pop();
+  if (!prevDate) return null;
+  try {
+    const c = JSON.parse(await readFile(join(out, `backup-${prevDate}.json`), "utf8")).counts;
+    if (!Number.isInteger(c?.events) || !Number.isInteger(c?.event_types)) throw new Error("counts なし");
+    return { events: c.events, event_types: c.event_types };
+  } catch (e) {
+    console.log(`::warning::直前のバックアップ（${prevDate}）の件数を読めないため、急減チェックを省略します: ${e.message}`);
+    return null;
+  }
+}
 
 async function main() {
   const { out, keep } = parseArgs(process.argv.slice(2));
   const key = process.env.SUPABASE_ANON_KEY;
-  let base = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const base = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
   if (!base || !key) fail("SUPABASE_URL と SUPABASE_ANON_KEY を設定してください。");
   if (/\/rest\/v1$/.test(base)) fail("SUPABASE_URL は Project URL のみ（末尾に /rest/v1 を付けない）にしてください。");
 
-  // 1. 取得と検証（ここまでは何も書かない）
+  // 1. 取得
   const events = await fetchAll(base, key, "events",
     "id,event_date,type,title,start_time,end_time,note,is_published",
     "event_date.asc,start_time.asc.nullsfirst,id.asc");
   const types = await fetchAll(base, key, "event_types", "name,color,sort_order", "sort_order.asc,name.asc");
-  if (events.length === 0) fail("events が 0 件でした。空のバックアップは保存しません。");
-  if (types.length === 0) fail("event_types が 0 件でした。空のバックアップは保存しません。");
+  const dbCounts = { events: await countRows(base, key, "events"), event_types: await countRows(base, key, "event_types") };
 
-  // 2. 保存
-  const date = jstDate();
-  const stem = join(out, `backup-${date}`);
-  await mkdir(out, { recursive: true });
-  await writeFile(`${stem}.csv`, toCSV([
-    ["日付", "種別", "内容", "開始時刻", "終了時刻", "備考", "公開"],
-    ...events.map(e => [e.event_date, e.type, e.title, hhmm(e.start_time), hhmm(e.end_time), e.note, e.is_published ? "公開" : "下書き"]),
-  ]));
-  await writeFile(`${stem}.event_types.csv`, toCSV([
-    ["種別", "色", "並び順"], ...types.map(t => [t.name, t.color, t.sort_order]),
-  ]));
-  await writeFile(`${stem}.json`, JSON.stringify({
-    taken_at: new Date().toISOString(),
-    note: "anon キーで読める公開分のみ（下書きは含まれません）",
-    counts: { events: events.length, event_types: types.length },
-    event_types: types,
-    events,
-  }, null, 2) + "\n");
-  console.log(`backup-${date}: events=${events.length}, event_types=${types.length}`);
+  // 2. 一時フォルダに書き出し → 読み直して検証（--out には触れない）
+  const date = jstDate(), stem = `backup-${date}`;
+  const files = buildFiles(events, types, new Date().toISOString());
+  const stage = await mkdtemp(join(tmpdir(), "sekigaku-backup-"));
+  try {
+    await writeFile(join(stage, `${stem}.csv`), files.csv);
+    await writeFile(join(stage, `${stem}.event_types.csv`), files.typesCsv);
+    await writeFile(join(stage, `${stem}.json`), files.json);
+    const read = n => readFile(join(stage, n), "utf8");
+    const errors = verifyBackup({
+      events, types, dbCounts,
+      csv: await read(`${stem}.csv`), typesCsv: await read(`${stem}.event_types.csv`), json: await read(`${stem}.json`),
+      prev: await previousCounts(out, date),
+      common: loadCommon(),
+    });
+    if (errors.length) {
+      errors.forEach(e => console.error(`::error::検証エラー ${e}`));
+      console.error(`::error::検証に失敗しました（${errors.length} 件）。既存のバックアップは変更していません。`);
+      await rm(stage, { recursive: true, force: true });
+      process.exit(1);
+    }
 
-  // 3. 古いバックアップを削除（日付単位で直近 keep 回分を残す）
-  const dates = [...new Set((await readdir(out)).map(f => f.match(/^backup-(\d{4}-\d{2}-\d{2})\./)?.[1]).filter(Boolean))].sort().reverse();
-  for (const d of dates.slice(keep)) {
-    for (const f of await readdir(out)) if (f.startsWith(`backup-${d}.`)) await rm(join(out, f));
-    console.log(`removed old backup: ${d}`);
+    // 3. 検証を通ったので、本番の保存先へ移す
+    await mkdir(out, { recursive: true });
+    for (const n of [`${stem}.csv`, `${stem}.event_types.csv`, `${stem}.json`]) await copyFile(join(stage, n), join(out, n));
+    console.log(`${stem}: events=${events.length}, event_types=${types.length}（検証OK）`);
+
+    // 4. 古いバックアップを削除（日付単位で直近 keep 回分を残す）
+    const names = await readdir(out);
+    for (const d of datesIn(names).reverse().slice(keep)) {
+      for (const f of names) if (f.startsWith(`backup-${d}.`)) await rm(join(out, f));
+      console.log(`removed old backup: ${d}`);
+    }
+  } finally {
+    await rm(stage, { recursive: true, force: true });
   }
 }
 
