@@ -33,6 +33,12 @@ scripts/backup.mjs      自動バックアップ本体（検証つき）／backu
 2. `supabase/schema.sql` の中身をすべて貼り付けて **Run**。
 3. エラーが出なければ完了です（何度実行しても壊れません）。
 
+### 2-b. 送迎予約を使う場合：`pickup.sql` を実行する
+1. SQL Editor で `supabase/pickup.sql` の中身をすべて貼り付けて **Run**（`schema.sql` のあとに。何度実行しても壊れません）。
+2. 期限切れの予約を自動で「却下（期限切れ）」にするため、pg_cron を使います。
+   実行結果に「pg_cron の登録に失敗しました」と出た場合は、**Integrations → Cron** で有効にしてから、もう一度実行してください。
+3. 設計は `docs/pickup-plan.md`、DB のテストは `npm i --no-save @electric-sql/pglite && node scripts/pickup-db.test.mjs` です。
+
 ### 3. 管理者ユーザーを作る
 1. **Authentication → Users → Add user → Create new user**。
 2. 自分のメールアドレスと強いパスワードを入力し、**「Auto Confirm User」にチェック**して作成。

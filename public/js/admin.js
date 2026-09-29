@@ -432,6 +432,17 @@ $("csv-import").onclick = () => guard(async () => {
 // ---------- 変更履歴 ----------
 const KEYS = { event_date: "日付", type: "種別", title: "内容", start_time: "開始", end_time: "終了", note: "備考", is_published: "公開", color: "色", sort_order: "並び順" };
 const OPS = { INSERT: "追加", UPDATE: "変更", DELETE: "削除" };
+const LOG_LABEL = {
+  events: d => `予定 ${d.event_date} ${d.type} ${d.title}`,
+  event_types: d => `種別「${d.name}」`,
+  students: d => `生徒「${d.name}」`,
+  student_contacts: d => `LINE連携「${d.display_name || d.email || ""}」`,
+  pickup_settings: () => "送迎の設定",
+  pickup_availability: d => `送迎時間帯 ${DOW[d.day_of_week]} ${hhmm(d.start_time)}–${hhmm(d.end_time)}`,
+  pickup_reservations: d => `送迎予約 ${d.pickup_date} ${hhmm(d.pickup_time)}`,
+  pickup_groups: d => `送迎の便 ${d.pickup_date} ${hhmm(d.approved_time)}`,
+  pickup_proposals: d => `相乗りの打診 ${hhmm(d.proposed_time)}`,
+};
 const show = v => (v === null || v === undefined || v === "" ? "（なし）" : v === true ? "公開" : v === false ? "下書き" : String(v));
 
 async function refreshLog() {
@@ -439,7 +450,7 @@ async function refreshLog() {
   if (!data.length) { $("log-list").innerHTML = `<p class="status">履歴はまだありません。</p>`; return; }
   $("log-list").innerHTML = data.map(l => {
     const d = l.new_data || l.old_data || {};
-    const what = l.table_name === "events" ? `予定 ${d.event_date} ${d.type} ${d.title}` : `種別「${d.name}」`;
+    const what = (LOG_LABEL[l.table_name] || (() => l.table_name))(d);
     let detail = "";
     if (l.op === "UPDATE") {
       detail = Object.keys(l.new_data).filter(k => k !== "updated_at" && JSON.stringify(l.new_data[k]) !== JSON.stringify(l.old_data[k]))
