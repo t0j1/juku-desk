@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=3">
-<link rel="stylesheet" href="css/admin.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/admin.css?v=4">
 </head>
 <body>
 <div class="wrap">
@@ -50,6 +50,13 @@
         <button class="btn small" id="ev-next" type="button">次月 ›</button>
         <span class="spacer"></span>
         <button class="btn primary" id="ev-add" type="button">＋ 予定を追加</button>
+      </div>
+      <div id="ev-select-bar" class="selection-bar" role="region" aria-label="選択中の予定の操作" hidden>
+        <span class="count">選択中: <strong id="sel-count">0</strong>件</span>
+        <button class="btn small" id="bulk-edit" type="button">一括編集</button>
+        <button class="btn small" id="bulk-toggle" type="button">公開/下書き切り替え</button>
+        <button class="btn small danger" id="bulk-delete" type="button">一括削除</button>
+        <button class="btn small" id="sel-clear" type="button">選択解除</button>
       </div>
       <div id="ev-list" class="tablewrap"></div>
     </section>
@@ -136,6 +143,27 @@
   </div>
 </div>
 
+<!-- 一括編集 -->
+<dialog id="ev-bulk-dlg">
+  <form id="ev-bulk-form" class="form" method="dialog">
+    <h3>一括編集</h3>
+    <p id="bulk-summary" class="hint"></p>
+    <div id="ev-bulk-fields">
+      <div class="bulk-field"><label class="check"><input type="checkbox" id="b-start-on"> 開始時刻を変更する</label><input type="time" id="b-start" disabled></div>
+      <div class="bulk-field"><label class="check"><input type="checkbox" id="b-end-on"> 終了時刻を変更する</label><input type="time" id="b-end" disabled></div>
+      <div class="bulk-field"><label class="check"><input type="checkbox" id="b-title-on"> 内容を変更する</label><input type="text" id="b-title" placeholder="空欄にすると種別名になります" disabled></div>
+      <div class="bulk-field"><label class="check"><input type="checkbox" id="b-note-on"> 備考を変更する</label><input type="text" id="b-note" placeholder="空欄にすると備考を消します" disabled></div>
+      <div class="bulk-field"><label class="check"><input type="checkbox" id="b-pub-on"> 公開状態を変更する</label>
+        <select id="b-pub" disabled><option value="1">公開</option><option value="0">下書き</option></select></div>
+    </div>
+    <p class="hint">チェックを入れた項目だけが反映されます。時刻を空欄にすると時刻を消します。</p>
+    <div class="cols">
+      <button class="btn" id="bulk-cancel" type="button">キャンセル</button>
+      <button class="btn primary" type="submit">更新する</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- 予定の追加・編集 -->
 <dialog id="ev-dlg">
   <form id="ev-form" class="form" method="dialog">
@@ -157,8 +185,8 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js?v=3"></script>
-<script src="js/common.js?v=3"></script>
-<script src="js/admin.js?v=3"></script>
+<script src="js/config.js?v=4"></script>
+<script src="js/common.js?v=4"></script>
+<script src="js/admin.js?v=4"></script>
 </body>
 </html>

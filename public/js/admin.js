@@ -79,29 +79,82 @@ document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
 });
 
 // ---------- 予定の一覧・編集 ----------
+const selected = new Set();     // 選択中の予定 id
+let shownMonth = null;          // いま一覧に出している月（月が変わったら選択をクリア）
+const listRows = () => $("ev-list")._rows || new Map();
+const selRows = () => [...selected].map(id => listRows().get(id)).filter(Boolean);
+
 async function refreshEvents() {
   const [y, m] = $("ev-month").value.split("-").map(Number);
   cur = { y, m: m - 1 };
   const data = must(await db.from("events").select("*")
     .gte("event_date", monthStart(cur.y, cur.m)).lte("event_date", monthEnd(cur.y, cur.m))
     .order("event_date").order("start_time", { ascending: true, nullsFirst: true }));
-  if (!data.length) { $("ev-list").innerHTML = `<p class="status">この月の予定はありません。</p>`; return; }
-  $("ev-list").innerHTML = `<table><thead><tr><th>日付</th><th>種別</th><th>内容</th><th>時間</th><th>状態</th><th>操作</th></tr></thead><tbody>${
+  const rows = new Map(data.map(e => [e.id, e]));
+  $("ev-list")._rows = rows;
+  // 月を切り替えたら選択をクリア。同じ月の再読み込みなら、残っている予定の選択だけ引き継ぐ
+  const month = `${y}-${m}`;
+  if (month !== shownMonth) selected.clear();
+  else [...selected].forEach(id => { if (!rows.has(id)) selected.delete(id); });
+  shownMonth = month;
+
+  if (!data.length) { $("ev-list").innerHTML = `<p class="status">この月の予定はありません。</p>`; updateSelectionUI(); return; }
+  $("ev-list").innerHTML = `<table><thead><tr>
+    <th class="chk"><label class="chk-label" title="全て選択"><input type="checkbox" id="ev-check-all"><span class="vh">全て選択</span></label></th>
+    <th>日付</th><th>種別</th><th>内容</th><th>時間</th><th>状態</th><th>操作</th></tr></thead><tbody>${
     data.map(e => `<tr class="${e.is_published ? "" : "draft"}" data-id="${e.id}">
+      <td class="chk"><label class="chk-label"><input type="checkbox" class="row-check" aria-label="${esc(fmtDate(e.event_date))} ${esc(e.type)} ${esc(e.title)} を選択"></label></td>
       <td>${fmtDate(e.event_date)}</td>
-      <td>${chipHTML({ type: e.type, title: e.type }, typeMap)}</td>
+      <td><button type="button" class="chip-btn" data-act="pick-type" title="同じ種別の予定をすべて選択">${chipHTML({ type: e.type, title: e.type }, typeMap)}</button></td>
       <td>${esc(e.title)}${e.note ? `<br><small>📝 ${esc(e.note)}</small>` : ""}</td>
       <td>${timeText(e)}</td>
       <td><button type="button" class="state ${e.is_published ? "pub" : "draft"}" data-act="toggle" title="クリックで切り替え">${e.is_published ? "● 公開中" : "○ 下書き"}</button></td>
       <td class="actions"><button type="button" class="btn small" data-act="edit">編集</button><button type="button" class="btn small danger" data-act="del">削除</button></td></tr>`).join("")}</tbody></table>`;
-  $("ev-list")._rows = new Map(data.map(e => [e.id, e]));
+  updateSelectionUI();
 }
+
+// 選択状態を画面に反映（件数・ツールバー・行のハイライト・全選択チェックの checked/indeterminate）
+function updateSelectionUI() {
+  const ids = [...listRows().keys()];
+  const n = ids.filter(id => selected.has(id)).length;
+  $("sel-count").textContent = selected.size;
+  $("ev-select-bar").hidden = selected.size === 0;
+  const all = $("ev-check-all");
+  if (all) { all.checked = ids.length > 0 && n === ids.length; all.indeterminate = n > 0 && n < ids.length; }
+  $("ev-list").querySelectorAll("tr[data-id]").forEach(tr => {
+    const on = selected.has(tr.dataset.id);
+    tr.classList.toggle("selected", on);
+    tr.querySelector(".row-check").checked = on;
+  });
+}
+
+function pickType(type) {
+  const same = [...listRows().values()].filter(e => e.type === type).map(e => e.id);
+  const already = same.length === selected.size && same.every(id => selected.has(id));
+  selected.clear();
+  if (!already) same.forEach(id => selected.add(id));     // もう一度押すと解除
+  updateSelectionUI();
+  toast(already ? "選択を解除しました" : `この月の「${type}」${same.length} 件を選択しました`);
+}
+
+$("ev-list").addEventListener("change", ev => {
+  const t = ev.target;
+  if (t.id === "ev-check-all") {
+    listRows().forEach((_, id) => (t.checked ? selected.add(id) : selected.delete(id)));
+    updateSelectionUI();
+  } else if (t.classList.contains("row-check")) {
+    const id = t.closest("tr").dataset.id;
+    if (t.checked) selected.add(id); else selected.delete(id);
+    updateSelectionUI();
+  }
+});
 
 $("ev-list").addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]"); if (!b) return;
-  const id = b.closest("tr").dataset.id, e = $("ev-list")._rows.get(id);
+  const id = b.closest("tr").dataset.id, e = listRows().get(id);
   guard(async () => {
-    if (b.dataset.act === "edit") openForm(e);
+    if (b.dataset.act === "pick-type") pickType(e.type);
+    else if (b.dataset.act === "edit") openForm(e);
     else if (b.dataset.act === "toggle") {
       must(await db.from("events").update({ is_published: !e.is_published }).eq("id", id).select());
       toast(e.is_published ? "下書きに戻しました" : "公開しました");
@@ -111,6 +164,88 @@ $("ev-list").addEventListener("click", ev => {
       must(await db.from("events").delete().eq("id", id).select());
       toast("削除しました"); await refreshEvents();
     }
+  });
+});
+
+// ---------- 選択した予定の一括操作 ----------
+const chunksOf = (a, n = 100) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
+// ids を分割して fn を実行し、処理された件数の合計を返す（RLS などで 0 件になったときに気づけるように件数を見る）
+async function inChunks(ids, fn) {
+  let total = 0;
+  for (const c of chunksOf(ids)) total += must(await fn(c)).length;
+  if (total !== ids.length) throw new Error(`${ids.length} 件中 ${total} 件のみ処理されました。一覧を更新して確認してください。`);
+  return total;
+}
+const summary = rows => rows.slice(0, 5).map(e => `・${fmtDate(e.event_date)} ${e.type} ${e.title}`).join("\n") + (rows.length > 5 ? `\n…ほか ${rows.length - 5} 件` : "");
+
+$("sel-clear").onclick = () => { selected.clear(); updateSelectionUI(); };
+
+// 公開/下書き: 下書きが1件でも混じっていれば全部「公開」、全部公開なら全部「下書き」に揃える
+$("bulk-toggle").onclick = () => guard(async () => {
+  const rows = selRows(); if (!rows.length) return;
+  const target = rows.some(r => !r.is_published);
+  const changing = rows.filter(r => r.is_published !== target);
+  const label = target ? "公開" : "下書き";
+  if (!confirm(`選択中の ${rows.length} 件のうち ${changing.length} 件を「${label}」に変更します。\n\n${summary(changing)}\n\nよろしいですか？`)) return;
+  const n = await inChunks(changing.map(r => r.id), c => db.from("events").update({ is_published: target }).in("id", c).select("id"));
+  selected.clear(); toast(`${n} 件を${label}にしました`); await refreshEvents();
+});
+
+$("bulk-delete").onclick = () => guard(async () => {
+  const rows = selRows(); if (!rows.length) return;
+  if (!confirm(`選択中の ${rows.length} 件を削除します。元に戻せません（変更履歴には残ります）。\n\n${summary(rows)}\n\nよろしいですか？`)) return;
+  const n = await inChunks(rows.map(r => r.id), c => db.from("events").delete().in("id", c).select("id"));
+  selected.clear(); toast(`${n} 件を削除しました`); await refreshEvents();
+});
+
+// 一括編集ダイアログ（同じ種別だけ。項目ごとのチェックを入れたものだけ反映）
+const BULK_IDS = ["b-start", "b-end", "b-title", "b-note", "b-pub"];
+const commonValue = (rows, f) => (new Set(rows.map(f)).size === 1 ? f(rows[0]) : "");
+
+function openBulkEditDialog() {
+  const rows = selRows(); if (!rows.length) return;
+  const kinds = [...new Set(rows.map(r => r.type))];
+  if (kinds.length > 1) { toast(`種別が混在しているため一括編集できません（${kinds.join("、")}）。同じ種別だけを選んでください。`, true); return; }
+  $("bulk-summary").innerHTML = `${chipHTML({ type: kinds[0], title: kinds[0] }, typeMap)} <strong>${rows.length} 件</strong>を編集します。変更する項目にチェックを入れてください。`;
+  $("b-start").value = commonValue(rows, r => hhmm(r.start_time));
+  $("b-end").value = commonValue(rows, r => hhmm(r.end_time));
+  $("b-title").value = commonValue(rows, r => r.title);
+  $("b-note").value = commonValue(rows, r => r.note);
+  $("b-pub").value = rows.every(r => !r.is_published) ? "0" : "1";
+  BULK_IDS.forEach(id => { $(id + "-on").checked = false; $(id).disabled = true; });
+  $("ev-bulk-dlg").showModal();
+}
+$("bulk-edit").onclick = openBulkEditDialog;
+$("bulk-cancel").onclick = () => $("ev-bulk-dlg").close();
+$("ev-bulk-fields").addEventListener("change", e => {
+  if (e.target.type === "checkbox") $(e.target.id.replace(/-on$/, "")).disabled = !e.target.checked;
+});
+
+$("ev-bulk-form").addEventListener("submit", e => {
+  e.preventDefault();
+  guard(async () => {
+    const rows = selRows();
+    const kinds = [...new Set(rows.map(r => r.type))];
+    if (!rows.length) throw new Error("選択中の予定がありません。");
+    if (kinds.length > 1) throw new Error(`種別が混在しているため一括編集できません（${kinds.join("、")}）。`);
+    const payload = {}, lines = [];
+    if ($("b-start-on").checked) { payload.start_time = nullIf($("b-start").value); lines.push(`開始時刻: ${$("b-start").value || "（なし）"}`); }
+    if ($("b-end-on").checked) { payload.end_time = nullIf($("b-end").value); lines.push(`終了時刻: ${$("b-end").value || "（なし）"}`); }
+    if ($("b-title-on").checked) { payload.title = $("b-title").value.trim() || kinds[0]; lines.push(`内容: ${payload.title}`); }
+    if ($("b-note-on").checked) { payload.note = $("b-note").value.trim(); lines.push(`備考: ${payload.note || "（なし）"}`); }
+    if ($("b-pub-on").checked) { payload.is_published = $("b-pub").value === "1"; lines.push(`状態: ${payload.is_published ? "公開" : "下書き"}`); }
+    if (!lines.length) throw new Error("変更する項目にチェックを入れてください。");
+    // 反映後に「終了 < 開始」になる予定があれば、更新前に止める
+    const bad = rows.filter(r => {
+      const s = "start_time" in payload ? payload.start_time : hhmm(r.start_time) || null;
+      const en = "end_time" in payload ? payload.end_time : hhmm(r.end_time) || null;
+      return s && en && en < s;
+    });
+    if (bad.length) throw new Error(`終了時刻が開始時刻より前になる予定が ${bad.length} 件あります（例: ${fmtDate(bad[0].event_date)}）。`);
+    if (!confirm(`選択した ${rows.length} 件（${kinds[0]}）を、次のとおり更新します。\n\n${lines.map(l => "・" + l).join("\n")}\n\n対象:\n${summary(rows)}\n\nよろしいですか？`)) return;
+    const n = await inChunks(rows.map(r => r.id), c => db.from("events").update(payload).in("id", c).select("id"));
+    $("ev-bulk-dlg").close(); selected.clear();
+    toast(`${n} 件を更新しました`); await refreshEvents();
   });
 });
 

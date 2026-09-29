@@ -73,3 +73,22 @@ tr.draft td { background: rgba(255, 255, 255, .35); }
 #csv-msg { white-space: pre-line; }
 
 .badge { font-size: .75rem; font-weight: 700; color: #1d6b3a; border: 1px solid #1d6b3a; background: #fff; border-radius: 999px; padding: 2px 10px; }
+
+/* ---- 複数選択・一括操作 ---- */
+th.chk, td.chk { width: 44px; padding: 0; text-align: center; }
+.chk-label { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+tr.selected td { background: #e3f2fd; }
+.chip-btn { font: inherit; text-align: left; max-width: 100%; padding: 2px; margin: -2px; background: none; border: 2px solid transparent; border-radius: 8px; cursor: pointer; }
+.chip-btn:hover { border-color: var(--accent); }
+
+.selection-bar {
+  position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 12px; padding: 10px 14px; border-radius: 16px;
+  background: var(--glass-strong); border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.selection-bar .count { font-weight: 700; margin-right: 6px; }
+
+#ev-bulk-dlg { width: min(520px, 94vw); }
+#ev-bulk-fields { display: grid; gap: 12px; }
+.bulk-field { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid rgba(75, 79, 179, .25); border-radius: 12px; background: rgba(255, 255, 255, .5); }
+.bulk-field input:disabled, .bulk-field select:disabled { opacity: .45; }
