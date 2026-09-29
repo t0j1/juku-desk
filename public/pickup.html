@@ -4,19 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>碩学館 送迎予約</title>
+<title>碩学館 生徒ページ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=6">
 <link rel="stylesheet" href="css/admin.css?v=6">  <!-- フォーム・ボタンの共通スタイル -->
-<link rel="stylesheet" href="css/pickup.css?v=2">
+<link rel="stylesheet" href="css/pickup.css?v=3">
 </head>
 <body>
 <div class="wrap pickup">
   <header>
-    <h1>碩学館 送迎予約</h1>
-    <p>乗車場所：<strong id="place">勝瑞駅</strong>（勝瑞駅 → 碩学館）</p>
+    <h1>碩学館 生徒ページ</h1>
+    <p>送迎の予約・欠席の連絡・振替の申請</p>
   </header>
 
   <div id="status" class="status" role="status" hidden></div>
@@ -47,9 +47,16 @@
     <p class="who"><span id="who-name"></span>
       <button class="btn small dev-only" type="button" data-act="change-mail" hidden>メールアドレスを変える</button></p>
 
+    <nav class="page-tabs" aria-label="ページの切り替え">
+      <button type="button" data-page="pickup" class="active" aria-pressed="true">🚗 送迎</button>
+      <button type="button" data-page="absence" aria-pressed="false">📝 欠席・振替</button>
+    </nav>
+
+    <div id="page-pickup">
     <!-- 予約 -->
     <section class="glass" id="book">
       <h2>送迎を予約する</h2>
+      <p class="hint">乗車場所：<strong id="place">勝瑞駅</strong>（勝瑞駅 → 碩学館）</p>
 
       <form id="book-form" class="form">
         <label>日付<input id="b-date" type="date" required></label>
@@ -91,14 +98,45 @@
       <div class="bar"><h2 style="margin:0">自分の予約</h2><span class="spacer"></span><button class="btn small" type="button" id="mine-refresh">更新</button></div>
       <div id="mine-list"></div>
     </section>
+    </div>
+
+    <!-- 欠席・振替 -->
+    <div id="page-absence" hidden>
+      <p id="ab-msg" class="status" role="status" hidden></p>
+
+      <section class="glass" id="ab-stock">
+        <div class="bar"><h2 style="margin:0">振替ストック</h2><span class="spacer"></span><button class="btn small" type="button" id="ab-refresh">更新</button></div>
+        <p class="stock-count">使えるストック <strong id="ab-count">–</strong> 回</p>
+        <p class="hint">授業を休む連絡をすると、ストックが1つ増えます（授業の開始時刻まで）。ストックは、欠席した日から3か月以内の、ほかの学年の授業で使えます。</p>
+        <ul id="ab-credits" class="ab-list"></ul>
+      </section>
+
+      <section class="glass" id="ab-classes">
+        <h2>欠席の連絡</h2>
+        <p class="hint">自分の学年の授業です。休む授業の「休む」を押してください。授業の開始時刻を過ぎると連絡できません（直接ご連絡ください）。</p>
+        <ul id="ab-class-list" class="ab-list"></ul>
+      </section>
+
+      <section class="glass" id="ab-makeup">
+        <h2>振替の申請</h2>
+        <p class="hint">ほかの学年の授業に、ストックを使って振替を申請できます。管理者が承認すると、その授業に出席できます。</p>
+        <ul id="ab-options" class="ab-list"></ul>
+      </section>
+
+      <section class="glass" id="ab-requests">
+        <h2>振替の申請状況</h2>
+        <ul id="ab-request-list" class="ab-list"></ul>
+      </section>
+    </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js?v=6"></script>
 <script src="js/common.js?v=6"></script>
-<script src="js/pickup-common.js?v=1"></script>
-<script src="js/pickup-cat.js?v=1"></script>
-<script src="js/pickup.js?v=4"></script>
+<script src="js/pickup-common.js?v=2"></script>
+<script src="js/pickup-cat.js?v=2"></script>
+<script src="js/pickup.js?v=5"></script>
+<script src="js/absence.js?v=1"></script>
 </body>
 </html>

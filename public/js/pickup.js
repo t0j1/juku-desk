@@ -76,6 +76,7 @@ async function whoAmI() {
     show("sec-main");
     resetBooking();
     await refreshMine();
+    if (location.hash === "#absence" && typeof showPage === "function") showPage("absence");   // absence.js
   } catch (e) {
     setStatus(e.message, true);
   }

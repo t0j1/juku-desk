@@ -38,7 +38,7 @@ const CAT_SVG = `
 
 const PAW_SVG = `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="26" rx="10" ry="8"/><circle cx="9" cy="15" r="4.5"/><circle cx="17" cy="9" r="4.5"/><circle cx="27" cy="10" r="4.5"/><circle cx="33" cy="17" r="4.5"/></svg>`;
 
-function celebrateCat() {
+function celebrateCat(text = "にゃ！予約できたよ") {
   const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   if (reduce) {
     // 動かさずに、完了メッセージの横に小さな猫だけ
@@ -54,7 +54,7 @@ function celebrateCat() {
     const left = 8 + i * 13 + Math.random() * 6, delay = 0.5 + Math.random() * 0.9, size = 22 + Math.random() * 14;
     return `<span class="cat-pawprint" style="left:${left}%;--d:${delay.toFixed(2)}s;--s:${size.toFixed(0)}px;--r:${(Math.random() * 60 - 30).toFixed(0)}deg">${PAW_SVG}</span>`;
   }).join("");
-  stage.innerHTML = `${paws}<div class="cat-pop"><div class="cat-bubble">にゃ！予約できたよ</div>${CAT_SVG}</div>`;
+  stage.innerHTML = `${paws}<div class="cat-pop"><div class="cat-bubble">${esc(text)}</div>${CAT_SVG}</div>`;
   document.body.appendChild(stage);
   setTimeout(() => stage.remove(), 3400);
 }

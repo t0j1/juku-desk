@@ -73,3 +73,22 @@
 /* 視差効果を減らす設定のとき：完了メッセージの横の小さな猫（動かない） */
 .done-cat { display: inline-block; width: 44px; margin-right: 8px; vertical-align: middle; }
 .done-cat .cat-paw, .done-cat .cat-tail { animation: none; }
+
+/* ---- 生徒ページのタブ（送迎 / 欠席・振替） ---- */
+.page-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 14px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .7); border: 1px solid var(--border); }
+.page-tabs button { font: inherit; font-weight: 700; min-height: 44px; border: 0; border-radius: 999px; background: none; color: var(--accent); cursor: pointer; }
+.page-tabs button.active { background: var(--accent); color: #fff; }
+
+/* ---- 欠席・振替 ---- */
+.stock-count { margin: 4px 0 8px; font-weight: 700; }
+.stock-count strong { font-size: 2rem; margin: 0 4px; color: var(--accent); }
+.ab-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ab-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .75); border: 1px solid var(--border); }
+.ab-item.is-absent { background: #fff8e6; }
+.ab-sub { font-size: .85rem; color: var(--muted); }
+.ab-sub.ok { color: #1d6b3a; font-weight: 700; }
+.ab-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.ab-form { grid-column: 1 / -1; display: grid; gap: 8px; }
+.ab-form label { display: grid; gap: 4px; font-weight: 700; font-size: .9rem; }
+.ab-empty { padding: 10px 4px; color: var(--muted); }
+#ab-msg:not(.error) { color: #1d6b3a; background: rgba(230, 246, 236, .9); border-radius: 12px; }

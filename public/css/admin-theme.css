@@ -342,3 +342,15 @@ body.admin-ui::before, body.admin-ui::after { display: none; }
 .admin-ui .hr-row label { font-size: .8rem; }
 .admin-ui #pk-hours-dlg { width: min(560px, 94vw); }
 @media (max-width: 520px) { .admin-ui .hr-row { grid-template-columns: 1fr 1fr; } }
+
+/* ---- 欠席・振替 ---- */
+.admin-ui .day-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 14px 20px; margin-bottom: 20px; }
+.admin-ui .class-card .card-head h2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.admin-ui .class-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+.admin-ui .class-cols h3 { margin: 0 0 6px; font-size: .9rem; color: var(--ink-2); }
+.admin-ui .grant-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.admin-ui .grant-form input { flex: 1; min-width: 180px; }
+.admin-ui .ab-hist { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; font-size: .9rem; }
+.admin-ui .ab-hist li { padding: 6px 0; border-top: 1px solid var(--line); }
+.admin-ui .att-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 700; color: var(--warn); background: var(--warn-soft); }
+@media (max-width: 900px) { .admin-ui .class-cols { grid-template-columns: 1fr; } }

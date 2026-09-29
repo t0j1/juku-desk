@@ -705,7 +705,7 @@ function renderAlert() {
   const kinds = new Set(alertItems.map(i => i.kind));
   $("pk-alert-title").textContent = kinds.size === 1 && kinds.has("new")
     ? `🚗 新しい送迎予約が入りました${alertItems.length > 1 ? `（${alertItems.length}件）` : ""}`
-    : `🚗 送迎予約のお知らせ（${alertItems.length}件）`;
+    : alertItems.length === 1 ? alertItems[0].title : `🔔 お知らせ（${alertItems.length}件）`;
   $("pk-alert-list").innerHTML = alertItems.map(i => `<li class="${i.kind}"><strong>${esc(i.title)}</strong><br>${esc(i.body)}</li>`).join("");
 }
 function closeAlert() {
@@ -714,20 +714,21 @@ function closeAlert() {
   if ($("pk-alert").open) $("pk-alert").close();
 }
 $("pk-alert-close").onclick = closeAlert;
-$("pk-alert-open").onclick = () => { const v = lastAlertView; closeAlert(); openPickupsTab(v.view, v.date); };
+$("pk-alert-open").onclick = () => { const v = lastAlertView; closeAlert(); v.open ? v.open() : openPickupsTab(v.view, v.date); };
 $("pk-alert").addEventListener("cancel", () => stopAlarm());   // Esc で閉じたとき
 
-function notify({ kind, title, body, view, date, tag }) {
+// open を渡すと、「開く」を押したときの移動先を変えられる（欠席・振替の通知など）
+function notify({ kind, title, body, view, date, tag, open }) {
   alertItems.unshift({ kind, title, body });
   alertItems = alertItems.slice(0, 8);
-  lastAlertView = { view, date };
+  lastAlertView = { view, date, open };
   renderAlert();
   if (!$("pk-alert").open) $("pk-alert").showModal();
   startAlarm();
   if ("Notification" in window && Notification.permission === "granted") {
     try {
       const n = new Notification(title, { body, tag, requireInteraction: true });
-      n.onclick = () => { window.focus(); closeAlert(); openPickupsTab(view, date); n.close(); };
+      n.onclick = () => { window.focus(); closeAlert(); open ? open() : openPickupsTab(view, date); n.close(); };
     } catch (e) { console.warn("ブラウザの通知を出せませんでした", e); }
   }
 }

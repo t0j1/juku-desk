@@ -143,3 +143,32 @@ test("回答リンク: トークンは64桁の16進数だけ", async () => {
   assert.equal((await post({ action: "proposal", token: "abc" })).status, 400);
   assert.equal((await post({ action: "proposal", token: "a".repeat(64) })).status, 404);
 });
+
+test("欠席・振替: 授業の種別は 高1〜高3授業 だけ、ID と日付の形式を確かめてから DB 関数を呼ぶ", async () => {
+  const { post, calls } = setup({ rpcImpl: {
+    register_absence: () => ({ data: "a1", error: null }),
+    request_makeup: () => ({ data: "m1", error: null }),
+    my_makeup: () => ({ data: { credits: [], requests: [] }, error: null }),
+  } });
+  const me = { email: "a@example.com" };
+  assert.deepEqual((await post({ action: "absence", ...me, date: "2026-10-02", type: "高2授業", reason: "x".repeat(300) })).body, { id: "a1" });
+  const reg = calls.find(c => c.fn === "register_absence");
+  assert.deepEqual({ ...reg.args, p_reason: reg.args.p_reason.length }, { p_contact_id: "c1", p_date: "2026-10-02", p_type: "高2授業", p_reason: 200 });
+  for (const bad of [{ date: "10/2", type: "高2授業" }, { date: "2026-10-02", type: "休講" }, { date: "2026-10-02", type: "高4授業" }]) {
+    assert.equal((await post({ action: "absence", ...me, ...bad })).status, 400, JSON.stringify(bad));
+    assert.equal((await post({ action: "makeup_request", ...me, ...bad })).status, 400, JSON.stringify(bad));
+  }
+  assert.deepEqual((await post({ action: "makeup_request", ...me, date: "2026-10-04", type: "高1授業" })).body, { id: "m1" });
+  assert.deepEqual((await post({ action: "makeup", ...me })).body, { credits: [], requests: [] });
+  assert.equal((await post({ action: "absence_cancel", ...me, id: "x" })).status, 400);
+  assert.equal((await post({ action: "makeup_cancel", ...me, id: "x" })).status, 400);
+  const id = "0b7c3f7e-1d2a-4c5b-9e8f-0123456789ab";
+  await post({ action: "makeup_cancel", ...me, id });
+  assert.deepEqual(calls.at(-1), { fn: "cancel_makeup", args: { p_contact_id: "c1", p_request_id: id } });
+});
+
+test("欠席・振替: 本番ではメールアドレスで使えない", async () => {
+  const { post, calls } = setup({ appEnv: "prod" });
+  assert.equal((await post({ action: "classes", email: "a@example.com" })).status, 401);
+  assert.equal(calls.length, 0);
+});

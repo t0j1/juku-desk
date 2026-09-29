@@ -26,6 +26,7 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
+const CLASS_RE = /^高[123]授業$/;
 
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 function need(v: unknown, re: RegExp, label: string): string {
@@ -135,6 +136,45 @@ export function makeHandler(deps: Deps) {
         p_token: need(body.token, /^[0-9a-f]{64}$/, "リンク"), p_accept: body.accept === true,
       });
       return { group_status: status };
+    },
+
+    // ---- 欠席・振替（supabase/absence.sql） ----
+    async classes(body) {
+      const c = await requireContact(await identify(body));
+      return { classes: await call<unknown[]>("my_classes", { p_contact_id: c.contact_id }) };
+    },
+    async absence(body) {
+      const c = await requireContact(await identify(body));
+      const id = await call<string>("register_absence", {
+        p_contact_id: c.contact_id, p_date: need(body.date, DATE_RE, "日付"), p_type: need(body.type, CLASS_RE, "授業"),
+        p_reason: str(body.reason, 200),
+      });
+      return { id };
+    },
+    async absence_cancel(body) {
+      const c = await requireContact(await identify(body));
+      await call("cancel_absence", { p_contact_id: c.contact_id, p_absence_id: need(body.id, UUID_RE, "欠席") });
+      return { ok: true };
+    },
+    async makeup(body) {
+      const c = await requireContact(await identify(body));
+      return await call<unknown>("my_makeup", { p_contact_id: c.contact_id });
+    },
+    async makeup_options(body) {
+      const c = await requireContact(await identify(body));
+      return { options: await call<unknown[]>("makeup_options", { p_contact_id: c.contact_id }) };
+    },
+    async makeup_request(body) {
+      const c = await requireContact(await identify(body));
+      const id = await call<string>("request_makeup", {
+        p_contact_id: c.contact_id, p_date: need(body.date, DATE_RE, "日付"), p_type: need(body.type, CLASS_RE, "授業"),
+      });
+      return { id };
+    },
+    async makeup_cancel(body) {
+      const c = await requireContact(await identify(body));
+      await call("cancel_makeup", { p_contact_id: c.contact_id, p_request_id: need(body.id, UUID_RE, "振替の申請") });
+      return { ok: true };
     },
   };
 

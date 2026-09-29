@@ -71,6 +71,7 @@ async function init() {
   await loadTypes();
   await refreshEvents();
   if (typeof initPickupAdmin === "function") await initPickupAdmin();   // 送迎予約の通知（admin-reservations.js）
+  if (typeof initAbsenceAdmin === "function") await initAbsenceAdmin();   // 欠席・振替の通知（admin-absence.js）
 }
 
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
@@ -88,13 +89,15 @@ const selRows = () => [...selected].map(id => listRows().get(id)).filter(Boolean
 async function refreshEvents() {
   const [y, m] = $("ev-month").value.split("-").map(Number);
   cur = { y, m: m - 1 };
-  const [data, pickups] = await Promise.all([
+  const [data, pickups, attendance] = await Promise.all([
     db.from("events").select("*")
       .gte("event_date", monthStart(cur.y, cur.m)).lte("event_date", monthEnd(cur.y, cur.m))
       .order("event_date").order("start_time", { ascending: true, nullsFirst: true }).then(must),
     // 確定した送迎の便（admin-reservations.js）。読み取り専用の行として混ぜて表示する
     $("ev-show-pickup").checked && typeof fetchMonthPickups === "function"
       ? fetchMonthPickups(monthStart(cur.y, cur.m), monthEnd(cur.y, cur.m)) : [],
+    // 授業ごとの欠席・振替の人数（admin-absence.js）
+    typeof fetchMonthAttendance === "function" ? fetchMonthAttendance(monthStart(cur.y, cur.m), monthEnd(cur.y, cur.m)) : new Map(),
   ]);
   const rows = new Map(data.map(e => [e.id, e]));
   $("ev-list")._rows = rows;
@@ -116,7 +119,7 @@ async function refreshEvents() {
       <td class="chk"><label class="chk-label"><input type="checkbox" class="row-check" aria-label="${esc(fmtDate(e.event_date))} ${esc(e.type)} ${esc(e.title)} を選択"></label></td>
       <td>${fmtDate(e.event_date)}</td>
       <td><button type="button" class="chip-btn" data-act="pick-type" title="同じ種別の予定をすべて選択">${chipHTML({ type: e.type, title: e.type }, typeMap)}</button></td>
-      <td>${esc(e.title)}${e.note ? `<br><small>📝 ${esc(e.note)}</small>` : ""}</td>
+      <td>${esc(e.title)}${typeof attendanceTag === "function" ? attendanceTag(e, attendance) : ""}${e.note ? `<br><small>📝 ${esc(e.note)}</small>` : ""}</td>
       <td>${timeText(e)}</td>
       <td><button type="button" class="state ${e.is_published ? "pub" : "draft"}" data-act="toggle" title="クリックで切り替え">${e.is_published ? "● 公開中" : "○ 下書き"}</button></td>
       <td class="actions"><button type="button" class="btn small" data-act="edit">編集</button><button type="button" class="btn small danger" data-act="del">削除</button></td></tr>`).join("")}</tbody></table>`;

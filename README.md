@@ -43,6 +43,12 @@ scripts/backup.mjs      自動バックアップ本体（検証つき）／backu
    - 通しのテスト（開発用 Supabase に対して。生徒2人の登録 → 予約 → 相乗り → 確定 → 後片付け）:
      `.env.dev` に開発用の `ADMIN_EMAIL=` と `ADMIN_PASSWORD=` を書いてから `node scripts/pickup-e2e.mjs`（`.env.dev` は Git に入りません）
 
+### 2-c. 欠席連絡・振替授業を使う場合：`absence.sql` を実行する
+1. SQL Editor で `supabase/absence.sql` の中身をすべて貼り付けて **Run**（`pickup.sql` のあとに。何度実行しても壊れません）。
+2. 設計と決定事項は `docs/absence-plan.md`。テストは次のとおりです。
+   - DB だけ（手元）: `npm i --no-save @electric-sql/pglite && node scripts/absence-db.test.mjs`
+   - 通しのテスト（開発用 Supabase に対して。欠席 → ストック → 振替の申請 → 承認 → 取り消し → 後片付け）: `node scripts/absence-e2e.mjs`
+
 ### 3. 管理者ユーザーを作る
 1. **Authentication → Users → Add user → Create new user**。
 2. 自分のメールアドレスと強いパスワードを入力し、**「Auto Confirm User」にチェック**して作成。
