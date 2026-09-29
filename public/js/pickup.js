@@ -124,14 +124,13 @@ async function loadSlots() {
   $("slots").innerHTML = ""; $("slot-box").hidden = true; $("size-box").hidden = true;
   if (!date) return;
   if (date < info.today || date > info.max_date) { setMsg("date-msg", `${fmtDay(info.today)} 〜 ${fmtDay(info.max_date)} の間で選んでください。`); return; }
-  const dow = new Date(date + "T00:00:00").getDay();
-  if (!info.days.includes(dow)) { setMsg("date-msg", `${DOW[dow]}曜日は送迎がありません。`); return; }
+  // 送迎があるかどうかは、曜日だけでは決まらない（日付ごとの調整がある）ので、選べる時刻で判断する
   setMsg("date-msg", "時刻を読み込み中…");
   const token = ++slotToken;
   const { data, error } = await db.rpc("get_pickup_slots", { p_date: date });
   if (token !== slotToken) return;
   if (error) { console.error(error); setMsg("date-msg", "時刻の読み込みに失敗しました。もう一度日付を選んでください。"); return; }
-  if (!data.length) { setMsg("date-msg", "この日は予約できる時刻がありません（休講日、または受付時間を過ぎています）。"); return; }
+  if (!data.length) { setMsg("date-msg", "この日は送迎がありません（送迎のない日・休講日、または受付時間を過ぎています）。"); return; }
   const open = data.filter(s => s.remaining > 0).length;
   setMsg("date-msg", open ? `${fmtDay(date)}：時刻を選んでください。` : "この日はすべて満席です。");
   $("slots").innerHTML = data.map(s => {

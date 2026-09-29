@@ -122,13 +122,16 @@ $("av-form").querySelectorAll("[data-wd]").forEach(b => b.onclick = () => {
 });
 
 async function refreshPickupSettings() {
-  const [av, ps] = await Promise.all([
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+  const [av, ps, ov] = await Promise.all([
     db.from("pickup_availability").select("*").order("day_of_week").order("start_time"),
     db.from("pickup_settings").select("*").eq("id", 1).single(),
+    db.from("pickup_date_overrides").select("*").gte("pickup_date", today).order("pickup_date").order("start_time"),
   ]);
   availability = must(av);
   pickupSettings = must(ps);
   renderAvailability();
+  renderOverrides(must(ov));
   $("ps-place").value = pickupSettings.pickup_place;
   $("ps-slot").value = String(pickupSettings.slot_minutes);
   $("ps-trip").value = pickupSettings.trip_minutes;
@@ -154,6 +157,30 @@ function renderAvailability() {
       <td class="actions"><button type="button" class="btn small" data-act="edit">編集</button><button type="button" class="btn small danger" data-act="del">削除</button></td>
     </tr>`).join("")}</tbody></table>`;
 }
+
+// 日付ごとの調整（今日以降）。調整そのものは「送迎予約 → 日ごとの予約」で行う
+function renderOverrides(rows) {
+  const dates = [...new Set(rows.map(o => o.pickup_date))];
+  if (!dates.length) { $("ov-list").innerHTML = `<p class="status">日付ごとの調整はありません。</p>`; return; }
+  $("ov-list").innerHTML = `<table><thead><tr><th>日付</th><th>送迎</th><th>メモ</th><th>操作</th></tr></thead><tbody>${dates.map(d => {
+    const day = rows.filter(o => o.pickup_date === d);
+    const closed = day.some(o => o.is_closed);
+    const text = closed ? "送迎なし" : day.map(o => `${hhmm(o.start_time)}〜${hhmm(o.end_time)}（定員${o.max_capacity}名）`).join("、");
+    return `<tr data-date="${esc(d)}"><td><strong>${fmtDay(d)}</strong></td><td>${esc(text)}</td><td>${esc(day.find(o => o.note)?.note || "")}</td>
+      <td class="actions"><button type="button" class="btn small" data-act="open-day">送迎予約で開く</button><button type="button" class="btn small danger" data-act="reset">通常に戻す</button></td></tr>`;
+  }).join("")}</tbody></table>`;
+}
+$("ov-list").addEventListener("click", ev => {
+  const b = ev.target.closest("[data-act]"); if (!b) return;
+  const d = b.closest("tr").dataset.date;
+  guard(async () => {
+    if (b.dataset.act === "open-day") { openPickupsTab("day", d); return; }
+    if (!confirm(`${fmtDay(d)} の調整をやめて、曜日の設定（通常どおり）に戻します。\n\nよろしいですか？`)) return;
+    must(await db.rpc("admin_set_pickup_day", { p_date: d, p_mode: "normal", p_windows: [], p_note: "" }));
+    toast(`${fmtDay(d)} を通常どおりに戻しました`);
+    await refreshPickupSettings();
+  });
+});
 
 $("av-form").addEventListener("submit", e => {
   e.preventDefault();

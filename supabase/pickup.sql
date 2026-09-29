@@ -70,6 +70,26 @@ create table if not exists public.pickup_availability (
   constraint pickup_availability_order check (end_time > start_time)
 );
 
+-- 日付ごとの調整（その日だけ、曜日の送迎時間帯の代わりに使う）
+--   ・その日に1行でもあれば、曜日の時間帯は使わない
+--   ・is_closed の行があれば、その日は送迎なし
+--   ・それ以外の行が、その日だけの時間帯（複数可。重なりはトリガーで拒否）
+create table if not exists public.pickup_date_overrides (
+  id           uuid primary key default gen_random_uuid(),
+  pickup_date  date not null,
+  is_closed    boolean not null default false,
+  start_time   time,
+  end_time     time,
+  max_capacity int  not null default 3 check (max_capacity between 1 and 8),
+  note         text not null default '' check (char_length(note) <= 100),
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  constraint pickup_date_overrides_shape check (
+    (is_closed and start_time is null and end_time is null)
+    or (not is_closed and start_time is not null and end_time is not null and end_time > start_time))
+);
+create index if not exists pickup_date_overrides_date_idx on public.pickup_date_overrides (pickup_date);
+
 -- 便（＝相乗りグループ。1人だけの便も1グループ）
 create table if not exists public.pickup_groups (
   id            uuid primary key default gen_random_uuid(),
@@ -157,7 +177,7 @@ declare
   t text;
 begin
   foreach t in array array['pickup_settings', 'students', 'student_link_codes', 'student_contacts', 'pickup_availability',
-                           'pickup_groups', 'pickup_reservations', 'pickup_proposals', 'pickup_notifications'] loop
+                           'pickup_date_overrides', 'pickup_groups', 'pickup_reservations', 'pickup_proposals', 'pickup_notifications'] loop
     execute format('revoke all on public.%I from anon, authenticated', t);
     execute format('grant select, insert, update, delete on public.%I to authenticated', t);
     execute format('alter table public.%I enable row level security', t);
@@ -196,6 +216,26 @@ returns void
 language sql
 as $$ select pg_advisory_xact_lock(hashtext('pickup:' || p_date::text)); $$;
 
+-- その日の送迎時間帯：日付ごとの調整があればそれを、無ければ曜日の設定を使う（送迎なしの日は0行）
+create or replace function public.pickup_windows(p_date date)
+returns table (start_time time, end_time time, max_capacity int)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select o.start_time, o.end_time, o.max_capacity
+  from public.pickup_date_overrides o
+  where o.pickup_date = p_date and not o.is_closed
+    and not exists (select 1 from public.pickup_date_overrides c where c.pickup_date = p_date and c.is_closed)
+  union all
+  select a.start_time, a.end_time, a.max_capacity
+  from public.pickup_availability a
+  where a.is_active and a.day_of_week = extract(dow from p_date)::int
+    and not exists (select 1 from public.pickup_date_overrides o where o.pickup_date = p_date)
+  order by 1;
+$$;
+
 -- その時刻を含む時間帯の定員（無ければ設定の既定値）
 create or replace function public.pickup_capacity_at(p_date date, p_time time)
 returns int
@@ -205,10 +245,9 @@ security definer
 set search_path = public
 as $$
   select coalesce(
-    (select a.max_capacity from public.pickup_availability a
-      where a.is_active and a.day_of_week = extract(dow from p_date)::int
-        and p_time >= a.start_time and p_time < a.end_time
-      order by a.start_time limit 1),
+    (select w.max_capacity from public.pickup_windows(p_date) w
+      where p_time >= w.start_time and p_time < w.end_time
+      order by w.start_time limit 1),
     (select default_capacity from public.pickup_settings where id = 1));
 $$;
 
@@ -245,14 +284,13 @@ begin
   return query
   with grid as (
     select distinct on (x.st) x.st, w.max_capacity
-    from public.pickup_availability w
+    from public.pickup_windows(p_date) w
     cross join lateral (
       select g::time as st
       from generate_series(p_date + w.start_time,
                            p_date + w.end_time - make_interval(mins => s.trip_minutes),
                            make_interval(mins => s.slot_minutes)) g
     ) x
-    where w.is_active and w.day_of_week = extract(dow from p_date)::int
     order by x.st, w.start_time
   ), grp as (
     select g.id, g.approved_time, g.trip_minutes, g.max_capacity
@@ -360,7 +398,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['pickup_settings', 'students', 'pickup_availability', 'pickup_groups', 'pickup_reservations'] loop
+  foreach t in array array['pickup_settings', 'students', 'pickup_availability', 'pickup_date_overrides', 'pickup_groups', 'pickup_reservations'] loop
     execute format('drop trigger if exists %I on public.%I', t || '_set_updated_at', t);
     execute format('create trigger %I before update on public.%I for each row execute function public.set_updated_at()',
                    t || '_set_updated_at', t);
@@ -372,7 +410,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['pickup_settings', 'students', 'student_contacts', 'pickup_availability',
+  foreach t in array array['pickup_settings', 'students', 'student_contacts', 'pickup_availability', 'pickup_date_overrides',
                            'pickup_groups', 'pickup_reservations', 'pickup_proposals'] loop
     execute format('drop trigger if exists %I on public.%I', t || '_audit', t);
     execute format('create trigger %I after insert or update or delete on public.%I for each row execute function public.log_audit()',
@@ -401,6 +439,28 @@ drop trigger if exists pickup_availability_check on public.pickup_availability;
 create trigger pickup_availability_check
   before insert or update on public.pickup_availability
   for each row execute function public.pickup_availability_check();
+
+-- 同じ日の「その日だけの時間帯」どうしの重なりを拒否
+create or replace function public.pickup_date_overrides_check()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not new.is_closed and exists (
+    select 1 from public.pickup_date_overrides o
+    where o.id <> new.id and o.pickup_date = new.pickup_date and not o.is_closed
+      and o.start_time < new.end_time and new.start_time < o.end_time) then
+    perform public.pickup_fail('同じ日に、時間が重なる送迎時間帯があります。');
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists pickup_date_overrides_check on public.pickup_date_overrides;
+create trigger pickup_date_overrides_check
+  before insert or update on public.pickup_date_overrides
+  for each row execute function public.pickup_date_overrides_check();
 
 -- 予約の状態の変え方を制限する
 --   pending → approved / rejected / cancelled、approved → cancelled だけ。却下・取り消しは最終状態
@@ -764,6 +824,49 @@ begin
 end;
 $$;
 
+-- その日の送迎時間を決める（前の調整は置き換える）
+--   p_mode = 'normal'（曜日の設定に戻す）/ 'custom'（p_windows の時間帯にする）/ 'closed'（送迎なし）
+--   p_windows = [{"start": "17:00", "end": "20:00", "capacity": 3}, ...]
+create or replace function public.admin_set_pickup_day(p_date date, p_mode text, p_windows jsonb default '[]', p_note text default '')
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  w jsonb;
+  st time;
+  en time;
+begin
+  perform public.pickup_require_admin();
+  if p_date is null then perform public.pickup_fail('日付を指定してください。'); end if;
+  delete from public.pickup_date_overrides where pickup_date = p_date;
+  if p_mode = 'normal' then
+    return;
+  elsif p_mode = 'closed' then
+    insert into public.pickup_date_overrides (pickup_date, is_closed, note) values (p_date, true, left(coalesce(p_note, ''), 100));
+  elsif p_mode = 'custom' then
+    if jsonb_typeof(p_windows) is distinct from 'array' or jsonb_array_length(p_windows) = 0 then
+      perform public.pickup_fail('時間帯を1つ以上入力してください。');
+    end if;
+    for w in select * from jsonb_array_elements(p_windows) loop
+      begin
+        st := (w ->> 'start')::time; en := (w ->> 'end')::time;
+      exception when others then
+        perform public.pickup_fail('時刻の形式が正しくありません。');
+      end;
+      if st is null or en is null or en <= st then perform public.pickup_fail('終了時刻は開始時刻より後にしてください。'); end if;
+      insert into public.pickup_date_overrides (pickup_date, start_time, end_time, max_capacity, note)
+      values (p_date, st, en,
+              coalesce(nullif(w ->> 'capacity', '')::int, (select default_capacity from public.pickup_settings where id = 1)),
+              left(coalesce(p_note, ''), 100));
+    end loop;
+  else
+    perform public.pickup_fail('不明な指定です。');
+  end if;
+end;
+$$;
+
 -- 便の重なりエラーを、分かる文に直す
 create or replace function public.pickup_overlap_message(p_date date, p_time time)
 returns text
@@ -1028,13 +1131,14 @@ begin
         'get_pickup_slots', 'get_pickup_info', 'link_student', 'find_contact', 'submit_pickup_reservation',
         'my_pickup_reservations', 'cancel_pickup_reservation', 'respond_pickup_proposal',
         'get_pickup_proposal_by_token', 'respond_pickup_proposal_by_token', 'issue_link_code',
-        'admin_approve_reservation', 'admin_reject_reservation', 'admin_propose_carpool', 'admin_resolve_group', 'expire_pickups'))
+        'admin_approve_reservation', 'admin_reject_reservation', 'admin_propose_carpool', 'admin_resolve_group', 'expire_pickups',
+        'admin_set_pickup_day'))
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f.sig);
     if f.proname in ('get_pickup_slots', 'get_pickup_info') then
       execute format('grant execute on function %s to anon, authenticated', f.sig);
     elsif f.proname in ('issue_link_code', 'admin_approve_reservation', 'admin_reject_reservation',
-                        'admin_propose_carpool', 'admin_resolve_group') then
+                        'admin_propose_carpool', 'admin_resolve_group', 'admin_set_pickup_day', 'pickup_windows') then
       execute format('grant execute on function %s to authenticated', f.sig);
     end if;
     execute format('grant execute on function %s to service_role', f.sig);

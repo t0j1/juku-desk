@@ -321,3 +321,24 @@ body.admin-ui::before, body.admin-ui::after { display: none; }
 /* 表の「操作」列：セルは表のセルのまま（flex にすると罫線がずれる）、ボタンの間だけあける */
 .admin-ui td.actions { display: table-cell; white-space: nowrap; }
 .admin-ui td.actions > * + * { margin-left: 6px; }
+
+/* ---- その日の送迎時間（日付ごとの調整） ---- */
+.admin-ui .hours-card { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; padding: 16px 22px; margin-bottom: 20px; }
+.admin-ui .hours-main { display: grid; gap: 4px; min-width: 0; }
+.admin-ui .hours-text { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; font-size: 1.05rem; }
+.admin-ui .hours-tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 700; color: var(--ink-2); background: #f1f0fa; }
+.admin-ui .hours-card.mode-custom .hours-tag { color: var(--info); background: var(--info-soft); }
+.admin-ui .hours-card.mode-closed .hours-tag { color: var(--danger); background: var(--danger-soft); }
+.admin-ui .hours-card.mode-custom { border-left: 5px solid var(--info); }
+.admin-ui .hours-card.mode-closed { border-left: 5px solid var(--danger); }
+.admin-ui .hours-note { font-size: .85rem; color: var(--ink-2); }
+.admin-ui .ov-mark { font-size: .62rem; font-weight: 700; line-height: 1; color: var(--info); }
+.admin-ui .day.ov-closed .ov-mark { color: var(--danger); }
+.admin-ui .day.ov-closed .num { text-decoration: line-through; text-decoration-thickness: 2px; opacity: .6; }
+.admin-ui .day.selected .ov-mark { color: #fff; }
+.admin-ui .day.selected.ov-closed .num { opacity: 1; }
+.admin-ui .hr-windows { display: grid; gap: 8px; margin-bottom: 8px; }
+.admin-ui .hr-row { display: grid; grid-template-columns: 1fr 1fr 5.5rem auto; gap: 8px; align-items: end; }
+.admin-ui .hr-row label { font-size: .8rem; }
+.admin-ui #pk-hours-dlg { width: min(560px, 94vw); }
+@media (max-width: 520px) { .admin-ui .hr-row { grid-template-columns: 1fr 1fr; } }

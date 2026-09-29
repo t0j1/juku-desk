@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=6">
 <link rel="stylesheet" href="css/admin.css?v=9">
-<link rel="stylesheet" href="css/admin-theme.css?v=1">
+<link rel="stylesheet" href="css/admin-theme.css?v=2">
 </head>
 <body class="admin-ui">
 <div class="wrap">
@@ -201,6 +201,10 @@
         <button class="btn primary" type="submit">追加する</button>
       </form>
       <hr>
+      <h2>日付ごとの調整（今日以降）</h2>
+      <p class="hint">特定の日だけ送迎の時間を変えたり、送迎をなしにしたりした日の一覧です。調整は「送迎予約 → 日ごとの予約」で、日付を選んで行います。</p>
+      <div id="ov-list"></div>
+      <hr>
       <h2>送迎の設定</h2>
       <form id="ps-form" class="form">
         <label>乗車場所<input id="ps-place" type="text" maxlength="40" required></label>
@@ -282,6 +286,30 @@
     <button class="btn" type="button" id="pk-alert-close">閉じる</button>
     <button class="btn primary" type="button" id="pk-alert-open">送迎予約を開く</button>
   </div>
+</dialog>
+
+<!-- その日の送迎時間の調整 -->
+<dialog id="pk-hours-dlg">
+  <form id="hours-form" class="form" method="dialog">
+    <h3>送迎時間の調整</h3>
+    <p id="hr-date" class="hint"></p>
+    <fieldset>
+      <legend>この日の送迎</legend>
+      <label class="check"><input type="radio" name="hr-mode" value="normal"> 通常どおり（<span id="hr-normal"></span>）</label>
+      <label class="check"><input type="radio" name="hr-mode" value="custom"> この日だけ時間を変える</label>
+      <label class="check"><input type="radio" name="hr-mode" value="closed"> この日は送迎なし</label>
+    </fieldset>
+    <div id="hr-custom">
+      <div id="hr-windows" class="hr-windows"></div>
+      <button type="button" class="btn small" id="hr-add">＋ 時間帯を追加</button>
+    </div>
+    <label>メモ（任意・管理画面だけに表示）<input type="text" id="hr-note" maxlength="100" placeholder="例：行事のため短縮"></label>
+    <p class="hint" style="margin:0">生徒の予約フォームで選べる時刻が、すぐに変わります。すでに入っている予約は、時間外になってもそのまま残ります（保存の前にお知らせします）。</p>
+    <div class="cols">
+      <button class="btn" type="button" id="hr-cancel">キャンセル</button>
+      <button class="btn primary" type="submit">保存</button>
+    </div>
+  </form>
 </dialog>
 
 <!-- 送迎予約の承認（時刻・便を選ぶ） -->
@@ -423,8 +451,8 @@
 <script src="js/common.js?v=6"></script>
 <script src="js/pickup-common.js?v=2"></script>
 <script src="js/admin.js?v=7"></script>
-<script src="js/admin-pickup.js?v=1"></script>
-<script src="js/admin-reservations.js?v=6"></script>
+<script src="js/admin-pickup.js?v=2"></script>
+<script src="js/admin-reservations.js?v=7"></script>
 <script src="js/admin-shell.js?v=1"></script>
 </body>
 </html>

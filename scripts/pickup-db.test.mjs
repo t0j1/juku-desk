@@ -217,6 +217,38 @@ const q4 = await subN("D", d6, "18:00", 2), q5 = await subN("E", d6, "18:15", 2)
 await fails(admin(`select * from admin_propose_carpool(array[$1, $2]::uuid[], '18:10')`, [q4, q5]), /合計4名/, "相乗りの定員オーバー");
 ok("人数：定員は人数の合計で数える（予約・承認・相乗り）");
 
+// ---- 日付ごとの送迎時間の調整 ----
+const d8 = (await db.query(`select (pickup_now()::date + 8)::text d`)).rows[0].d;
+const setDay = (mode, windows = [], note = "") => admin(`select admin_set_pickup_day($1, $2, $3::jsonb, $4)`, [d8, mode, JSON.stringify(windows), note]);
+await fails(as("authenticated", OTHER, `select admin_set_pickup_day($1, 'closed', '[]'::jsonb, '')`, [d8]), /管理者のみ/, "管理者以外は調整できない");
+await fails(as("anon", "", `select * from pickup_windows($1)`, [d8]), /permission denied/, "anon は時間帯の関数を呼べない");
+// その日だけ 17:00〜18:00・定員1 → 17:00〜17:45 だけ（最終便は18:00に戻れる時刻）
+await setDay("custom", [{ start: "17:00", end: "18:00", capacity: 1 }], "行事のため");
+let s8 = await anonSlots(d8);
+assert.deepEqual(s8.map(x => x.slot), ["17:00", "17:15", "17:30", "17:45"]);
+assert.ok(s8.every(x => x.remaining === 1), "定員はその日の設定（1名）");
+await fails(submit("F", d8, "16:00"), /予約できません/, "調整した時間帯の外");
+const o1 = await submit("F", d8, "17:15");
+await fails(submit("G", d8, "17:15"), /満席/, "その日の定員1");
+// 時間帯は複数でき、重なりは拒否
+await setDay("custom", [{ start: "16:00", end: "16:30" }, { start: "19:00", end: "19:30" }]);
+assert.deepEqual((await anonSlots(d8)).map(x => x.slot), ["16:00", "16:15", "19:00", "19:15"]);
+await fails(setDay("custom", [{ start: "16:00", end: "17:00" }, { start: "16:30", end: "17:30" }]), /重なる/, "時間帯の重なり");
+await fails(setDay("custom", [{ start: "18:00", end: "17:00" }]), /開始時刻より後/, "終了が開始より前");
+await fails(setDay("custom", []), /1つ以上/, "時間帯なし");
+// 送迎なし → 選べる時刻なし・予約できない
+await setDay("closed", [], "臨時休業");
+assert.equal((await anonSlots(d8)).length, 0);
+await fails(submit("G", d8, "17:00"), /予約できません/, "送迎なしの日");
+// 通常どおりに戻すと、曜日の設定（16:00〜21:00・定員3）
+await setDay("normal");
+s8 = await anonSlots(d8);
+assert.equal(s8[0].slot, "16:00"); assert.equal(s8.at(-1).slot, "20:45");
+assert.equal(s8.find(x => x.slot === "17:15").remaining, 2, "調整中に入った予約は残る");
+assert.equal((await admin(`select count(*)::int c from pickup_date_overrides where pickup_date = $1`, [d8]))[0].c, 0);
+await svc(`select cancel_pickup_reservation($1, $2)`, [cid.F, o1]);
+ok("日付ごとの調整：その日だけの時間帯・定員・送迎なし・通常に戻す");
+
 // ---- 変更履歴 ----
 const logs = (await admin(`select table_name, count(*)::int c from audit_log group by 1 order by 1`));
 assert.ok(logs.some(l => l.table_name === "pickup_reservations") && logs.some(l => l.table_name === "students"));

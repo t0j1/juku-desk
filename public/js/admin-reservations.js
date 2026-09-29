@@ -13,6 +13,8 @@ let pendingGroups = [];     // 承認待ちの予約がある日の便
 let dayRows = [];
 let dayGroups = [];
 let dayProposals = [];      // その日の調整中の便の打診
+let dayWindows = [];        // その日の送迎時間帯（日付ごとの調整、または曜日の設定）
+let dayOverrides = [];      // その日の日付ごとの調整（無ければ空）
 let proposingGroups = [];   // 今日以降の調整中の便（承認待ちの画面に出す）
 const cpSelected = new Set();   // 日ごとの予約で、相乗り調整に選んだ予約
 let cpRows = [];            // 相乗り調整ダイアログの予約
@@ -329,16 +331,21 @@ $("pk-week").addEventListener("click", ev => {
   $("pk-date").value = b.dataset.date; guard(refreshDay);
 });
 
-function renderWeek(start, selectedDay, counts) {
+function renderWeek(start, selectedDay, counts, overrides = []) {
   const today = todayJST();
   $("pk-week").innerHTML = Array.from({ length: 7 }, (_, i) => {
     const k = addDays(start, i), dt = parseYMD(k), c = counts.get(k) || { approved: 0, pending: 0 };
     const dots = [...Array(Math.min(c.approved, 3)).fill(""), ...Array(Math.min(c.pending, Math.max(0, 3 - c.approved))).fill("pending")];
-    const cls = ["day", k === selectedDay ? "selected" : "", k === today ? "today" : "", dt.getDay() === 0 ? "sun" : dt.getDay() === 6 ? "sat" : ""].filter(Boolean).join(" ");
-    const label = `${dt.getMonth() + 1}月${dt.getDate()}日（${DOW[dt.getDay()]}）　承認 ${c.approved}件・未承認 ${c.pending}件`;
+    const ov = overrides.filter(o => o.pickup_date === k);
+    const ovMode = !ov.length ? "" : ov.some(o => o.is_closed) ? "closed" : "custom";
+    const cls = ["day", k === selectedDay ? "selected" : "", k === today ? "today" : "", dt.getDay() === 0 ? "sun" : dt.getDay() === 6 ? "sat" : "",
+                 ovMode ? `ov-${ovMode}` : ""].filter(Boolean).join(" ");
+    const label = `${dt.getMonth() + 1}月${dt.getDate()}日（${DOW[dt.getDay()]}）　承認 ${c.approved}件・未承認 ${c.pending}件`
+      + (ovMode === "closed" ? "・送迎なし" : ovMode === "custom" ? "・時間を調整" : "");
     return `<button type="button" class="${cls}" data-date="${k}" aria-pressed="${k === selectedDay}" aria-label="${label}">
       <span class="dow">${DOW[dt.getDay()]}</span><span class="num">${dt.getDate()}</span>
-      <span class="dots">${dots.map(x => `<i class="${x}"></i>`).join("")}</span></button>`;
+      <span class="dots">${dots.map(x => `<i class="${x}"></i>`).join("")}</span>
+      ${ovMode ? `<span class="ov-mark">${ovMode === "closed" ? "送迎なし" : "時間調整"}</span>` : ""}</button>`;
   }).join("");
 }
 
@@ -352,6 +359,11 @@ async function refreshDay() {
     // 週のストリップの点（1件＝1つ）に使う件数
     db.from("pickup_reservations").select("pickup_date, status").gte("pickup_date", start).lte("pickup_date", addDays(start, 6)).in("status", ["pending", "approved"]),
   ]);
+  const [win, ovs] = await Promise.all([
+    db.rpc("pickup_windows", { p_date: d }).then(must),
+    db.from("pickup_date_overrides").select("*").gte("pickup_date", start).lte("pickup_date", addDays(start, 6)).order("start_time").then(must),
+  ]);
+  dayWindows = win; dayOverrides = ovs.filter(o => o.pickup_date === d);
   dayRows = must(res); dayGroups = grp;
   const counts = new Map();
   must(wk).forEach(r => {
@@ -362,7 +374,7 @@ async function refreshDay() {
   const pids = dayGroups.map(g => g.id);
   dayProposals = pids.length ? must(await db.from("pickup_proposals").select("*").in("group_id", pids)) : [];
   applyPending(await fetchPending());
-  renderWeek(start, d, counts);
+  renderWeek(start, d, counts, ovs);
   updatePickupHead();
 
   const inGroup = id => dayRows.filter(r => r.group_id === id && (r.status === "approved" || r.status === "pending"));
@@ -372,6 +384,17 @@ async function refreshDay() {
   const seats = dayGroups.reduce((n, g) => n + g.max_capacity, 0);
   const waitingIds = new Set(waiting.map(r => r.id));
   [...cpSelected].forEach(id => { if (!waitingIds.has(id)) cpSelected.delete(id); });   // 日付を変えたら選択は外す
+
+  // その日の送迎時間
+  const mode = !dayOverrides.length ? "normal" : dayOverrides.some(o => o.is_closed) ? "closed" : "custom";
+  const winText = dayWindows.length ? dayWindows.map(w => `${hhmm(w.start_time)}〜${hhmm(w.end_time)}（定員${w.max_capacity}名）`).join("、") : "送迎なし";
+  const modeTag = { normal: `通常（${WEEKDAY[parseYMD(d).getDay()]}の設定）`, custom: "この日だけ", closed: "この日は送迎なし" }[mode];
+  const note = dayOverrides.find(o => o.note)?.note;
+  const hours = `<section class="card hours-card mode-${mode}">
+      <div class="hours-main"><span class="kpi-label">この日の送迎時間</span>
+        <div class="hours-text"><strong>${esc(winText)}</strong><span class="hours-tag">${modeTag}</span></div>
+        ${note ? `<div class="hours-note">📝 ${esc(note)}</div>` : ""}</div>
+      <button type="button" class="btn small" id="hours-edit">時間を調整</button></section>`;
 
   // KPI
   const kpis = `<div class="kpis">
@@ -423,7 +446,7 @@ async function refreshDay() {
   const closedHTML = closed.length ? `<details class="closed"><summary>却下・キャンセル（${closed.length}件）</summary><ul>${closed.map(r =>
     `<li>${hhmm(r.pickup_time)}　${esc(nameOf(r))}　${pickupBadge(r.status)}${r.reject_reason ? `　<small>${esc(r.reject_reason)}</small>` : ""}</li>`).join("")}</ul></details>` : "";
 
-  $("pk-day-body").innerHTML = `${kpis}
+  $("pk-day-body").innerHTML = `${hours}${kpis}
     <div class="lower">
       <section class="card"><div class="card-head"><h2>便</h2><span class="count">${dayGroups.length}本</span></div>${trips}</section>
       <section class="card"><div class="card-head"><h2>未承認</h2>${waiting.length ? `<span class="count">${waiting.length}件</span>` : ""}</div>${unapproved}${closedHTML}</section>
@@ -431,6 +454,7 @@ async function refreshDay() {
 }
 $("pk-day-body").addEventListener("click", ev => {
   if (ev.target.closest("#cp-open")) { openCarpoolDialog(); return; }
+  if (ev.target.closest("#hours-edit")) { guard(openHoursDialog); return; }
   const ga = ev.target.closest("[data-gact]");
   if (ga) { guard(() => resolveGroup(ga.closest("[data-gid]").dataset.gid, ga.dataset.gact)); return; }
   onReservationAction(ev, dayRows, dayGroups);
@@ -442,14 +466,88 @@ $("pk-day-body").addEventListener("change", ev => {
   guard(refreshDay);
 });
 
+// ---------- その日の送迎時間の調整 ----------
+let hoursTrip = 15;
+async function openHoursDialog() {
+  const d = $("pk-date").value || todayJST();
+  const dow = parseYMD(d).getDay();
+  const [weekly, ps] = await Promise.all([
+    db.from("pickup_availability").select("*").eq("day_of_week", dow).eq("is_active", true).order("start_time").then(must),
+    db.from("pickup_settings").select("default_capacity, trip_minutes").eq("id", 1).single().then(must),
+  ]);
+  hoursTrip = ps.trip_minutes;
+  const mode = !dayOverrides.length ? "normal" : dayOverrides.some(o => o.is_closed) ? "closed" : "custom";
+  $("hr-date").textContent = `${fmtDay(d)} の送迎時間`;
+  $("hr-normal").textContent = weekly.length ? `${DOW[dow]}曜日：${weekly.map(w => `${hhmm(w.start_time)}〜${hhmm(w.end_time)}`).join("、")}` : `${DOW[dow]}曜日は送迎なし`;
+  document.querySelectorAll('input[name="hr-mode"]').forEach(r => { r.checked = r.value === mode; });
+  // 「この日だけ」の初期値：今の調整、無ければ曜日の設定
+  const base = mode === "custom" ? dayOverrides.filter(o => !o.is_closed) : weekly;
+  $("hr-windows").innerHTML = "";
+  (base.length ? base : [{ start_time: "16:00", end_time: "21:00", max_capacity: ps.default_capacity }])
+    .forEach(w => addHoursRow(hhmm(w.start_time), hhmm(w.end_time), w.max_capacity));
+  $("hr-note").value = dayOverrides.find(o => o.note)?.note || "";
+  updateHoursMode();
+  $("pk-hours-dlg").showModal();
+}
+function addHoursRow(start = "", end = "", cap = 3) {
+  $("hr-windows").insertAdjacentHTML("beforeend", `<div class="hr-row">
+    <label>開始<input type="time" class="hr-start" value="${esc(start)}" required></label>
+    <label>終了<input type="time" class="hr-end" value="${esc(end)}" required></label>
+    <label>定員<input type="number" class="hr-cap" min="1" max="8" value="${esc(cap)}" required></label>
+    <button type="button" class="btn small danger hr-del" aria-label="この時間帯を消す">削除</button></div>`);
+}
+function updateHoursMode() {
+  const mode = document.querySelector('input[name="hr-mode"]:checked')?.value;
+  $("hr-custom").hidden = mode !== "custom";
+  $("hr-windows").querySelectorAll("input").forEach(i => { i.disabled = mode !== "custom"; });
+}
+$("hours-form").addEventListener("change", e => { if (e.target.name === "hr-mode") updateHoursMode(); });
+$("hr-add").onclick = () => addHoursRow("", "", 3);
+$("hr-windows").addEventListener("click", e => {
+  const b = e.target.closest(".hr-del"); if (!b) return;
+  if ($("hr-windows").children.length > 1) b.closest(".hr-row").remove();
+  else toast("時間帯を1つ以上残すか、「この日は送迎なし」を選んでください", true);
+});
+$("hr-cancel").onclick = () => $("pk-hours-dlg").close();
+$("hours-form").addEventListener("submit", e => {
+  e.preventDefault();
+  guard(async () => {
+    const d = $("pk-date").value || todayJST();
+    const mode = document.querySelector('input[name="hr-mode"]:checked')?.value;
+    if (!mode) throw new Error("この日の送迎を選んでください。");
+    const windows = mode !== "custom" ? [] : [...$("hr-windows").querySelectorAll(".hr-row")].map(r => ({
+      start: r.querySelector(".hr-start").value, end: r.querySelector(".hr-end").value, capacity: +r.querySelector(".hr-cap").value,
+    }));
+    if (mode === "custom") {
+      if (windows.some(w => !w.start || !w.end)) throw new Error("開始時刻と終了時刻を入力してください。");
+      if (windows.some(w => w.end <= w.start)) throw new Error("終了時刻は開始時刻より後にしてください。");
+    }
+    // 時間外になる予約（取り消しはしない。お知らせだけ）
+    let outside = [];
+    if (mode !== "normal") {
+      outside = dayRows.filter(r => (r.status === "pending" || r.status === "approved") && !windows.some(w => {
+        const t = toMin(hhmm(r.approved_time || r.pickup_time));
+        return t >= toMin(w.start) && t + hoursTrip <= toMin(w.end);
+      }));
+    }
+    const label = { normal: "通常どおり（曜日の設定）", custom: `この日だけ ${windows.map(w => `${w.start}〜${w.end}（定員${w.capacity}名）`).join("、")}`, closed: "送迎なし" }[mode];
+    const warn = outside.length ? `\n\n⚠ 次の予約は時間外になります（予約は残ります。必要なら生徒に連絡して、取り消しや時刻の変更をしてください）\n${
+      outside.map(r => `・${hhmm(r.approved_time || r.pickup_time)} ${nameOf(r)}（${PICKUP_STATUS[pickupStatusOf(r)]}）`).join("\n")}` : "";
+    if (!confirm(`${fmtDay(d)} の送迎を「${label}」にします。${warn}\n\nよろしいですか？`)) return;
+    must(await db.rpc("admin_set_pickup_day", { p_date: d, p_mode: mode, p_windows: windows, p_note: $("hr-note").value.trim() }));
+    $("pk-hours-dlg").close();
+    toast(`${fmtDay(d)} の送迎時間を保存しました`);
+    await refreshDay();
+  });
+});
+
 // ---------- 相乗り調整 ----------
 async function openCarpoolDialog() {
   cpRows = dayRows.filter(r => cpSelected.has(r.id));
   if (cpRows.length < 2) return;
   const d = cpRows[0].pickup_date;
-  const dow = parseYMD(d).getDay();
   const [av, ps] = await Promise.all([
-    db.from("pickup_availability").select("*").eq("day_of_week", dow).eq("is_active", true).order("start_time").then(must),
+    db.rpc("pickup_windows", { p_date: d }).then(must),
     db.from("pickup_settings").select("*").eq("id", 1).single().then(must),
   ]);
   const times = cpRows.map(r => hhmm(r.pickup_time));
