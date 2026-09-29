@@ -12,6 +12,8 @@ supabase/
   schema.sql            テーブル・RLS・トリガー（全部入り）
   seed.sql              初期データ（2027年1月＋冬期休暇）
 keepalive-worker/       Supabase の自動停止を防ぐ cron Worker
+scripts/backup.mjs      自動バックアップ用スクリプト
+.github/workflows/      週1回の自動バックアップ（GitHub Actions）
 ```
 
 > ⚠ **service_role キーは絶対に** `config.js` や Git に入れないでください。
@@ -108,6 +110,69 @@ npx wrangler deploy
 
 ---
 
+## 自動バックアップ（GitHub Actions）
+
+毎週日曜 23:00（日本時間）に、`events` と `event_types` を読み出して、このリポジトリの **`backup` ブランチ**の `backups/` に保存します。
+手動実行もできます。使うのは `SUPABASE_URL` と **anon キーだけ**です（service_role は使いません）。
+
+- 保存ファイル（直近12回分を残し、古いものは自動削除）
+  - `backup-YYYY-MM-DD.csv` … 予定。**管理画面の CSV 読み込みでそのまま使える形式**
+  - `backup-YYYY-MM-DD.json` … 予定と種別（色）の両方
+  - `backup-YYYY-MM-DD.event_types.csv` … 種別と色
+- `backup` ブランチは `main` と履歴が別で、`public/` を含みません。サイトとして公開されることはありません。
+- **取得が 0 件、または API エラーのときは、何も保存せず失敗として終了**します（空のバックアップで正常なデータが消えないように）。失敗すると GitHub から通知メールが届きます。
+- ⚠ **下書きはバックアップされません。** anon キーで読めるのは「公開」の予定だけだからです。下書きも残したいときは、管理画面の CSV タブから手動で書き出してください（下書きも含まれます）。
+- ⚠ リポジトリが Public の場合、`backup` ブランチも誰でも見られます。中身は公開サイトに表示されている内容と同じ（公開分のみ）です。
+
+### A. GitHub Secrets を登録する
+1. GitHub のリポジトリ → **Settings → Secrets and variables → Actions → New repository secret**。
+2. 次の2つを登録します。
+   | Name | Value |
+   |---|---|
+   | `SUPABASE_URL` | Project URL（例 `https://xxxx.supabase.co`。末尾に `/rest/v1` は付けない） |
+   | `SUPABASE_ANON_KEY` | anon（publishable）キー。**service_role は入れない** |
+
+### B. Cloudflare Pages の設定を確認する（重要）
+`backup` ブランチがプレビューとして公開・ビルドされないようにします。
+Cloudflare → 該当の Pages プロジェクト → **Settings → Builds → Branch control** で、
+Production branch を `main` にし、**Preview branches は「None」**（または `main` だけ）にしてください。
+（`backup` に `public/` は無いので、ビルドしても公開はされず、失敗通知が出るだけです。それを避けるための設定です。）
+
+### C. 初回の手動実行と確認
+1. GitHub → **Actions** タブ → 左の **Weekly backup** → **Run workflow** → `main` を選んで実行。
+   （初回に「ワークフローを有効にする」ボタンが出たら押します。）
+2. 1分ほどで緑のチェックになれば成功です。赤なら、実行をクリックして、どの手順で失敗したかを確認します。
+   - `SUPABASE_URL` / `SUPABASE_ANON_KEY を設定してください` … Secrets の名前や登録漏れ
+   - `HTTP 401` … anon キーの間違い
+   - `0 件でした` … 公開の予定が1件もない（意図通りの停止です）
+3. リポジトリのブランチ切り替えで **`backup`** を選び、`backups/` に `backup-日付.csv / .json / .event_types.csv` があることを確認します。
+   件数はログの `backup-日付: events=N, event_types=M` でも見られます。
+
+### D. バックアップからの復元
+1. GitHub の `backup` ブランチ → `backups/` → 戻したい日付の **`backup-YYYY-MM-DD.csv`** を開き、**Download raw file**（またはダウンロードボタン）で保存します。
+2. 管理画面（`/admin.html`）にログイン → **CSV** タブ。
+3. **先に、いまのデータを「全予定をCSVで書き出す」で保存**しておきます（念のため）。
+4. 「CSV の読み込み」で、保存したファイルを選びます。
+   - 予定をまるごと戻す → **「既存の予定をすべて削除して置き換える」にチェック** → 「読み込む」→ 確認で「全削除」と入力。
+   - 足りない分だけ追加する → チェックなしで「読み込む」（同じ予定が重複しないよう注意）。
+5. **予定はすべて「公開」として復元されます**（バックアップが公開分のみのため）。下書きにしたいものは、管理画面で切り替えてください。
+6. 種別の色を戻したい場合は、`backup-YYYY-MM-DD.json`（または `.event_types.csv`）の色を見て、管理画面の **「種別の色」** タブで設定します。
+   （種別そのものを消してしまった場合は、`supabase/schema.sql` の最後の `insert` を再実行すると初期の8種別が戻ります。）
+
+### keepalive-worker との関係（役割が重なります）
+どちらも Supabase に読み取りアクセスを行うため、**バックアップ自体が「アクセスあり」として、自動停止（約1週間アクセスなしで停止）の防止にも働きます**。ただし、次の理由で `keepalive-worker` は残すことをおすすめします。
+
+| | keepalive-worker | 自動バックアップ |
+|---|---|---|
+| 目的 | Supabase の自動停止を防ぐ | データの保管 |
+| 頻度 | 3日おき | 週1回 |
+| 停止の余裕 | 十分 | 週1回だと余裕が少ない。Actions が遅れる・失敗すると間に合わない |
+
+- GitHub の仕様で、リポジトリに動きがない状態が **60日**続くと、定期実行が自動で無効になることがあります。Actions タブに「無効になった」表示が出たら、再度有効にしてください。
+- 定期実行は、混雑時に数十分遅れることがあります。
+
+---
+
 ## 日々の使い方（管理画面）
 
 | タブ | できること |
@@ -124,7 +189,7 @@ npx wrangler deploy
 - 誤って消しても、変更履歴に変更前のデータが残ります。
 
 ### バックアップ（重要）
-無料プランには自動バックアップがありません。**CSV タブから定期的に書き出して**保管してください。
+週1回の自動バックアップ（上の「自動バックアップ」）は**公開分のみ**です。下書きも含めて残したいときは、**CSV タブから書き出して**保管してください。
 復元は「CSV の読み込み」で「既存の予定をすべて削除して置き換える」を使います
 （実行前に現在のデータが自動でCSVとして書き出されます）。
 書き出されるのは予定のみです。種別の色は `schema.sql` の初期値に戻せば再現できます。

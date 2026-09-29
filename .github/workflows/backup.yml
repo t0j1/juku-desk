@@ -1,0 +1,56 @@
+name: Weekly backup
+
+on:
+  schedule:
+    - cron: "0 14 * * 0"   # 毎週日曜 23:00 JST（14:00 UTC）
+  workflow_dispatch:        # 手動実行
+
+permissions:
+  contents: write           # backup ブランチへ push するために必要
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # backup ブランチ用の作業ディレクトリを用意（main とは履歴の無い専用ブランチ）
+      - name: Prepare backup branch
+        run: |
+          if git ls-remote --exit-code --heads origin backup >/dev/null 2>&1; then
+            git fetch --depth=1 origin backup
+            git worktree add -B backup ../backup-wt FETCH_HEAD
+          else
+            git worktree add --detach ../backup-wt
+            git -C ../backup-wt checkout --orphan backup
+            git -C ../backup-wt rm -rf -q .
+          fi
+
+      # 取得・検証に失敗すると、ここで止まる（何も書かれず、push もされない）
+      - name: Take backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: node scripts/backup.mjs --out ../backup-wt/backups --keep 12
+
+      - name: Commit and push
+        working-directory: ../backup-wt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -f backups
+          if git diff --cached --quiet; then
+            echo "変更なし（同じ内容のため、コミットしません）"
+          else
+            git commit -m "backup: $(TZ=Asia/Tokyo date +%F)"
+            git push origin backup
+          fi
