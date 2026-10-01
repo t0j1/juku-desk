@@ -29,6 +29,7 @@
         <nav class="container mx-auto px-5 py-3 flex items-center gap-6 text-sm">
           <%= link_to "塾日報ステーション", root_path, class: "font-bold text-base" %>
           <%= link_to "生徒データベース", students_path, class: "hover:underline" %>
+          <%= link_to "PDF分割", tools_pdf_splitter_jobs_path, class: "hover:underline" %>
           <span class="ml-auto text-stone-500"><%= current_user.name %>（<%= t("roles.#{current_user.role}") %>）</span>
           <%= button_to "ログアウト", session_path, method: :delete, class: "text-stone-600 hover:underline" %>
         </nav>

@@ -1,0 +1,128 @@
+module Tools
+  module PdfSplitter
+    class JobsController < BaseController
+      before_action :set_job, except: %i[ index create ]
+
+      def index
+        @jobs = current_user.pdf_split_jobs.order(created_at: :desc).limit(50)
+      end
+
+      def show
+        @boundaries = @job.boundaries.presence || []
+      end
+
+      def create
+        result = ::PdfSplitter::Uploader.new(current_user).call(params[:file], password: params[:password])
+        if result.error
+          redirect_to tools_pdf_splitter_jobs_path, alert: result.error
+        else
+          AuditLog.record!(:create, result.job, metadata: { filename: result.job.original_filename, pages: result.job.page_count })
+          ::PdfSplitter::AnalyzeJob.perform_later(result.job.id)
+          redirect_to tools_pdf_splitter_job_path(result.job)
+        end
+      end
+
+      def destroy
+        AuditLog.record!(:delete, @job, metadata: { filename: @job.original_filename })
+        @job.destroy!
+        redirect_to tools_pdf_splitter_jobs_path, notice: "削除しました。", status: :see_other
+      end
+
+      # 解析をやり直す
+      def analyze
+        @job.update!(status: :uploaded, error_message: nil)
+        ::PdfSplitter::AnalyzeJob.perform_later(@job.id)
+        redirect_to tools_pdf_splitter_job_path(@job)
+      end
+
+      # 境界の手動修正（保存のみ）。N等分の適用もここで受ける
+      def update_boundaries
+        if params[:equal_parts].present?
+          @job.update!(boundaries: ::PdfSplitter::PatternGuesser.equal_parts(@job.page_count, params[:equal_parts]), pattern: 4)
+          return redirect_to tools_pdf_splitter_job_path(@job), notice: "#{params[:equal_parts].to_i}等分の範囲を入れました。確認して分割してください。"
+        end
+
+        set = ::PdfSplitter::BoundarySet.new(boundary_rows, page_count: @job.page_count)
+        if set.valid?
+          @job.update!(boundaries: set.to_a, pattern: @job.auto_detected? ? @job.pattern : 3)
+          redirect_to tools_pdf_splitter_job_path(@job), notice: "分割範囲を保存しました。"
+        else
+          redirect_to tools_pdf_splitter_job_path(@job), alert: set.errors.join(" ")
+        end
+      end
+
+      # 境界を確定して出力を作る（自動判定は提案まで。確定は人がこのボタンで行う）
+      def split
+        set = ::PdfSplitter::BoundarySet.new(params.key?(:boundaries) ? boundary_rows : @job.boundaries, page_count: @job.page_count)
+        return redirect_to(tools_pdf_splitter_job_path(@job), alert: set.errors.join(" ")) unless set.valid?
+
+        names = ::PdfSplitter::Namer.new.then do |namer|
+          generated = set.to_a.each_with_index.map { |b, i| b["name"] ? namer.sanitize(b["name"]) : namer.build(b, index: i + 1) }
+          ::PdfSplitter::Namer.uniquify(generated)
+        end
+
+        PdfSplitJob.transaction do
+          @job.outputs.destroy_all
+          set.to_a.each_with_index do |b, i|
+            @job.outputs.create!(display_name: names[i], page_from: b["from"], page_to: b["to"],
+                                 round_label: b["round"], section_kind: b["kind"], position: i)
+          end
+          @job.update!(boundaries: set.to_a, status: :splitting, output_count: set.to_a.size, error_message: nil)
+        end
+        ::PdfSplitter::SplitJob.perform_later(@job.id)
+        redirect_to tools_pdf_splitter_job_path(@job), notice: "#{set.to_a.size}ファイルに分割しています。"
+      end
+
+      # ファイル名の一括変更（個別編集・先頭/末尾への一括追加）
+      def update_names
+        namer = ::PdfSplitter::Namer.new
+        outputs = @job.outputs.to_a
+        edited = params.fetch(:names, {})
+        names = outputs.map do |o|
+          n = edited[o.id.to_s].presence || o.display_name
+          namer.sanitize("#{params[:prefix]}#{n}#{params[:suffix]}")
+        end
+        names = ::PdfSplitter::Namer.uniquify(names)
+        PdfSplitOutput.transaction do
+          outputs.zip(names).each { |o, n| o.update!(display_name: n) if o.display_name != n }
+        end
+        redirect_to tools_pdf_splitter_job_path(@job), notice: "ファイル名を更新しました。"
+      end
+
+      # 印刷ページ（iPad で QR から開く）
+      def print
+        @outputs = @job.outputs.to_a
+        @bundles = @outputs.select(&:round_label).group_by(&:round_label).select { |_, os| os.size > 1 }
+      end
+
+      # 同じ回の問題＋解答を1つにまとめて印刷（inline）
+      def print_bundle
+        outputs = @job.outputs.where(round_label: params[:round]).to_a
+        return redirect_to(print_tools_pdf_splitter_job_path(@job), alert: "対象のファイルがありません。") if outputs.empty?
+        AuditLog.record!(:print, @job, metadata: { job_id: @job.id, bundle: params[:round], outputs: outputs.map(&:display_name) })
+        send_pdf ::PdfSplitter::PrintOptimizer.bundle(outputs), filename: "#{params[:round]}_まとめ.pdf", disposition: "inline"
+      end
+
+      def download_zip
+        outputs = @job.outputs.to_a
+        return redirect_to(tools_pdf_splitter_job_path(@job), alert: "分割済みのファイルがありません。") if outputs.empty?
+        AuditLog.record!(:export, @job, metadata: { job_id: @job.id, format: "zip", count: outputs.size })
+        send_data ::PdfSplitter::Zipper.zip(outputs), filename: "#{File.basename(@job.original_filename, '.*')}.zip",
+                                                     type: "application/zip", disposition: "attachment"
+      end
+
+      # 境界確認用のサムネイル（保存しない）
+      def thumbnail
+        page = params[:page].to_i
+        return head(:not_found) unless page.between?(1, @job.page_count.to_i)
+        expires_in 1.hour, public: false
+        send_data ::PdfSplitter::Thumbnailer.png(@job.original_blob_data, page), type: "image/png", disposition: "inline"
+      end
+
+      private
+        def boundary_rows
+          params.fetch(:boundaries, []).map { |r| r.permit(:from, :to, :round, :kind, :name) }
+        end
+    end
+  end
+end

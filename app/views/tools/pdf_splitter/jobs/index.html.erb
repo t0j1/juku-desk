@@ -1,0 +1,22 @@
+<% content_for :title, "PDF分割" %>
+<h1 class="font-bold text-2xl mb-4">PDF分割</h1>
+<%= form_with url: tools_pdf_splitter_jobs_path, multipart: true, class: "bg-white border border-stone-200 p-4 mb-6 max-w-xl text-sm space-y-3" do |f| %>
+  <p>問題集のPDFを選ぶと、「第1回_問題」「第1回_解答」…のように分けます。上限は <%= PdfSplitter.config.dig(:limits, :max_file_mb) %>MB・<%= PdfSplitter.config.dig(:limits, :max_pages) %>ページです。</p>
+  <div><%= f.file_field :file, accept: "application/pdf", required: true %></div>
+  <div><%= f.label :password, "PDFのパスワード（ある場合のみ・保存しません）" %><br><%= f.password_field :password, autocomplete: "off", class: "border rounded px-2 py-1" %></div>
+  <%= f.submit "アップロードして解析", class: "rounded px-3 py-2 bg-stone-800 text-white" %>
+<% end %>
+<table id="jobs" class="w-full bg-white border border-stone-200 text-sm">
+  <thead class="bg-stone-100 text-left"><tr><th class="p-2">ファイル</th><th class="p-2">ページ</th><th class="p-2">状態</th><th class="p-2">作成</th></tr></thead>
+  <tbody>
+    <% @jobs.each do |job| %>
+      <tr class="border-t border-stone-200">
+        <td class="p-2"><%= link_to job.original_filename, tools_pdf_splitter_job_path(job), class: "underline" %></td>
+        <td class="p-2"><%= job.page_count %></td>
+        <td class="p-2"><%= t("pdf_splitter.status.#{job.status}") %></td>
+        <td class="p-2"><%= l job.created_at, format: :short %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<p class="mt-2 text-xs text-stone-500">ファイルは<%= PdfBlob.retention_days %>日後にサーバーから自動で消えます。</p>

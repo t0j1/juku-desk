@@ -22,3 +22,11 @@ ja:
         note: メモ
       student_weekday:
         weekday: 曜日
+  pdf_splitter:
+    status:
+      uploaded: 解析待ち
+      analyzing: 解析中
+      analyzed: 解析済み（未分割）
+      splitting: 分割中
+      done: 分割済み
+      failed: 失敗
