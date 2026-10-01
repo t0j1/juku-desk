@@ -1,0 +1,9 @@
+taro_mon:
+  student: taro
+  weekday: 1
+taro_thu:
+  student: taro
+  weekday: 4
+mika_mon:
+  student: mika
+  weekday: 1

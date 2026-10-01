@@ -1,0 +1,4 @@
+<% content_for :title, "生徒を登録" %>
+<h1 class="font-bold text-2xl mb-4">生徒を登録</h1>
+<%= render "form", student: @student %>
+<p class="mt-4"><%= link_to "一覧に戻る", students_path, class: "underline text-sm" %></p>
