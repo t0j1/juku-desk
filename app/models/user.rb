@@ -2,6 +2,7 @@ class User < ApplicationRecord
   has_secure_password
   has_many :sessions, dependent: :destroy
   has_many :pdf_split_jobs, dependent: :destroy
+  has_many :lessons, foreign_key: :instructor_id, dependent: :restrict_with_error, inverse_of: :instructor
 
   enum :role, { instructor: 0, manager: 1, admin: 2 }, validate: true
 

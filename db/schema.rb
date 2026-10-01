@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -26,6 +26,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_230000) do
     t.index ["auditable_type", "auditable_id"], name: "index_audit_logs_on_auditable_type_and_auditable_id"
     t.index ["created_at"], name: "index_audit_logs_on_created_at"
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
+  end
+
+  create_table "lesson_students", force: :cascade do |t|
+    t.bigint "lesson_id", null: false
+    t.bigint "student_id", null: false
+    t.string "subject"
+    t.integer "understanding"
+    t.boolean "attended", default: true, null: false
+    t.text "memo"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["lesson_id", "student_id"], name: "index_lesson_students_on_lesson_id_and_student_id", unique: true
+    t.index ["lesson_id"], name: "index_lesson_students_on_lesson_id"
+    t.index ["student_id"], name: "index_lesson_students_on_student_id"
+  end
+
+  create_table "lessons", force: :cascade do |t|
+    t.date "held_on", null: false
+    t.integer "weekday", null: false
+    t.time "starts_at", default: "2000-01-01 19:20:00", null: false
+    t.time "ends_at", default: "2000-01-01 22:00:00", null: false
+    t.bigint "instructor_id", null: false
+    t.text "overall_memo"
+    t.text "homework"
+    t.text "manager_note"
+    t.integer "status", default: 0, null: false
+    t.datetime "finalized_at"
+    t.datetime "reported_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["held_on", "instructor_id"], name: "index_lessons_on_held_on_and_instructor_id", unique: true
+    t.index ["instructor_id"], name: "index_lessons_on_instructor_id"
+    t.index ["status"], name: "index_lessons_on_status"
   end
 
   create_table "pdf_blobs", force: :cascade do |t|
@@ -97,6 +131,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_230000) do
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
+  create_table "settings", force: :cascade do |t|
+    t.string "key", null: false
+    t.jsonb "value", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_settings_on_key", unique: true
+  end
+
   create_table "student_weekdays", force: :cascade do |t|
     t.bigint "student_id", null: false
     t.integer "weekday", null: false
@@ -130,6 +172,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_230000) do
   end
 
   add_foreign_key "audit_logs", "users"
+  add_foreign_key "lesson_students", "lessons", on_delete: :cascade
+  add_foreign_key "lesson_students", "students"
+  add_foreign_key "lessons", "users", column: "instructor_id"
   add_foreign_key "pdf_blobs", "pdf_split_jobs", on_delete: :cascade
   add_foreign_key "pdf_blobs", "pdf_split_outputs", on_delete: :cascade
   add_foreign_key "pdf_split_jobs", "users"

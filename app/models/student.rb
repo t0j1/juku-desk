@@ -1,5 +1,6 @@
 class Student < ApplicationRecord
   has_many :student_weekdays, -> { order(:weekday) }, dependent: :destroy
+  has_many :lesson_students, dependent: :restrict_with_error
 
   validates :name, presence: true
 
