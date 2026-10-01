@@ -2,7 +2,7 @@
 
 ## 1. Neon
 1. 無料プロジェクトを作成（Region: AWS Asia Pacific (Singapore)）。
-2. データベース名 `juku_production` で接続文字列を取得し、末尾に `?sslmode=require` を付ける。
+2. データベース名 `juku_production` で接続文字列を取得し、末尾に `?sslmode=require` を付ける。**直結（non-pooled）の文字列を使う**（`-pooler` ホストは db:prepare の CREATE DATABASE や Solid Queue が不安定になる）。
 3. Solid Cache/Queue/Cable 用の `juku_production_cache` / `_queue` / `_cable` は、起動時の `db:prepare` が同じサーバー上に自動作成する（Neon のオーナーロールは CREATEDB 権限を持つ）。別の場所に置く場合は `CACHE_DATABASE_URL` / `QUEUE_DATABASE_URL` / `CABLE_DATABASE_URL` で上書きする。
 
 ## 2. Render（Web Service）
