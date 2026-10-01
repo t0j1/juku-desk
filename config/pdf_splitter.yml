@@ -1,0 +1,27 @@
+shared:
+  headings:
+    round_patterns:
+      - '第\s*[0-9０-９一二三四五六七八九十]{1,3}\s*(?:回|講|章|単元)'
+      - '[0-9０-９]{1,3}\s*回目'
+    answer_patterns:  [ '解答|答え|模範解答|解説|回答' ]
+    problem_patterns: [ '問題|演習|練習|確認テスト|ドリル' ]
+  limits:
+    max_file_mb: 30
+    max_pages: 150
+    max_jobs_per_day: 20
+    max_outputs: 50
+    thumbnail_pages: 20
+  retention:
+    enabled: true
+    days: 7
+    max_original_mb: 20
+    max_outputs_mb_per_job: 40
+    max_total_mb: 150
+  naming:
+    template: "{prefix}{round}_{kind}{suffix}"
+    prefix: ""
+    suffix: ""
+    kind_labels: { problem: "問題", answer: "解答", unknown: "分割" }
+    round_fallback: "第{index}部"
+    zero_pad: false
+    max_bytes: 200

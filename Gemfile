@@ -68,3 +68,8 @@ group :test do
 end
 
 gem "rails-i18n", "~> 8.1"
+
+gem "pdf-reader", "~> 2.16"
+gem "rubyzip", "~> 3.7"
+gem "combine_pdf", "~> 1.0"
+gem "rqrcode", "~> 3.2"

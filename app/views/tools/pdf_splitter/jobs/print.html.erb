@@ -1,0 +1,40 @@
+<% content_for :title, "印刷 - #{@job.original_filename}" %>
+<h1 class="font-bold text-2xl mb-4">印刷するファイルを選ぶ</h1>
+<% if @outputs.empty? %>
+  <p>まだ分割されていません。<%= link_to "分割画面へ", tools_pdf_splitter_job_path(@job), class: "underline" %></p>
+<% else %>
+  <table id="print-list" class="w-full max-w-2xl bg-white border border-stone-200 text-base">
+    <% @outputs.each do |o| %>
+      <tr class="border-t border-stone-200">
+        <td class="p-3"><%= o.filename %></td>
+        <td class="p-3 text-stone-500"><%= o.pages_label %></td>
+        <td class="p-3 whitespace-nowrap">
+          <%= link_to "印刷", print_tools_pdf_splitter_job_output_path(@job, o), class: "rounded px-4 py-2 bg-stone-800 text-white", data: { turbo: false } %>
+          <%= link_to "保存", download_tools_pdf_splitter_job_output_path(@job, o), class: "rounded px-4 py-2 border ml-2", data: { turbo: false } %>
+        </td>
+      </tr>
+    <% end %>
+  </table>
+  <% if @bundles.any? %>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <% @bundles.each_key do |round| %>
+        <%= link_to "#{round} 問題＋解答をまとめて印刷", print_bundle_tools_pdf_splitter_job_path(@job, round:), class: "rounded px-4 py-2 border", data: { turbo: false } %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<div class="mt-6 flex flex-wrap gap-6 items-start">
+  <div class="bg-white border border-stone-200 p-4">
+    <p class="text-sm mb-2">iPadのカメラで読み取ると、このページが開きます</p>
+    <div id="qr"><%= qr_svg(print_tools_pdf_splitter_job_url(@job)) %></div>
+  </div>
+  <ol class="text-sm list-decimal pl-5 space-y-1">
+    <li>QRコードをiPadのカメラで読み取る（初回はログインが必要です）</li>
+    <li>印刷したいファイルの「印刷」をタップ</li>
+    <li>PDFが開いたら、共有メニューから「プリント」</li>
+    <li>プリンタを選び、部数・両面・モノクロを設定して印刷</li>
+  </ol>
+</div>
+<p class="mt-4 text-sm text-amber-800">⚠ ファイルは<%= l(@job.expires_at, format: :short) if @job.expires_at %>（<%= PdfBlob.retention_days %>日後）にサーバーから消えます</p>
+<p class="mt-4 text-sm"><%= link_to "分割画面に戻る", tools_pdf_splitter_job_path(@job), class: "underline" %></p>
