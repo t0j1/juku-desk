@@ -104,8 +104,9 @@ test:
 <%
   solid_url = lambda do |suffix|
     base = ENV["DATABASE_URL"].to_s
-    next base if base.empty?
-    uri = URI.parse(base)
+    uri = URI.parse(base) rescue nil
+    # Only production (a URL with a database path) needs the derived name.
+    next base if uri.nil? || uri.path.to_s.delete("/").empty?
     uri.path = "#{uri.path}_#{suffix}"
     uri.to_s
   end
