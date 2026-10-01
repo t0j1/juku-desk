@@ -6,7 +6,7 @@ class StudentsTest < ApplicationSystemTestCase
     fill_in "メールアドレス", with: users(:instructor).email_address
     fill_in "パスワード", with: "password"
     click_on "ログイン"
-    assert_text "生徒データベース"
+    assert_selector "#students"
 
     click_on "生徒を登録"
     assert_selector "h1", text: "生徒を登録"
@@ -14,6 +14,6 @@ class StudentsTest < ApplicationSystemTestCase
     check "student_weekday_3"
     click_on "保存"
     assert_text "生徒を登録しました。"
-    assert_text "水"
+    assert_selector "#weekdays", text: "水"
   end
 end
