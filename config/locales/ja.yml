@@ -1,0 +1,24 @@
+ja:
+  roles:
+    instructor: 講師
+    manager: 上長
+    admin: 管理者
+  activerecord:
+    models:
+      user: ユーザー
+      student: 生徒
+      student_weekday: 通い曜日
+    attributes:
+      user:
+        name: 氏名
+        email_address: メールアドレス
+        password: パスワード
+        role: 権限
+      student:
+        name: 氏名
+        grade: 学年
+        enrolled_on: 入塾日
+        left_on: 退塾日
+        note: メモ
+      student_weekday:
+        weekday: 曜日

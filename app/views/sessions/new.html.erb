@@ -1,0 +1,15 @@
+<div class="mx-auto max-w-md">
+  <h1 class="font-bold text-2xl mb-6">ログイン</h1>
+  <%= form_with url: session_url, class: "space-y-4" do |form| %>
+    <div>
+      <%= form.label :email_address, "メールアドレス", class: "block text-sm" %>
+      <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username", value: params[:email_address], class: "block rounded border border-stone-400 px-3 py-2 mt-1 w-full" %>
+    </div>
+    <div>
+      <%= form.label :password, "パスワード", class: "block text-sm" %>
+      <%= form.password_field :password, required: true, autocomplete: "current-password", maxlength: 72, class: "block rounded border border-stone-400 px-3 py-2 mt-1 w-full" %>
+    </div>
+    <%= form.submit "ログイン", class: "rounded px-4 py-2 bg-stone-800 text-white cursor-pointer" %>
+    <p class="text-sm"><%= link_to "パスワードを忘れた場合", new_password_path, class: "underline" %></p>
+  <% end %>
+</div>

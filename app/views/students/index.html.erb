@@ -1,0 +1,26 @@
+<% content_for :title, "生徒データベース" %>
+<div class="flex items-center mb-4">
+  <h1 class="font-bold text-2xl">生徒データベース</h1>
+  <%= link_to "生徒を登録", new_student_path, class: "ml-auto rounded px-3 py-2 bg-stone-800 text-white text-sm" %>
+</div>
+<div class="mb-4 flex gap-2 text-sm">
+  <%= link_to "全員", students_path, class: "px-2 py-1 rounded border #{'bg-stone-200' if params[:weekday].blank?}" %>
+  <% StudentWeekday::NAMES.each_with_index do |n, i| %>
+    <%= link_to n, students_path(weekday: i), class: "px-2 py-1 rounded border #{'bg-stone-200' if params[:weekday] == i.to_s}" %>
+  <% end %>
+</div>
+<table id="students" class="w-full bg-white border border-stone-200 text-sm">
+  <thead class="bg-stone-100 text-left">
+    <tr><th class="p-2">氏名</th><th class="p-2">学年</th><th class="p-2">通い曜日</th><th class="p-2">状態</th></tr>
+  </thead>
+  <tbody>
+    <% @students.each do |student| %>
+      <tr class="border-t border-stone-200">
+        <td class="p-2"><%= link_to student.name, student, class: "underline" %></td>
+        <td class="p-2"><%= student.grade %></td>
+        <td class="p-2"><%= student.student_weekdays.map(&:label).join("・") %></td>
+        <td class="p-2"><%= student.left_on ? "退塾（#{l student.left_on}）" : "在籍" %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

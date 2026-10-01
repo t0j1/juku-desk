@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
   <head>
     <title><%= content_for(:title) || "Juku Desk" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -23,8 +23,20 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+  <body class="bg-stone-50 text-stone-800">
+    <% if authenticated? %>
+      <header class="bg-white border-b border-stone-200">
+        <nav class="container mx-auto px-5 py-3 flex items-center gap-6 text-sm">
+          <%= link_to "塾日報ステーション", root_path, class: "font-bold text-base" %>
+          <%= link_to "生徒データベース", students_path, class: "hover:underline" %>
+          <span class="ml-auto text-stone-500"><%= current_user.name %>（<%= t("roles.#{current_user.role}") %>）</span>
+          <%= button_to "ログアウト", session_path, method: :delete, class: "text-stone-600 hover:underline" %>
+        </nav>
+      </header>
+    <% end %>
+    <main class="container mx-auto mt-8 px-5">
+      <% if notice %><p id="notice" class="mb-4 py-2 px-3 bg-green-50 text-green-700 rounded"><%= notice %></p><% end %>
+      <% if alert %><p id="alert" class="mb-4 py-2 px-3 bg-red-50 text-red-700 rounded"><%= alert %></p><% end %>
       <%= yield %>
     </main>
   </body>
