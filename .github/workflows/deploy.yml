@@ -1,0 +1,37 @@
+name: Deploy
+
+# Render Auto-Deploy is Off; production deploys only after CI passes on main.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Check Ruby version consistency
+        run: |
+          a=$(grep -oP 'ARG RUBY_VERSION=\K[0-9.]+' Dockerfile | head -1)
+          b=$(tr -d '\n' < .ruby-version)
+          c=$(grep -oP '^ruby = "\K[0-9.]+' mise.toml)
+          echo "Dockerfile=$a .ruby-version=$b mise.toml=$c"
+          [ "$a" = "$b" ] && [ "$b" = "$c" ] || { echo "::error::Ruby version mismatch"; exit 1; }
+
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "::error::RENDER_DEPLOY_HOOK_URL secret is not set"; exit 1; fi
+          curl -fsS -X POST "$HOOK" > /dev/null
+          echo "Render deploy triggered for ${{ github.event.workflow_run.head_sha }}"

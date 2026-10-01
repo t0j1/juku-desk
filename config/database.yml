@@ -97,21 +97,32 @@ test:
 # Read https://guides.rubyonrails.org/configuring.html#configuring-a-database
 # for a full overview on how database connection configuration can be specified.
 #
+# Production runs on Neon (one project). DATABASE_URL points at the primary
+# database; the Solid Cache/Queue/Cable databases default to the same server
+# with a suffixed database name (created by db:prepare on boot). Each can be
+# overridden with CACHE_/QUEUE_/CABLE_DATABASE_URL.
+<%
+  solid_url = lambda do |suffix|
+    base = ENV["DATABASE_URL"].to_s
+    next base if base.empty?
+    uri = URI.parse(base)
+    uri.path = "#{uri.path}_#{suffix}"
+    uri.to_s
+  end
+%>
 production:
   primary: &primary_production
     <<: *default
-    database: juku_desk_production
-    username: juku_desk
-    password: <%= ENV["JUKU_DESK_DATABASE_PASSWORD"] %>
+    url: <%= ENV["DATABASE_URL"] %>
   cache:
     <<: *primary_production
-    database: juku_desk_production_cache
+    url: <%= ENV.fetch("CACHE_DATABASE_URL") { solid_url.call("cache") } %>
     migrations_paths: db/cache_migrate
   queue:
     <<: *primary_production
-    database: juku_desk_production_queue
+    url: <%= ENV.fetch("QUEUE_DATABASE_URL") { solid_url.call("queue") } %>
     migrations_paths: db/queue_migrate
   cable:
     <<: *primary_production
-    database: juku_desk_production_cable
+    url: <%= ENV.fetch("CABLE_DATABASE_URL") { solid_url.call("cable") } %>
     migrations_paths: db/cable_migrate
