@@ -83,4 +83,20 @@ class StudentsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_equal "delete", AuditLog.last.action
   end
+
+  test "deactivated user is locked out on next request" do
+    get students_path
+    assert_response :success
+    users(:instructor).update!(active: false)
+    get students_path
+    assert_redirected_to new_session_path
+  end
+
+  test "stale lock_version is rejected even when only weekdays change" do
+    student = students(:taro)
+    stale = student.lock_version
+    student.update!(note: "他の人が更新")
+    patch student_path(student), params: { student: { lock_version: stale, weekdays: [ "1" ] } }
+    assert_response :conflict
+  end
 end

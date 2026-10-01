@@ -65,6 +65,10 @@ class StudentsController < ApplicationController
     def replace_weekdays!
       return unless params[:student]&.key?(:weekdays)
       wanted = Array(params[:student][:weekdays]).reject(&:blank?).map(&:to_i).uniq
+      current = @student.student_weekdays.pluck(:weekday)
+      return if current.sort == wanted.sort
+      # 曜日だけの変更でも lock_version を検査・更新する（属性無変更だと UPDATE が出ず楽観ロックが効かないため）
+      @student.touch unless @student.saved_changes?
       @student.student_weekdays.where.not(weekday: wanted).destroy_all
       (wanted - @student.student_weekdays.pluck(:weekday)).each { |w| @student.student_weekdays.create!(weekday: w) }
     end
