@@ -1,0 +1,23 @@
+require "test_helper"
+
+class PdfSplitter::AnalyzeJobTest < ActiveJob::TestCase
+  test "detects front-back pattern and stores page analysis" do
+    job = create_pdf_job(analyze: false)
+    PdfSplitter::AnalyzeJob.perform_now(job.id)
+    job.reload
+    assert job.analyzed?
+    assert job.auto_detected?
+    assert_equal 0, job.pattern
+    assert_equal 10, job.boundaries.size
+    assert_equal 20, job.page_analyses.count
+    assert_equal 10, job.page_analyses.where(is_heading: true).count
+  end
+
+  test "marks job failed when the original is missing" do
+    job = create_pdf_job(analyze: false)
+    job.pdf_blobs.delete_all
+    PdfSplitter::AnalyzeJob.perform_now(job.id)
+    assert job.reload.failed?
+    assert_match "期限", job.error_message
+  end
+end

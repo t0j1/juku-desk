@@ -2,12 +2,12 @@
 class PdfSplitter::CleanupJob < ApplicationJob
   queue_as :default
 
-  def perform
+  def perform(max_total_bytes: nil)
     retention = PdfSplitter.config[:retention]
     return unless retention[:enabled]
 
     PdfBlob.expired.delete_all
-    limit = retention[:max_total_mb].to_i.megabytes
+    limit = max_total_bytes || retention[:max_total_mb].to_i.megabytes
     total = PdfBlob.sum(:byte_size)
     PdfBlob.order(:created_at).select(:id, :byte_size).find_each do |b|
       break if total <= limit

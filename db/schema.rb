@@ -65,6 +65,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_230000) do
     t.string "display_name", null: false
     t.integer "page_from", null: false
     t.integer "page_to", null: false
+    t.string "round_label"
+    t.string "section_kind"
     t.integer "position", default: 0, null: false
     t.integer "byte_size"
     t.datetime "created_at", null: false
