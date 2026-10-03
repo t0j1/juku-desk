@@ -14,7 +14,7 @@ shared:
   retention:
     enabled: true
     days: 7
-    max_original_mb: 20
+    max_original_mb: 30
     max_outputs_mb_per_job: 40
     max_total_mb: 150
   naming:
