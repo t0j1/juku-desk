@@ -3,6 +3,43 @@
 <% if @outputs.empty? %>
   <p>まだ分割されていません。<%= link_to "分割画面へ", tools_pdf_splitter_job_path(@job), class: "underline" %></p>
 <% else %>
+  <% labels = ::PdfSplitter::PrintQueue::KIND_LABELS %>
+  <div data-controller="print-queue" data-print-queue-url-value="<%= print_queue_tools_pdf_splitter_job_path(@job) %>" data-print-queue-key-value="juku-desk:print-queue:<%= @job.id %>"
+       data-print-queue-max-value="<%= ::PdfSplitter::PrintQueue.max_rounds %>" data-print-queue-labels-value="<%= labels.to_json %>">
+    <% if @rounds.any? %>
+      <section id="print-queue" class="mb-6 max-w-2xl bg-amber-50 border border-amber-200 rounded p-3">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="font-bold">印刷リスト <span class="text-sm font-normal text-stone-500" data-print-queue-target="count"></span></h2>
+          <button type="button" data-action="print-queue#clear" class="text-sm underline">リストを空にする</button>
+        </div>
+        <p data-print-queue-target="empty" class="text-sm text-stone-500">下の表の「＋ リストに追加」で、まとめて印刷する回を選んでください。</p>
+        <ol data-print-queue-target="list" class="text-base"></ol>
+        <%= form_with url: print_queue_tools_pdf_splitter_job_path(@job), method: :get, data: { turbo: false, print_queue_target: "form" }, html: { target: "_blank", hidden: true }, class: "mt-2 flex flex-wrap items-center gap-3" do %>
+          <label class="text-sm"><%= check_box_tag :pad_even, "1", false %> 両面印刷用に白紙を入れて、各ファイルを偶数ページにそろえる</label>
+          <button type="submit" class="rounded px-4 py-2 bg-stone-800 text-white">まとめて印刷</button>
+        <% end %>
+      </section>
+
+      <table id="round-list" class="w-full max-w-2xl bg-white border border-stone-200 text-base mb-6">
+        <thead class="bg-stone-100 text-left text-sm"><tr><th class="p-2">回</th><th class="p-2">印刷する内容</th><th></th></tr></thead>
+        <% @rounds.each do |round, outs| %>
+          <% kinds = outs.map(&:section_kind) %>
+          <% options = labels.select { |k, _| ::PdfSplitter::PrintQueue::KINDS[k].all? { |x| kinds.include?(x) } } %>
+          <% next if options.empty? %>
+          <tr class="border-t border-stone-200" data-round="<%= round %>">
+            <td class="p-3"><%= round %></td>
+            <td class="p-3"><%= select_tag "kind_#{round}", options_for_select(options.invert.to_a, options.key?("both") ? "both" : options.keys.first), class: "border rounded px-2 py-1", aria: { label: "#{round} 印刷する内容" } %></td>
+            <td class="p-3 whitespace-nowrap">
+              <button type="button" class="rounded px-4 py-2 bg-stone-800 text-white" data-action="print-queue#printOne">印刷</button>
+              <button type="button" class="rounded px-4 py-2 border ml-2" data-action="print-queue#add">＋ リストに追加</button>
+            </td>
+          </tr>
+        <% end %>
+      </table>
+    <% end %>
+
+    <details <%= "open" if @rounds.empty? %>>
+      <summary class="cursor-pointer text-sm mb-2">ファイルごとに印刷・保存する</summary>
   <table id="print-list" class="w-full max-w-2xl bg-white border border-stone-200 text-base">
     <% @outputs.each do |o| %>
       <tr class="border-t border-stone-200">
@@ -15,13 +52,8 @@
       </tr>
     <% end %>
   </table>
-  <% if @bundles.any? %>
-    <div class="mt-4 flex flex-wrap gap-2">
-      <% @bundles.each_key do |round| %>
-        <%= link_to "#{round} 問題＋解答をまとめて印刷", print_bundle_tools_pdf_splitter_job_path(@job, round:), class: "rounded px-4 py-2 border", data: { turbo: false } %>
-      <% end %>
-    </div>
-  <% end %>
+    </details>
+  </div>
 <% end %>
 
 <div class="mt-6 flex flex-wrap gap-6 items-start">
@@ -31,7 +63,7 @@
   </div>
   <ol class="text-sm list-decimal pl-5 space-y-1">
     <li>QRコードをiPadのカメラで読み取る（初回はログインが必要です）</li>
-    <li>印刷したいファイルの「印刷」をタップ</li>
+    <li>回ごとに「印刷」をタップ。何回分かまとめるときは「＋ リストに追加」→「まとめて印刷」</li>
     <li>PDFが開いたら、共有メニューから「プリント」</li>
     <li>プリンタを選び、部数・両面・モノクロを設定して印刷</li>
   </ol>

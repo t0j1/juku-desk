@@ -16,7 +16,7 @@
         <table id="outputs" class="w-full bg-white border border-stone-200">
           <% @job.outputs.each do |o| %>
             <tr class="border-t border-stone-200">
-              <td class="p-2"><%= text_field_tag "names[#{o.id}]", o.display_name, class: "border rounded px-2 py-1 w-72", aria: { label: "ファイル名 #{o.pages_label}" } %>.pdf</td>
+              <td class="p-2 w-full"><div class="flex items-center gap-1"><%= text_field_tag "names[#{o.id}]", o.display_name, class: "border rounded px-2 py-1 w-full min-w-96", aria: { label: "ファイル名 #{o.pages_label}" } %>.pdf</div></td>
               <td class="p-2 text-stone-500"><%= o.pages_label %></td>
               <td class="p-2"><%= link_to "印刷", print_tools_pdf_splitter_job_output_path(@job, o), target: "_blank", class: "underline", data: { turbo: false } %>
                 <%= link_to "保存", download_tools_pdf_splitter_job_output_path(@job, o), class: "underline ml-2", data: { turbo: false } %></td>

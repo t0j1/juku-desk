@@ -14,6 +14,7 @@ class PdfSplitterTest < ApplicationSystemTestCase
       attach_file "file", file_fixture("workbook_p1.pdf")
       click_on "アップロードして解析"
       assert_text "自動判定: P1 前後分離型"
+      visit current_path # 解析中の自動更新（meta refresh）と押下が重ならないよう読み直す
       within("#boundaries-form") { click_on "この範囲で分割する" }
     end
     assert_text "分割したファイル（10）"
@@ -26,8 +27,33 @@ class PdfSplitterTest < ApplicationSystemTestCase
 
     click_on "印刷ページ（iPad用QR）"
     assert_selector "#qr svg"
+    visit current_path # 分割中の画面の自動更新（meta refresh）が残らないよう読み直す
+    find("summary", text: "ファイルごとに印刷・保存する").click
     assert_text "英語 第1回 問題.pdf"
-    assert_text "第1回 問題＋解答をまとめて印刷"
+    assert_selector "#print-queue [data-print-queue-target=empty]", text: "リストに追加"
+
+    # 印刷リスト: 第2回(問題のみ) → 第1回(問題と解答) の順に追加し、並べ替え・削除・再読み込み後も残る
+    within("#round-list tr[data-round='第2回']") do
+      find("select").find("option", text: "問題のみ").select_option
+      click_on "＋ リストに追加"
+    end
+    within("#round-list tr[data-round='第1回']") { click_on "＋ リストに追加" }
+    within("#print-queue") do
+      assert_text "1. 第2回 問題のみ"
+      assert_text "2. 第1回 問題と解答"
+      assert_text "2 / 4回分"
+      within("li[data-index='1']") { click_on "↑" }
+      assert_text "1. 第1回 問題と解答"
+    end
+    visit current_path
+    within("#print-queue") do
+      assert_text "1. 第1回 問題と解答"
+      assert_equal %w[第1回:both 第2回:problem], all("input[name='items[]']", visible: false).map(&:value)
+      within("li[data-index='0']") { click_on "削除" }
+      assert_text "1. 第2回 問題のみ"
+      click_on "リストを空にする"
+      assert_text "リストに追加"
+    end
   end
 
   test "add a problem/answer pair row and split a scanned PDF" do

@@ -148,6 +148,21 @@ class Tools::PdfSplitter::JobsControllerTest < ActionDispatch::IntegrationTest
     assert_equal before, job.reload.boundaries
   end
 
+  test "print queue returns one inline PDF and rejects too many rounds" do
+    job = create_pdf_job
+    post split_tools_pdf_splitter_job_path(job)
+    get print_tools_pdf_splitter_job_path(job)
+    assert_select "#round-list tr[data-round='第1回'] select option", 3
+    get print_queue_tools_pdf_splitter_job_path(job, items: [ "第1回:both", "第2回:answer" ])
+    assert_response :success
+    assert_match(/\Ainline;/, response.headers["Content-Disposition"])
+    assert PdfSplitter::Splitter.page_count_of(response.body).positive?
+
+    get print_queue_tools_pdf_splitter_job_path(job, items: (1..5).map { |i| "第#{i}回:both" })
+    assert_redirected_to print_tools_pdf_splitter_job_path(job)
+    assert_match "4回分まで", flash[:alert]
+  end
+
   test "equal parts fills boundaries" do
     job = create_pdf_job(fixture: "plain.pdf")
     patch update_boundaries_tools_pdf_splitter_job_path(job), params: { equal_parts: 2 }
