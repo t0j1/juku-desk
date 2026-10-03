@@ -1,6 +1,9 @@
 module Tools
   module PdfSplitter
     class JobsController < BaseController
+      # サムネイルは1件ずつ作る（同時に何十MBもの元PDFを読み込んでメモリ不足で落ちるのを防ぐ）
+      THUMB_LOCK = Mutex.new
+
       before_action :set_job, except: %i[ index create ]
 
       def index
@@ -116,7 +119,10 @@ module Tools
         page = params[:page].to_i
         return head(:not_found) unless page.between?(1, @job.page_count.to_i)
         expires_in 1.hour, public: false
-        send_data ::PdfSplitter::Thumbnailer.png(@job.original_blob_data, page), type: "image/png", disposition: "inline"
+        png = Rails.cache.fetch([ "pdf_thumb", @job.id, page ], expires_in: 1.day) do
+          THUMB_LOCK.synchronize { ::PdfSplitter::Thumbnailer.png(@job.original_blob_data, page) }
+        end
+        send_data png, type: "image/png", disposition: "inline"
       end
 
       private

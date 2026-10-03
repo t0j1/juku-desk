@@ -19,7 +19,7 @@
 RAILS_MASTER_KEY    = config/master.key の中身
 DATABASE_URL        = Neon の接続文字列（?sslmode=require 付き）
 SOLID_QUEUE_IN_PUMA = true
-WEB_CONCURRENCY     = 1
+WEB_CONCURRENCY     = 0   # 512MB プランでは single mode（ワーカープロセスを増やさない）
 RAILS_MAX_THREADS   = 3
 ```
 Settings → Deploy Hook の URL を控える。
