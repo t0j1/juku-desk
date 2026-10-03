@@ -57,6 +57,11 @@ class QuizTest < ActiveSupport::TestCase
     assert words.all? { |w| (11..40).cover?(w.number) }
   end
 
+  test "draw returns words in ascending number order" do
+    words = quiz(count: 30).draw
+    assert_equal words.map(&:number).sort, words.map(&:number)
+  end
+
   test "split gives the extra word to the left column" do
     assert_equal [ 25, 25 ], Quiz.split(50)
     assert_equal [ 13, 12 ], Quiz.split(25)

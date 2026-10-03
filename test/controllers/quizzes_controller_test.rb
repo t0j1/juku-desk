@@ -42,20 +42,44 @@ class QuizzesControllerTest < ActionDispatch::IntegrationTest
     create_quiz(start_no: 1, end_no: 50, count: 25)
     assert_response :success
     assert_select "[aria-current=step]", text: /印刷/
-    assert_select "#quiz-sheet .sheet-title", text: "LEAP 改訂版 No.1–50"
-    assert_select "#quiz-sheet .sheet-point, #quiz-sheet", text: %r{／25}
-    assert_select "#quiz-sheet .sheet-col", count: 2
-    assert_select "#quiz-sheet .sheet-col:first-child .sheet-row", count: 13
-    assert_select "#quiz-sheet .sheet-col:last-child .sheet-row", count: 12
-    terms = css_select("#quiz-sheet .sheet-term").map(&:text)
+    assert_select "#quiz-sheet-question .sheet-title", text: "LEAP 改訂版 No.1–50"
+    assert_select "#quiz-sheet-question", text: %r{／25}
+    assert_select "#quiz-sheet-question .sheet-col", count: 2
+    assert_select "#quiz-sheet-question .sheet-col:first-child .sheet-row", count: 13
+    assert_select "#quiz-sheet-question .sheet-col:last-child .sheet-row", count: 12
+    terms = css_select("#quiz-sheet-question .sheet-term").map(&:text)
     assert_equal 25, terms.uniq.size
+  end
+
+  test "sheet numbers are the headword numbers in ascending order, not 1..n" do
+    create_quiz(start_no: 31, end_no: 50, count: 20)
+    numbers = css_select("#quiz-sheet-question .sheet-no").map { |n| n.text.to_i }
+    assert_equal (31..50).to_a, numbers
+    terms = css_select("#quiz-sheet-question .sheet-term").map(&:text)
+    assert_equal numbers.map { |n| "word#{n}" }, terms
+  end
+
+  test "answer sheet has the same layout with the first meaning in the answer column" do
+    create_quiz(start_no: 31, end_no: 50, count: 20)
+    assert_select "#quiz-sheet-question .sheet-answer", count: 0
+    assert_select "#quiz-sheet-answer .sheet-title", text: "LEAP 改訂版 No.31–50　解答"
+    assert_select "#quiz-sheet-answer .sheet-row", count: 20
+    assert_select "#quiz-sheet-answer .sheet-row:first-child .sheet-answer", text: "[他] 意味31"
+    assert_equal css_select("#quiz-sheet-question .sheet-no").map(&:text), css_select("#quiz-sheet-answer .sheet-no").map(&:text)
+  end
+
+  test "print kind selector offers question, answer and both" do
+    create_quiz
+    assert_select "select#print_kind option", count: 3
+    assert_select "select#print_kind option[value=question][selected]"
+    assert_select "option", text: "問題と解答"
   end
 
   test "re-drawing with the same conditions gives a different selection" do
     create_quiz(count: 20)
-    first = css_select("#quiz-sheet .sheet-term").map(&:text)
+    first = css_select("#quiz-sheet-question .sheet-term").map(&:text)
     create_quiz(count: 20)
-    second = css_select("#quiz-sheet .sheet-term").map(&:text)
+    second = css_select("#quiz-sheet-question .sheet-term").map(&:text)
     assert_equal 20, first.size
     assert_not_equal first, second
   end

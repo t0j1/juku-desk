@@ -54,21 +54,38 @@ class QuizzesTest < ApplicationSystemTestCase
     assert_text "左 25／右 24"
 
     click_on "問題を作成"
-    assert_selector "#quiz-sheet .sheet-row", count: 49
+    assert_selector "#quiz-sheet-question .sheet-row", count: 49
     shot "4_preview_49", height: 1010
-    first = all("#quiz-sheet .sheet-term").map(&:text)
+    first = all("#quiz-sheet-question .sheet-term").map(&:text)
     page.execute_script("document.body.dataset.old = '1'") # ページが読み込み直されるまで待つための目印
     click_on "問題を入れ替える"
     assert_no_selector "body[data-old]"
-    assert_selector "#quiz-sheet .sheet-row", count: 49
-    assert_not_equal first, all("#quiz-sheet .sheet-term").map(&:text)
+    assert_selector "#quiz-sheet-question .sheet-row", count: 49
+    assert_not_equal first, all("#quiz-sheet-question .sheet-term").map(&:text)
+  end
+
+  test "choose what to print: question, answer or both" do
+    visit new_quiz_path(wordbook_id: wordbooks(:leap).id)
+    click_on "20"
+    click_on "問題を作成"
+    assert_selector "#quiz-sheet-question"
+    assert_no_selector "#quiz-sheet-answer"
+
+    select "解答のみ", from: "print_kind"
+    assert_selector "#quiz-sheet-answer .sheet-answer", count: 20
+    assert_no_selector "#quiz-sheet-question"
+    shot "6_preview_answer", height: 1010
+
+    select "問題と解答", from: "print_kind"
+    assert_selector "#quiz-sheet-question"
+    assert_selector "#quiz-sheet-answer"
   end
 
   test "preview with 20 words" do
     visit new_quiz_path(wordbook_id: wordbooks(:leap).id)
     click_on "20"
     click_on "問題を作成"
-    assert_selector "#quiz-sheet .sheet-row", count: 20
+    assert_selector "#quiz-sheet-question .sheet-row", count: 20
     shot "5_preview_20", height: 1010
   end
 end
