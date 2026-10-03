@@ -110,7 +110,14 @@ class Tools::PdfSplitter::JobsControllerTest < ActionDispatch::IntegrationTest
   test "paired rows with a bad range are rejected" do
     job = create_pdf_job(fixture: "scanned_images.pdf")
     post split_tools_pdf_splitter_job_path(job), params: { pairs: [ { round: "第1回", problem_from: 2, problem_to: 4, answer_from: 8, answer_to: 99 } ] }
-    assert_match "2行目のページ範囲", flash[:alert]
+    assert_match "第1回の解答のページ範囲", flash[:alert]
+    assert_empty job.outputs.reload
+  end
+
+  test "a pair with only the problem range is rejected, not silently dropped" do
+    job = create_pdf_job(fixture: "scanned_images.pdf")
+    post split_tools_pdf_splitter_job_path(job), params: { pairs: [ { round: "第1回", problem_from: 2, problem_to: 4, answer_from: "", answer_to: "" } ] }
+    assert_match "第1回の解答のページ範囲が空です", flash[:alert]
     assert_empty job.outputs.reload
   end
 

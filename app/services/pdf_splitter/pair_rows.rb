@@ -4,8 +4,8 @@ module PdfSplitter
     def self.expand(pairs)
       rows = Array(pairs).map { |p| (p.respond_to?(:to_unsafe_h) ? p.to_unsafe_h : p.to_h).stringify_keys }
       rows = rows.reject { |p| %w[problem_from problem_to answer_from answer_to].all? { |k| p[k].blank? } }
-      problems = rows.map { |p| { "from" => p["problem_from"], "to" => p["problem_to"], "round" => p["round"], "kind" => "problem" } }
-      answers  = rows.map { |p| { "from" => p["answer_from"],  "to" => p["answer_to"],  "round" => p["round"], "kind" => "answer" } }
+      problems = rows.map { |p| { "from" => p["problem_from"], "to" => p["problem_to"], "round" => p["round"], "kind" => "problem", "label" => "#{p['round'].presence || '回名なし'}の問題" } }
+      answers  = rows.map { |p| { "from" => p["answer_from"],  "to" => p["answer_to"],  "round" => p["round"], "kind" => "answer", "label" => "#{p['round'].presence || '回名なし'}の解答" } }
       problems + answers
     end
 

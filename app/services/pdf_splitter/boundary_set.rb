@@ -13,21 +13,26 @@ module PdfSplitter
       @to_a ||= @rows.filter_map do |r|
         r = r.respond_to?(:to_unsafe_h) ? r.to_unsafe_h : r.to_h
         r = r.stringify_keys
-        next if r["from"].blank? && r["to"].blank?
+        if r["from"].blank? && r["to"].blank?
+          (@blank_labels ||= []) << r["label"] if r["label"]
+          next
+        end
         { "from" => r["from"].to_i, "to" => r["to"].to_i,
           "round" => r["round"].to_s.strip.presence, "kind" => (%w[problem answer].include?(r["kind"]) ? r["kind"] : nil),
-          "name" => r["name"].to_s.strip.presence }
+          "name" => r["name"].to_s.strip.presence, "label" => r["label"] }.compact
       end
     end
 
     def valid?
       @errors = []
+      to_a
+      Array(@blank_labels).each { |l| @errors << "#{l}のページ範囲が空です。" }
       @errors << "分割範囲を1つ以上指定してください。" if to_a.empty?
       max = PdfSplitter.config.dig(:limits, :max_outputs).to_i
       @errors << "分割数が多すぎます（上限 #{max}）。" if to_a.size > max
       to_a.each_with_index do |b, i|
         unless b["from"].between?(1, @page_count) && b["to"].between?(b["from"], @page_count)
-          @errors << "#{i + 1}行目のページ範囲が正しくありません（1〜#{@page_count}）。"
+          @errors << "#{b['label'] || "#{i + 1}行目"}のページ範囲が正しくありません（1〜#{@page_count}）。"
         end
       end
       @errors.empty?

@@ -6,7 +6,11 @@ export default class extends Controller {
 
   add(event) {
     event.preventDefault()
-    const index = this.bodyTarget.querySelectorAll("tr").length + 1
+    const used = Array.from(this.bodyTarget.querySelectorAll("tr")).map((tr) => {
+      const m = (tr.querySelector("input")?.value || "").match(/第\s*(\d+)\s*回/)
+      return m ? Number(m[1]) : 0
+    })
+    const index = Math.max(this.bodyTarget.querySelectorAll("tr").length, ...used) + 1
     const html = this.templateTarget.innerHTML.replaceAll("__N__", index)
     this.bodyTarget.insertAdjacentHTML("beforeend", html)
   }
