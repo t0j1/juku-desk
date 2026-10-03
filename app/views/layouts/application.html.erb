@@ -33,7 +33,8 @@
           <% end %>
           <nav aria-label="メインメニュー" class="space-y-1">
             <%= nav_item "生徒データベース", students_path, :users, active: controller_path == "students" %>
-            <%= nav_item "PDF分割", tools_pdf_splitter_jobs_path, :scissors, active: controller_path.start_with?("tools/pdf_splitter") %>
+            <%= nav_item "PDF分割", tools_pdf_splitter_jobs_path, :scissors, active: controller_path.start_with?("tools/pdf_splitter") && action_name != "print" %>
+            <%= nav_item "印刷", print_library_path, :printer, active: controller_path == "print_library" || (controller_path == "tools/pdf_splitter/jobs" && action_name == "print") %>
           </nav>
           <div class="mt-auto rounded-xl bg-white/70 border border-line p-4">
             <p class="font-bold text-sm text-ink"><%= current_user.name %></p>
