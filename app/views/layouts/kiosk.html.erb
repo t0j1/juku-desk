@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <title><%= content_for(:title) || "Juku Desk" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Juku Desk">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body class="min-h-screen bg-gradient-to-b from-console-bg-from to-console-bg-to text-ink font-sans text-[15px]">
+    <header class="h-16 flex items-center gap-3 px-6 bg-white/70 border-b border-line">
+      <span class="flex items-center justify-center size-10 rounded-xl bg-gradient-to-br from-primary to-primary-to text-white text-lg font-bold" aria-hidden="true">塾</span>
+      <span class="font-bold text-lg text-ink">教材を印刷</span>
+    </header>
+    <main class="max-w-5xl mx-auto my-6 px-4">
+      <div class="bg-white rounded-[20px] shadow-card p-6 sm:p-8">
+        <%= render "shared/flash" %>
+        <%= yield %>
+      </div>
+    </main>
+  </body>
+</html>

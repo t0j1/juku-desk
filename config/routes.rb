@@ -30,6 +30,20 @@ Rails.application.routes.draw do
     end
   end
 
+  # 印刷（講師ログイン）
+  get  "print" => "print_library#index", as: :print_library
+  post "print/reissue" => "print_library#reissue", as: :reissue_print_link
+
+  # 印刷専用リンク（共用 iPad・ログイン不要）
+  scope "print/:token", as: :kiosk, token: /[A-Za-z0-9]{20,}/ do
+    get "" => "kiosk/print#index", as: :print
+    get "jobs/:id" => "kiosk/print#show", as: :job
+    get "jobs/:id/print_queue" => "kiosk/print#print_queue", as: :job_print_queue
+    get "jobs/:id/print_bundle" => "kiosk/print#print_bundle", as: :job_print_bundle
+    get "jobs/:job_id/outputs/:id/print" => "kiosk/print#output_print", as: :job_output_print
+    get "jobs/:job_id/outputs/:id/download" => "kiosk/print#output_download", as: :job_output_download
+  end
+
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check
 
