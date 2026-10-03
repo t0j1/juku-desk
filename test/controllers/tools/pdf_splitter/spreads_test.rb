@@ -29,6 +29,7 @@ class Tools::PdfSplitter::SpreadsTest < ActionDispatch::IntegrationTest
     assert_equal 7, job.page_count
     follow_redirect!
     assert_select "#spread-preview img", 2
+    assert job.pdf_blobs.where(kind: "spread_source").exists?
 
     job.update!(boundaries: [ { "from" => 6, "to" => 6, "round" => "第1回", "kind" => "answer" } ])
     perform_enqueued_jobs { post split_tools_pdf_splitter_job_path(job) }
@@ -43,6 +44,36 @@ class Tools::PdfSplitter::SpreadsTest < ActionDispatch::IntegrationTest
     get print_queue_tools_pdf_splitter_job_path(job, items: [ "第1回:answer" ], paper: "b5")
     sizes = PdfSplitter::Splitter.with_tempfile(response.body) { |p| Open3.capture3("pdfinfo", p).first[/size:\s+([\d.]+) x/, 1].to_f.round }
     assert_equal 516, sizes
+  end
+
+  test "split runs in the background and shows progress, then retry after failure keeps the original" do
+    job = upload_spread
+    assert_enqueued_with(job: PdfSplitter::SpreadJob) do
+      post spreads_tools_pdf_splitter_job_path(job), params: { decision: "split", binding: "right" }
+    end
+    follow_redirect!
+    assert_select "#spread-progress", text: /見開きを分けています/
+
+    original = PdfSplitter::Spread.method(:split_to_path)
+    PdfSplitter::Spread.define_singleton_method(:split_to_path) { |*, **| raise PdfSplitter::SplitError, "boom" }
+    begin
+      perform_enqueued_jobs
+    ensure
+      PdfSplitter::Spread.define_singleton_method(:split_to_path, original)
+    end
+    job.reload
+    assert job.failed?
+    assert_equal 4, job.page_count
+    assert job.pdf_blobs.where(kind: "original").exists?
+    assert_not job.pdf_blobs.where(kind: "spread_source").exists?
+    get tools_pdf_splitter_job_path(job)
+    assert_select "#job-failed button", text: "再試行"
+
+    perform_enqueued_jobs { post analyze_tools_pdf_splitter_job_path(job) }
+    job.reload
+    assert job.spread_split?
+    assert_equal 7, job.page_count
+    assert_equal "right", job.binding
   end
 
   test "keep: analyzes the original pages as they are" do
