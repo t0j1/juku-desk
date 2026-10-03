@@ -121,6 +121,33 @@ class Tools::PdfSplitter::JobsControllerTest < ActionDispatch::IntegrationTest
     assert_empty job.outputs.reload
   end
 
+  test "save-only button on the split form saves pairs without splitting, even with CSRF protection on" do
+    job = create_pdf_job(fixture: "scanned_images.pdf")
+    ActionController::Base.allow_forgery_protection = true
+    get tools_pdf_splitter_job_path(job)
+    token = css_select("#pairs-form input[name=authenticity_token]").first["value"]
+    pairs = [ { round: "第1回", problem_from: 2, problem_to: 4, answer_from: 8, answer_to: 9 } ]
+    post split_tools_pdf_splitter_job_path(job), params: { authenticity_token: token, save_only: "範囲だけ保存", pairs: pairs }
+    assert_redirected_to tools_pdf_splitter_job_path(job)
+    assert_equal [ [ 2, 4 ], [ 8, 9 ] ], job.reload.boundaries.map { |b| [ b["from"], b["to"] ] }
+    assert_empty job.outputs
+  ensure
+    ActionController::Base.allow_forgery_protection = false
+  end
+
+  test "invalid ranges keep what was typed on the form" do
+    job = create_pdf_job(fixture: "scanned_images.pdf")
+    before = job.boundaries
+    pairs = [ { round: "第1回", problem_from: 2, problem_to: 4, answer_from: 8, answer_to: 9 },
+              { round: "第2回", problem_from: 5, problem_to: 7, answer_from: 10, answer_to: 99 } ]
+    post split_tools_pdf_splitter_job_path(job), params: { save_only: "1", pairs: pairs }
+    assert_response :unprocessable_entity
+    assert_select "#alert", /第2回の解答のページ範囲/
+    assert_select "#pairs-form input[aria-label='2組目 解答 終了'][value='99']"
+    assert_select "#pairs-form input[aria-label='1組目 問題 開始'][value='2']"
+    assert_equal before, job.reload.boundaries
+  end
+
   test "equal parts fills boundaries" do
     job = create_pdf_job(fixture: "plain.pdf")
     patch update_boundaries_tools_pdf_splitter_job_path(job), params: { equal_parts: 2 }

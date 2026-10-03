@@ -46,19 +46,17 @@ module Tools
           return redirect_to tools_pdf_splitter_job_path(@job), notice: "#{params[:equal_parts].to_i}等分の範囲を入れました。確認して分割してください。"
         end
 
-        set = ::PdfSplitter::BoundarySet.new(boundary_rows, page_count: @job.page_count)
-        if set.valid?
-          @job.update!(boundaries: set.to_a, pattern: @job.auto_detected? ? @job.pattern : 3)
-          redirect_to tools_pdf_splitter_job_path(@job), notice: "分割範囲を保存しました。"
-        else
-          redirect_to tools_pdf_splitter_job_path(@job), alert: set.errors.join(" ")
-        end
+        save_boundaries
       end
 
       # 境界を確定して出力を作る（自動判定は提案まで。確定は人がこのボタンで行う）
       def split
+        # 「範囲だけ保存」は分割フォームの中のボタン。Rails 8.1 はフォームごとの CSRF トークンなので、
+        # formaction で別のURLに送ると 422 になる。同じURLで受けて保存だけ行う
+        return save_boundaries if params.key?(:save_only)
+
         set = ::PdfSplitter::BoundarySet.new((params.key?(:boundaries) || params.key?(:pairs)) ? boundary_rows : @job.boundaries, page_count: @job.page_count)
-        return redirect_to(tools_pdf_splitter_job_path(@job), alert: set.errors.join(" ")) unless set.valid?
+        return render_invalid(set) unless set.valid?
 
         names = ::PdfSplitter::Namer.new.then do |namer|
           generated = set.to_a.each_with_index.map { |b, i| b["name"] ? namer.sanitize(b["name"]) : namer.build(b, index: i + 1) }
@@ -127,6 +125,23 @@ module Tools
       end
 
       private
+        # 入力が誤っていても打ち直さなくて済むよう、エラー時は入力した値のまま画面を出し直す
+        def save_boundaries
+          set = ::PdfSplitter::BoundarySet.new(boundary_rows, page_count: @job.page_count)
+          if set.valid?
+            @job.update!(boundaries: set.to_a, pattern: @job.auto_detected? ? @job.pattern : 3)
+            redirect_to tools_pdf_splitter_job_path(@job), notice: "分割範囲を保存しました。"
+          else
+            render_invalid(set)
+          end
+        end
+
+        def render_invalid(set)
+          @boundaries = boundary_rows.map { |r| (r.respond_to?(:to_h) ? r.to_h : r).stringify_keys }
+          flash.now[:alert] = set.errors.join(" ")
+          render :show, status: :unprocessable_entity
+        end
+
         def boundary_rows
           if params.key?(:pairs)
             pairs = params.fetch(:pairs, []).map { |r| r.permit(:round, :problem_from, :problem_to, :answer_from, :answer_to) }
