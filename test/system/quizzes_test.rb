@@ -57,7 +57,9 @@ class QuizzesTest < ApplicationSystemTestCase
     assert_selector "#quiz-sheet .sheet-row", count: 49
     shot "4_preview_49", height: 1010
     first = all("#quiz-sheet .sheet-term").map(&:text)
+    page.execute_script("document.body.dataset.old = '1'") # ページが読み込み直されるまで待つための目印
     click_on "問題を入れ替える"
+    assert_no_selector "body[data-old]"
     assert_selector "#quiz-sheet .sheet-row", count: 49
     assert_not_equal first, all("#quiz-sheet .sheet-term").map(&:text)
   end
