@@ -4,10 +4,17 @@
 <p class="text-sm text-stone-500 mb-4"><%= @job.page_count %>ページ ・ 状態: <span id="status"><%= t("pdf_splitter.status.#{@job.status}") %></span>
   <% if @job.expires_at %> ・ <%= l @job.expires_at, format: :short %> に自動削除<% end %></p>
 
-<% if @job.failed? %><p class="mb-4 py-2 px-3 bg-red-50 text-red-700 rounded">処理に失敗しました: <%= @job.error_message %></p><% end %>
+<% if @job.failed? %>
+  <div id="job-failed" class="mb-4 flex flex-wrap items-center gap-3 py-3 px-4 bg-ng-bg text-ng rounded-lg">
+    <%= status_pill "失敗", :ng %><span class="flex-1">処理に失敗しました: <%= @job.error_message %></span>
+    <%= button_to "再試行", analyze_tools_pdf_splitter_job_path(@job), class: "btn-secondary" %>
+  </div>
+<% end %>
 
 <% if @job.spread_pending? %>
   <%= render "spread_confirm", job: @job %>
+<% elsif @job.spread_splitting? %>
+  <% unless @job.failed? %><p id="spread-progress" class="flex items-center gap-3"><%= status_pill "処理中", :busy %>見開きを分けています…</p><% end %>
 <% elsif @job.uploaded? || @job.analyzing? %>
   <%= render "spread_preview", job: @job if @job.spread_split? %>
   <p>解析しています…</p>

@@ -34,23 +34,30 @@ module Tools
 
       # 見開きページを分ける／分けない
       def spreads
+        return redirect_to(tools_pdf_splitter_job_path(@job), status: :see_other) unless @job.spread_pending?
+
         if params[:decision] == "split"
           binding = ::PdfSplitJob::BINDINGS.key?(params[:binding]) ? params[:binding] : "left"
-          @job.split_spreads!(binding:)
+          @job.update!(binding:, spread_state: :splitting, status: :splitting, error_message: nil)
           AuditLog.record!(:update, @job, metadata: { spreads: "split", binding:, pages: @job.spread_pages.size })
-          notice = "見開きを1ページずつに分けました（#{@job.page_count}ページ）。"
+          ::PdfSplitter::SpreadJob.perform_later(@job.id)
         else
           @job.update!(spread_state: :declined)
-          notice = nil
+          ::PdfSplitter::AnalyzeJob.perform_later(@job.id)
         end
-        ::PdfSplitter::AnalyzeJob.perform_later(@job.id)
-        redirect_to tools_pdf_splitter_job_path(@job), notice:, status: :see_other
+        redirect_to tools_pdf_splitter_job_path(@job), status: :see_other
       end
 
       # 解析をやり直す
       def analyze
-        @job.update!(status: :uploaded, error_message: nil)
-        ::PdfSplitter::AnalyzeJob.perform_later(@job.id)
+        if @job.spread_splitting?
+          # 見開き分割の途中で失敗したものは、分割からやり直す
+          @job.update!(status: :splitting, error_message: nil)
+          ::PdfSplitter::SpreadJob.perform_later(@job.id)
+        else
+          @job.update!(status: :uploaded, error_message: nil)
+          ::PdfSplitter::AnalyzeJob.perform_later(@job.id)
+        end
         redirect_to tools_pdf_splitter_job_path(@job)
       end
 

@@ -9,7 +9,7 @@ class PdfSplitJob < ApplicationRecord
 
   enum :status, { uploaded: 0, analyzing: 1, analyzed: 2, splitting: 3, done: 4, failed: 5 }
   # 見開き: none=横長ページなし / pending=分けるか確認待ち / split=分けた / declined=分けない
-  enum :spread_state, { none: 0, pending: 1, split: 2, declined: 3 }, prefix: :spread
+  enum :spread_state, { none: 0, pending: 1, split: 2, declined: 3, splitting: 4 }, prefix: :spread
   BINDINGS = { "left" => "左綴じ（横書き・英語/数学）", "right" => "右綴じ（縦書き・国語）" }.freeze
   validates :binding, inclusion: { in: BINDINGS.keys }
 
@@ -29,7 +29,7 @@ class PdfSplitJob < ApplicationRecord
   end
 
   def fail_if_stale!
-    return unless (analyzing? || splitting?) && updated_at < STALE_AFTER.ago
+    return unless (analyzing? || splitting? || spread_splitting?) && !failed? && updated_at < STALE_AFTER.ago
     update!(status: :failed, error_message: "処理中にサーバーが停止しました。ページ数の少ないPDFで再度お試しください。")
   end
 
@@ -54,15 +54,19 @@ class PdfSplitJob < ApplicationRecord
     yield original_cache_path(kind: "spread_source")
   end
 
-  # 見開きを分ける。元PDFは spread_source として残し、original を分けたPDFに差し替える
-  def split_spreads!(binding:)
-    self.binding = binding
+  # 見開きを分ける（SpreadJob から呼ぶ）。元PDFは spread_source として残し、original を分けたPDFに差し替える。
+  # 失敗しても元PDFは original のまま残る
+  def split_spreads!
     with_original_file do |src|
-      data, map = PdfSplitter::Spread.split(src, page_count:, spread_pages:, binding:)
-      transaction do
-        pdf_blobs.where(kind: "original").update_all(kind: "spread_source")
-        pdf_blobs.create!(kind: "original", data:, byte_size: data.bytesize, expires_at: expires_at_for_new_blob)
-        update!(spread_state: :split, page_map: map, page_count: map.size, boundaries: [], status: :uploaded)
+      Dir.mktmpdir do |dir|
+        out = File.join(dir, "split.pdf")
+        map = PdfSplitter::Spread.split_to_path(src, out, page_count:, spread_pages:, binding:)
+        transaction do
+          expires = expires_at_for_new_blob
+          pdf_blobs.where(kind: "original").update_all(kind: "spread_source")
+          PdfBlob.create_from_file!(job: self, kind: "original", path: out, expires_at: expires)
+          update!(spread_state: :split, page_map: map, page_count: map.size, boundaries: [], status: :uploaded)
+        end
       end
     end
   end
