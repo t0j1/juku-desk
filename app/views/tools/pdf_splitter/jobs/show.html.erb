@@ -59,7 +59,7 @@
       <div class="mt-2 flex gap-2">
         <button type="button" data-action="pair-rows#add" class="rounded px-3 py-2 border">＋ 回を追加（問題と解答）</button>
         <%= f.submit "この範囲で分割する", class: "rounded px-3 py-2 bg-stone-800 text-white", id: "split-pairs" %>
-        <%= f.submit "範囲だけ保存", formaction: update_boundaries_tools_pdf_splitter_job_path(@job), name: "save_only", class: "rounded px-3 py-2 border", data: { turbo: false } %>
+        <%= f.submit "範囲だけ保存", name: "save_only", class: "rounded px-3 py-2 border", data: { turbo: false } %>
       </div>
     <% end %>
 
@@ -82,7 +82,7 @@
       <p class="text-xs text-stone-500 mt-1">行を足したいときは、空いている行に入力して「範囲だけ保存」を押すと、新しい空行が増えます。</p>
       <div class="mt-2 flex gap-2">
         <%= f.submit "この範囲で分割する", class: "rounded px-3 py-2 bg-stone-800 text-white" %>
-        <%= f.submit "範囲だけ保存", formaction: update_boundaries_tools_pdf_splitter_job_path(@job), name: "save_only", class: "rounded px-3 py-2 border", data: { turbo: false } %>
+        <%= f.submit "範囲だけ保存", name: "save_only", class: "rounded px-3 py-2 border", data: { turbo: false } %>
       </div>
     <% end %>
 

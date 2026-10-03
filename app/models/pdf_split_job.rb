@@ -26,6 +26,28 @@ class PdfSplitJob < ApplicationRecord
     pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).first
   end
 
+  CHUNK_BYTES = 1.megabyte
+
+  # 原本を Ruby の大きな文字列にせず、DB から 1MB ずつ tempfile に書き出してパスを渡す
+  # （512MB 環境で 27MB の原本を何度も読み込むとメモリ不足で落ちるため）
+  def with_original_file
+    blob_id, size = pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).pick(:id, :byte_size)
+    raise PdfSplitter::Error, "元PDFの保存期限が切れています。もう一度アップロードしてください。" unless blob_id
+
+    Tempfile.create([ "pdf_original", ".pdf" ], binmode: true) do |f|
+      offset = 0
+      loop do
+        chunk = PdfBlob.where(id: blob_id).pick(Arel.sql("substring(data from #{offset + 1} for #{CHUNK_BYTES})"))
+        break if chunk.blank?
+        f.write(chunk)
+        offset += chunk.bytesize
+        break if size && offset >= size
+      end
+      f.flush
+      yield f.path
+    end
+  end
+
   def original_blob_data
     original_blob&.data or raise PdfSplitter::Error, "元PDFの保存期限が切れています。もう一度アップロードしてください。"
   end

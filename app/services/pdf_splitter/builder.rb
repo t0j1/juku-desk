@@ -1,13 +1,16 @@
 module PdfSplitter
   # 出力PDFを返す。保存済みが無ければ元PDFから再生成して保存する
   class Builder
-    def self.build(output)
+    # source_path を渡すと原本を読み直さない（SplitJob で16件まとめて作るとき用）
+    def self.build(output, source_path: nil)
       if (blob = output.pdf_blobs.where("expires_at > ?", Time.current).first)
         return blob.data
       end
 
       job = output.pdf_split_job
-      pdf = Splitter.extract_to_string(job.original_blob_data, output.page_from, output.page_to)
+      return output.pdf_split_job.with_original_file { |path| build(output, source_path: path) } unless source_path
+
+      pdf = Splitter.extract_path_to_string(source_path, output.page_from, output.page_to)
       if within_job_quota?(job, pdf.bytesize)
         output.pdf_blobs.create!(pdf_split_job: job, kind: "output", data: pdf, byte_size: pdf.bytesize,
                                  expires_at: job.expires_at || PdfBlob.retention_days.days.from_now)
