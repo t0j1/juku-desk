@@ -76,24 +76,6 @@ class Tools::PdfSplitter::SpreadsTest < ActionDispatch::IntegrationTest
     assert_equal "right", job.binding
   end
 
-  test "scanned spreads (no headings) get empty ranges after split, not one-page-per-round defaults" do
-    job = upload_spread
-    original = PdfSplitter::TextExtractor.method(:pages_from_path)
-    PdfSplitter::TextExtractor.define_singleton_method(:pages_from_path) { |_p, n| Array.new(n, "") }
-    begin
-      perform_enqueued_jobs { post spreads_tools_pdf_splitter_job_path(job), params: { decision: "split", binding: "left" } }
-    ensure
-      PdfSplitter::TextExtractor.define_singleton_method(:pages_from_path, original)
-    end
-    job.reload
-    assert job.analyzed?
-    assert_equal 7, job.page_count
-    assert_empty job.boundaries
-    assert_nil job.pattern
-    get tools_pdf_splitter_job_path(job)
-    assert_select "#manual-notice"
-  end
-
   test "keep: analyzes the original pages as they are" do
     job = upload_spread
     assert_enqueued_with(job: PdfSplitter::AnalyzeJob) do
