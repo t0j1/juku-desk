@@ -13,6 +13,9 @@ module PdfSplitter
           score: h&.dig(:score), created_at: now, updated_at: now }
       end
       guess = PatternGuesser.new.guess(headings, page_count: job.page_count)
+      # 見開きを分けたあとは1ページ＝片面なので、「奇数=問題・偶数=解答」の見開き型の初期値は意味がない。
+      # 見出しが取れなかったら範囲は空にして、手入力・等分に任せる
+      guess = guess.merge(pattern: nil, confidence: 0.0, boundaries: []) if job.spread_split? && guess[:pattern] == PatternGuesser::P3
 
       PdfSplitJob.transaction do
         job.page_analyses.delete_all
