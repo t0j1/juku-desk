@@ -1,0 +1,14 @@
+<% (1..50).each do |n| %>
+leap_<%= n %>:
+  wordbook: leap
+  number: <%= n %>
+  term: word<%= n %>
+  meaning: "[他] ①意味<%= n %> ②別の意味"
+<% end %>
+<% (1..10).each do |n| %>
+small_<%= n %>:
+  wordbook: small
+  number: <%= n %>
+  term: small<%= n %>
+  meaning: "[名] 意味<%= n %>"
+<% end %>

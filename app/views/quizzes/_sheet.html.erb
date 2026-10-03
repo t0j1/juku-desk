@@ -1,0 +1,25 @@
+<%# A4 縦・余白15mm（@page）。モノクロ印刷で読めるよう、色は使わず罫線だけで構成する %>
+<% rows = left %>
+<section class="sheet" id="quiz-sheet" aria-label="小テスト用紙">
+  <header class="sheet-head">
+    <h2 class="sheet-title"><%= quiz.title %></h2>
+    <div class="sheet-meta">
+      <span>日付　　　　年　　月　　日</span>
+      <span>名前 <span class="sheet-line" style="width: 48mm"></span></span>
+      <span>点数 <span class="sheet-line" style="width: 14mm"></span> ／<%= quiz.count %></span>
+    </div>
+  </header>
+  <div class="sheet-body" style="--rows: <%= rows %>">
+    <% words.each_slice(rows).each_with_index do |column, c| %>
+      <div class="sheet-col">
+        <% column.each_with_index do |word, i| %>
+          <div class="sheet-row">
+            <span class="sheet-no tnum"><%= c * rows + i + 1 %>.</span>
+            <span class="sheet-term"><%= word.term %></span>
+            <span class="sheet-blank"></span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

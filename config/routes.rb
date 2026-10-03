@@ -6,6 +6,9 @@ Rails.application.routes.draw do
     resources :student_weekdays, only: %i[ create destroy ]
   end
 
+  resources :wordbooks, only: %i[ index create ]
+  resources :quizzes, only: %i[ new create ]
+
   namespace :tools do
     namespace :pdf_splitter do
       resources :jobs, only: %i[ index show create destroy ] do
