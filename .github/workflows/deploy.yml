@@ -24,7 +24,7 @@ jobs:
         run: |
           a=$(grep -oP 'ARG RUBY_VERSION=\K[0-9.]+' Dockerfile | head -1)
           b=$(tr -d '\n' < .ruby-version)
-          c=$(grep -oP '^ruby = "\K[0-9.]+' mise.toml)
+          c=$(grep -oP '^ruby = "\K[0-9.]+' .mise.toml)
           echo "Dockerfile=$a .ruby-version=$b mise.toml=$c"
           [ "$a" = "$b" ] && [ "$b" = "$c" ] || { echo "::error::Ruby version mismatch"; exit 1; }
 
