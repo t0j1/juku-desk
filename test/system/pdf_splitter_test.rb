@@ -11,7 +11,7 @@ class PdfSplitterTest < ApplicationSystemTestCase
     click_on "PDF分割"
 
     perform_enqueued_jobs do
-      attach_file "file", file_fixture("workbook_p1.pdf")
+      attach_file "file", file_fixture("workbook_p1.pdf"), make_visible: true
       click_on "アップロードして解析"
       assert_text "自動判定: P1 前後分離型"
       within("#boundaries-form") { click_on "この範囲で分割する" }

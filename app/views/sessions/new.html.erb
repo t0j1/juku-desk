@@ -9,7 +9,7 @@
       <%= form.label :password, "パスワード", class: "block text-sm" %>
       <%= form.password_field :password, required: true, autocomplete: "current-password", maxlength: 72, class: "block rounded border border-stone-400 px-3 py-2 mt-1 w-full" %>
     </div>
-    <%= form.submit "ログイン", class: "rounded px-4 py-2 bg-stone-800 text-white cursor-pointer" %>
+    <%= form.submit "ログイン", class: "btn-primary" %>
     <p class="text-sm"><%= link_to "パスワードを忘れた場合", new_password_path, class: "underline" %></p>
   <% end %>
 </div>

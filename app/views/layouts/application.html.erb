@@ -23,22 +23,36 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="bg-stone-50 text-stone-800">
+  <body class="min-h-screen bg-gradient-to-b from-console-bg-from to-console-bg-to text-ink font-sans text-[15px]">
     <% if authenticated? %>
-      <header class="bg-white border-b border-stone-200">
-        <nav class="container mx-auto px-5 py-3 flex items-center gap-6 text-sm">
-          <%= link_to "塾日報ステーション", root_path, class: "font-bold text-base" %>
-          <%= link_to "生徒データベース", students_path, class: "hover:underline" %>
-          <%= link_to "PDF分割", tools_pdf_splitter_jobs_path, class: "hover:underline" %>
-          <span class="ml-auto text-stone-500"><%= current_user.name %>（<%= t("roles.#{current_user.role}") %>）</span>
-          <%= button_to "ログアウト", session_path, method: :delete, class: "text-stone-600 hover:underline" %>
-        </nav>
-      </header>
+      <div class="flex min-h-screen gap-6 p-6">
+        <aside class="w-[300px] shrink-0 flex flex-col">
+          <%= link_to root_path, class: "flex items-center gap-3 px-2 mb-8" do %>
+            <span class="flex items-center justify-center size-11 rounded-xl bg-gradient-to-br from-primary to-primary-to text-white text-xl font-bold" aria-hidden="true">塾</span>
+            <span class="leading-tight"><span class="block font-bold text-ink">塾日報ステーション</span><span class="block text-xs text-ink-sub">Admin Console</span></span>
+          <% end %>
+          <nav aria-label="メインメニュー" class="space-y-1">
+            <%= nav_item "生徒データベース", students_path, :users, active: controller_path == "students" %>
+            <%= nav_item "PDF分割", tools_pdf_splitter_jobs_path, :scissors, active: controller_path.start_with?("tools/pdf_splitter") %>
+          </nav>
+          <div class="mt-auto rounded-xl bg-white/70 border border-line p-4">
+            <p class="font-bold text-sm text-ink"><%= current_user.name %></p>
+            <p class="text-xs text-ink-sub mb-3"><%= t("roles.#{current_user.role}") %></p>
+            <%= button_to session_path, method: :delete, class: "inline-flex items-center gap-2 text-sm text-ink-sub hover:text-ink cursor-pointer" do %>
+              <%= console_icon(:logout, size: 16) %>ログアウト
+            <% end %>
+          </div>
+        </aside>
+        <main class="flex-1 min-w-0 bg-white rounded-[20px] shadow-card p-8">
+          <%= render "shared/flash" %>
+          <%= yield %>
+        </main>
+      </div>
+    <% else %>
+      <main class="mx-auto max-w-xl mt-16 bg-white rounded-[20px] shadow-card p-8">
+        <%= render "shared/flash" %>
+        <%= yield %>
+      </main>
     <% end %>
-    <main class="container mx-auto mt-8 px-5">
-      <% if notice %><p id="notice" class="mb-4 py-2 px-3 bg-green-50 text-green-700 rounded"><%= notice %></p><% end %>
-      <% if alert %><p id="alert" class="mb-4 py-2 px-3 bg-red-50 text-red-700 rounded"><%= alert %></p><% end %>
-      <%= yield %>
-    </main>
   </body>
 </html>
