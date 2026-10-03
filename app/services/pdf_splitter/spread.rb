@@ -26,62 +26,33 @@ module PdfSplitter
       end.sort
     end
 
-    CHUNK = 30 # 一度に qpdf の JSON で扱うページ数（Ruby 側のメモリを一定に保つ）
-
-    def self.page_map(page_count:, spread_pages:, binding:)
+    # 分けたPDFのバイト列と page_map（[[元ページ, "L"|"R"|nil], ...]）を返す
+    def self.split(path, page_count:, spread_pages:, binding:)
       spread = spread_pages.to_set
       order = SIDES.fetch(binding)
-      (1..page_count).flat_map { |p| spread.include?(p) ? order.map { |s| [ p, s ] } : [ [ p, nil ] ] }
-    end
+      page_map = (1..page_count).flat_map { |p| spread.include?(p) ? order.map { |s| [ p, s ] } : [ [ p, nil ] ] }
 
-    # 分けたPDFを out_path に書き出し、page_map（[[元ページ, "L"|"R"|nil], ...]）を返す。
-    # PDF 本体は Ruby に読み込まない。CHUNK ページずつ qpdf で複製・クロップしてから最後に連結する
-    def self.split_to_path(path, out_path, page_count:, spread_pages:, binding:)
-      map = page_map(page_count:, spread_pages:, binding:)
       Dir.mktmpdir do |dir|
-        parts = map.each_slice(CHUNK).each_with_index.map do |slice, n|
-          part = File.join(dir, "part#{n}.pdf")
-          crop_chunk(path, slice, dir, part)
-          part
+        dup = File.join(dir, "dup.pdf")
+        run!("qpdf", "--empty", "--pages", path.to_s, page_map.map(&:first).join(","), "--", dup)
+        pages = JSON.parse(capture!("qpdf", dup, "--json=2", "--json-key=pages"))["pages"].map { |pg| pg["object"] }
+        objects = JSON.parse(capture!("qpdf", dup, "--json-output", "--json-key=qpdf", "--json-stream-data=none"))["qpdf"]
+        updates = {}
+        page_map.each_with_index do |(_orig, side), i|
+          next unless side
+          key = "obj:#{pages[i]}"
+          value = objects[1].fetch(key).fetch("value")
+          x0, y0, x1, y1 = (value["/CropBox"] || value["/MediaBox"]).map(&:to_f)
+          xm = (x0 + x1) / 2
+          box = side == "L" ? [ x0, y0, xm, y1 ] : [ xm, y0, x1, y1 ]
+          box = rotated_box(value, box, side, x0, y0, x1, y1)
+          updates[key] = { "value" => value.merge("/MediaBox" => box, "/CropBox" => box) }
         end
-        run!("qpdf", "--empty", "--pages", *parts, "--", out_path.to_s)
-      end
-      map
-    end
-
-    def self.crop_chunk(path, slice, dir, part)
-      dup = File.join(dir, "dup.pdf")
-      run!("qpdf", "--empty", "--pages", path.to_s, slice.map(&:first).join(","), "--", dup)
-      pages = JSON.parse(capture!("qpdf", dup, "--json=2", "--json-key=pages"))["pages"].map { |pg| pg["object"] }
-      targets = slice.each_index.select { |i| slice[i][1] }
-      if targets.empty?
-        FileUtils.mv(dup, part)
-        return
-      end
-      ids = targets.map { |i| "--json-object=#{pages[i].split.first(2).join(',')}" }
-      objects = JSON.parse(capture!("qpdf", dup, "--json-output", "--json-key=qpdf", "--json-stream-data=none", *ids))["qpdf"]
-      updates = targets.to_h do |i|
-        key = "obj:#{pages[i]}"
-        value = objects[1].fetch(key).fetch("value")
-        x0, y0, x1, y1 = (value["/CropBox"] || value["/MediaBox"]).map(&:to_f)
-        xm = (x0 + x1) / 2
-        box = slice[i][1] == "L" ? [ x0, y0, xm, y1 ] : [ xm, y0, x1, y1 ]
-        box = rotated_box(value, box, slice[i][1], x0, y0, x1, y1)
-        [ key, { "value" => value.merge("/MediaBox" => box, "/CropBox" => box) } ]
-      end
-      upd = File.join(dir, "upd.json")
-      File.write(upd, JSON.generate("qpdf" => [ objects[0], updates ]))
-      run!("qpdf", dup, "--update-from-json=#{upd}", part)
-    ensure
-      FileUtils.rm_f([ dup, upd ].compact)
-    end
-
-    # テスト・小さいPDF用：バイト列で返す
-    def self.split(path, page_count:, spread_pages:, binding:)
-      Dir.mktmpdir do |dir|
+        upd = File.join(dir, "upd.json")
+        File.write(upd, JSON.generate("qpdf" => [ objects[0], updates ]))
         out = File.join(dir, "out.pdf")
-        map = split_to_path(path, out, page_count:, spread_pages:, binding:)
-        [ File.binread(out), map ]
+        run!("qpdf", dup, "--update-from-json=#{upd}", out)
+        [ File.binread(out), page_map ]
       end
     end
 
