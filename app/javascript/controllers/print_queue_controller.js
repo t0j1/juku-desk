@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 // 印刷リスト。iPad のブラウザ（localStorage）に job ごとに保存する
 export default class extends Controller {
-  static targets = [ "list", "empty", "form", "count", "paperField", "paperNote", "neighborField", "neighbor" ]
+  static targets = [ "list", "empty", "form", "count" ]
   static values = { url: String, key: String, max: Number, labels: Object }
 
   connect() { this.render() }
@@ -20,23 +20,7 @@ export default class extends Controller {
   printOne(event) {
     const row = event.target.closest("[data-round]")
     const item = `${row.dataset.round}:${row.querySelector("select").value}`
-    const params = new URLSearchParams()
-    params.append("items[]", item)
-    if (this.hasPaperFieldTarget) params.append("paper", this.paperFieldTarget.value)
-    if (this.hasNeighborFieldTarget) params.append("include_neighbor", this.neighborFieldTarget.value)
-    window.open(`${this.urlValue}?${params}`, "_blank")
-  }
-
-  // 用紙（B4見開き / B5 / A4縮小）
-  paper(event) {
-    const btn = event.currentTarget
-    this.element.querySelectorAll("[data-paper]").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)))
-    if (this.hasPaperFieldTarget) this.paperFieldTarget.value = btn.dataset.paper
-    if (this.hasPaperNoteTarget) this.paperNoteTarget.textContent = btn.dataset.note
-  }
-
-  neighbor(event) {
-    if (this.hasNeighborFieldTarget) this.neighborFieldTarget.value = event.currentTarget.checked ? "1" : "0"
+    window.open(`${this.urlValue}?items[]=${encodeURIComponent(item)}`, "_blank")
   }
 
   add(event) {

@@ -8,10 +8,6 @@ class PdfSplitJob < ApplicationRecord
   has_many :pdf_blobs, dependent: :delete_all
 
   enum :status, { uploaded: 0, analyzing: 1, analyzed: 2, splitting: 3, done: 4, failed: 5 }
-  # 見開き: none=横長ページなし / pending=分けるか確認待ち / split=分けた / declined=分けない
-  enum :spread_state, { none: 0, pending: 1, split: 2, declined: 3, splitting: 4 }, prefix: :spread
-  BINDINGS = { "left" => "左綴じ（横書き・英語/数学）", "right" => "右綴じ（縦書き・国語）" }.freeze
-  validates :binding, inclusion: { in: BINDINGS.keys }
 
   validates :original_filename, presence: true
 
@@ -29,7 +25,7 @@ class PdfSplitJob < ApplicationRecord
   end
 
   def fail_if_stale!
-    return unless (analyzing? || splitting? || spread_splitting?) && !failed? && updated_at < STALE_AFTER.ago
+    return unless (analyzing? || splitting?) && updated_at < STALE_AFTER.ago
     update!(status: :failed, error_message: "処理中にサーバーが停止しました。ページ数の少ないPDFで再度お試しください。")
   end
 
@@ -49,37 +45,8 @@ class PdfSplitJob < ApplicationRecord
     yield original_cache_path
   end
 
-  # B4 へ組み直すときに使う、見開きを分ける前の元PDF
-  def with_spread_source_file
-    yield original_cache_path(kind: "spread_source")
-  end
-
-  # 見開きを分ける（SpreadJob から呼ぶ）。元PDFは spread_source として残し、original を分けたPDFに差し替える。
-  # 失敗しても元PDFは original のまま残る
-  def split_spreads!
-    with_original_file do |src|
-      Dir.mktmpdir do |dir|
-        out = File.join(dir, "split.pdf")
-        map = PdfSplitter::Spread.split_to_path(src, out, page_count:, spread_pages:, binding:)
-        transaction do
-          expires = expires_at_for_new_blob
-          pdf_blobs.where(kind: "original").update_all(kind: "spread_source")
-          PdfBlob.create_from_file!(job: self, kind: "original", path: out, expires_at: expires)
-          update!(spread_state: :split, page_map: map, page_count: map.size, boundaries: [], status: :uploaded)
-        end
-      end
-    end
-  end
-
-  # 分けたあとの最初の見開き1組（分けたPDFでのページ番号 [左, 右]）
-  def first_spread_preview_pages
-    i = page_map.index { |(_, side)| side }
-    return nil unless i
-    [ i + 1, i + 2 ]
-  end
-
-  def original_cache_path(kind: "original")
-    blob_id, size, created = pdf_blobs.where(kind:).where("expires_at > ?", Time.current).pick(:id, :byte_size, :created_at)
+  def original_cache_path
+    blob_id, size, created = pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).pick(:id, :byte_size, :created_at)
     raise PdfSplitter::Error, "元PDFの保存期限が切れています。もう一度アップロードしてください。" unless blob_id
 
     path = CACHE_DIR.join("#{id}-#{blob_id}-#{created.to_f.to_s.delete('.')}.pdf")
@@ -111,10 +78,6 @@ class PdfSplitJob < ApplicationRecord
   end
 
   # data 列（数十MB）を読み込まないように期限だけ取る
-  def expires_at_for_new_blob
-    pdf_blobs.where(kind: %w[original spread_source]).maximum(:expires_at) || PdfBlob.retention_days.days.from_now
-  end
-
   def expires_at
     pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).pick(:expires_at)
   end
