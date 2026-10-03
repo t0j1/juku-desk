@@ -117,11 +117,15 @@ module Tools
       def thumbnail
         page = params[:page].to_i
         return head(:not_found) unless page.between?(1, @job.page_count.to_i)
-        expires_in 1.hour, public: false
         png = Rails.cache.fetch([ "pdf_thumb", @job.id, page ], expires_in: 1.day) do
-          THUMB_LOCK.synchronize { @job.with_original_file { |path| ::PdfSplitter::Thumbnailer.png_from_path(path, page) } }
+          THUMB_LOCK.synchronize { ::PdfSplitter::Thumbnailer.png_from_path(@job.original_cache_path, page) }
         end
+        expires_in 1.hour, public: false
         send_data png, type: "image/png", disposition: "inline"
+      rescue ::PdfSplitter::Error => e
+        # img のリクエストなので、ページへのリダイレクトではなく 404 を返す（show を何度も描き直さない）
+        Rails.logger.warn("thumbnail failed job=#{@job.id} page=#{page}: #{e.message.truncate(200)}")
+        head :not_found
       end
 
       private

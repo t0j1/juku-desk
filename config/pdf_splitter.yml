@@ -10,7 +10,7 @@ shared:
     max_pages: 300
     max_jobs_per_day: 20
     max_outputs: 50
-    thumbnail_pages: 20
+    thumbnail_pages: 8
   retention:
     enabled: true
     days: 7

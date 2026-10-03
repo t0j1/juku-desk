@@ -172,9 +172,27 @@ class Tools::PdfSplitter::JobsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "thumbnail renders a png" do
+  test "thumbnail renders a png without writing -.png into the working directory, and is cached" do
     job = create_pdf_job
+    Rails.cache.clear
+    Dir.chdir(Dir.mktmpdir) do |cwd|
+      get thumbnail_tools_pdf_splitter_job_path(job, page: 1)
+      assert_response :success
+      assert_equal "image/png", response.media_type
+      assert_equal "\x89PNG".b, response.body.b[0, 4]
+      assert_empty Dir.children(cwd)
+    end
+  end
+
+  test "thumbnail failure returns 404 instead of redirecting to the job page" do
+    job = create_pdf_job
+    Rails.cache.clear
+    orig = PdfSplitter::Thumbnailer.method(:png_from_path)
+    PdfSplitter::Thumbnailer.define_singleton_method(:png_from_path) { |*| raise PdfSplitter::Error, "boom" }
     get thumbnail_tools_pdf_splitter_job_path(job, page: 1)
-    assert_equal "image/png", response.media_type
+    assert_response :not_found
+  ensure
+    PdfSplitter::Thumbnailer.singleton_class.send(:remove_method, :png_from_path)
+    PdfSplitter::Thumbnailer.define_singleton_method(:png_from_path, orig)
   end
 end
