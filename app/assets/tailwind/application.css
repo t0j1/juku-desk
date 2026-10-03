@@ -1,1 +1,49 @@
 @import "tailwindcss";
+
+/* Admin Console design tokens v1 (estimated from 碩学館 Admin Console screenshots; no source CSS in repo) */
+@theme {
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
+  --color-console-bg-from: #F3F1FE;
+  --color-console-bg-to: #ECEAFD;
+  --color-primary: #5B4BE0;
+  --color-primary-to: #7C5CF0;
+  --color-primary-hover: #4A3BC8;
+  --color-ink: #1F2433;
+  --color-ink-sub: #6B7080;
+  --color-ink-head: #6B7080;
+  --color-line: #E6E4F0;
+  --color-line-strong: #D5D3E0;
+  --color-ok: #1E7A3E;
+  --color-ok-bg: #E8F6EC;
+  --color-busy: #4A3BC8;
+  --color-busy-bg: #EEEBFD;
+  --color-ng: #C62828;
+  --color-ng-bg: #FDECEC;
+  --color-warn-bg: #FFF6E0;
+  --color-warn-line: #F2B544;
+  --color-warn-ink: #7A4B00;
+  --shadow-card: 0 2px 12px rgba(60, 50, 140, .06);
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg text-[15px] font-bold text-white cursor-pointer
+           bg-gradient-to-r from-primary to-primary-to hover:from-primary-hover hover:to-primary-hover
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-primary disabled:hover:to-primary-to;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1 h-9 px-3 rounded-lg text-sm font-bold bg-white text-ink border border-line-strong hover:bg-console-bg-from cursor-pointer;
+  }
+  .btn-danger { @apply inline-flex items-center h-9 px-3 rounded-lg text-sm font-bold text-ng bg-ng-bg cursor-pointer; }
+  .input { @apply block w-full max-w-[480px] h-11 px-3 rounded-lg border border-line-strong bg-white text-[15px] text-ink focus:outline-2 focus:outline-primary; }
+  .pill { @apply inline-flex items-center gap-1 h-7 px-3 rounded-full text-xs font-bold whitespace-nowrap; }
+  .pill-ok { @apply text-ok bg-ok-bg; }
+  .pill-busy { @apply text-busy bg-busy-bg; }
+  .pill-ng { @apply text-ng bg-ng-bg; }
+  .pill-neutral { @apply text-ink-sub border border-line-strong; }
+  .table-console { @apply w-full text-sm text-ink; }
+  .table-console thead th { @apply h-10 px-4 text-left text-xs font-bold text-ink-head border-b border-line; }
+  .table-console tbody td { @apply h-14 px-4 border-b border-line; }
+  .tnum { font-variant-numeric: tabular-nums; }
+}

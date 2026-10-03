@@ -11,7 +11,7 @@ class PdfSplitterTest < ApplicationSystemTestCase
     click_on "PDF分割"
 
     perform_enqueued_jobs do
-      attach_file "file", file_fixture("workbook_p1.pdf")
+      attach_file "file", file_fixture("workbook_p1.pdf"), make_visible: true
       click_on "アップロードして解析"
       assert_text "自動判定: P1 前後分離型"
       visit current_path # 解析中の自動更新（meta refresh）と押下が重ならないよう読み直す
