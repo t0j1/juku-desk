@@ -35,12 +35,14 @@ module PdfSplitter
     end
 
     def self.extract_to_string(data, from, to)
-      with_tempfile(data) do |input|
-        Dir.mktmpdir do |dir|
-          out = File.join(dir, "out.pdf")
-          extract(input, out, from, to)
-          File.binread(out)
-        end
+      with_tempfile(data) { |input| extract_path_to_string(input, from, to) }
+    end
+
+    def self.extract_path_to_string(input, from, to)
+      Dir.mktmpdir do |dir|
+        out = File.join(dir, "out.pdf")
+        extract(input, out, from, to)
+        File.binread(out)
       end
     end
 

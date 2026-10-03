@@ -119,7 +119,7 @@ module Tools
         return head(:not_found) unless page.between?(1, @job.page_count.to_i)
         expires_in 1.hour, public: false
         png = Rails.cache.fetch([ "pdf_thumb", @job.id, page ], expires_in: 1.day) do
-          THUMB_LOCK.synchronize { ::PdfSplitter::Thumbnailer.png(@job.original_blob_data, page) }
+          THUMB_LOCK.synchronize { @job.with_original_file { |path| ::PdfSplitter::Thumbnailer.png_from_path(path, page) } }
         end
         send_data png, type: "image/png", disposition: "inline"
       end
