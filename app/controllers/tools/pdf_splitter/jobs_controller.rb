@@ -95,6 +95,15 @@ module Tools
       def print
         @outputs = @job.outputs.to_a
         @bundles = @outputs.select(&:round_label).group_by(&:round_label).select { |_, os| os.size > 1 }
+        @rounds = @outputs.select(&:round_label).group_by(&:round_label)
+      end
+
+      # 印刷リスト（回ごとに 問題/解答/両方）を1つのPDFにして開く
+      def print_queue
+        queue = ::PdfSplitter::PrintQueue.new(@job, params[:items], pad_even: params[:pad_even] == "1")
+        return redirect_to(print_tools_pdf_splitter_job_path(@job), alert: queue.errors.join(" ")) unless queue.valid?
+        AuditLog.record!(:print, @job, metadata: { job_id: @job.id, queue: params[:items], pad_even: params[:pad_even] == "1" })
+        send_pdf queue.to_pdf, filename: queue.filename, disposition: "inline"
       end
 
       # 同じ回の問題＋解答を1つにまとめて印刷（inline）

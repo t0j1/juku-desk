@@ -11,6 +11,7 @@ shared:
     max_jobs_per_day: 20
     max_outputs: 50
     thumbnail_pages: 8
+    max_print_rounds: 4
   retention:
     enabled: true
     days: 7

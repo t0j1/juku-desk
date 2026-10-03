@@ -16,6 +16,7 @@ Rails.application.routes.draw do
           patch :update_names
           get   :print
           get   :print_bundle
+          get   :print_queue
           get   :download_zip
           get   :thumbnail
         end
