@@ -28,6 +28,9 @@
 threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
 
+# Render free (512MB) ではクラスタモードの worker がメモリを圧迫するのでシングルモードを既定にする
+workers ENV.fetch("WEB_CONCURRENCY", 0).to_i
+
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 port ENV.fetch("PORT", 3000)
 

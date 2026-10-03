@@ -1,7 +1,7 @@
 module PdfSplitter
   class Analyzer
     def self.call(job)
-      texts = TextExtractor.pages(job.original_blob_data)
+      texts = TextExtractor.pages(job.original_blob_data, page_count: job.page_count.presence)
       detector = HeadingDetector.new
       headings = []
       rows = texts.each_with_index.map do |text, i|
