@@ -7,6 +7,7 @@ class PdfSplitter::CleanupJob < ApplicationJob
     return unless retention[:enabled]
 
     PdfBlob.expired.delete_all
+    PdfSplitJob.prune_original_cache
     limit = max_total_bytes || retention[:max_total_mb].to_i.megabytes
     total = PdfBlob.sum(:byte_size)
     PdfBlob.order(:created_at).select(:id, :byte_size).find_each do |b|

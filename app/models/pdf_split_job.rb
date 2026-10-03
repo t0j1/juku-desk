@@ -26,26 +26,44 @@ class PdfSplitJob < ApplicationRecord
     pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).first
   end
 
-  CHUNK_BYTES = 1.megabyte
+  CHUNK_BYTES = 8.megabytes
 
-  # 原本を Ruby の大きな文字列にせず、DB から 1MB ずつ tempfile に書き出してパスを渡す
-  # （512MB 環境で 27MB の原本を何度も読み込むとメモリ不足で落ちるため）
+  # 原本を Ruby の大きな文字列にせず、DB から CHUNK_BYTES ずつディスクに書き出してパスを渡す
+  # （512MB 環境で 27MB の原本を何度も読み込むとメモリ不足で落ちるため）。
+  # 書き出したファイルは tmp/pdf_cache に残して、サムネイルや分割で使い回す（DB から毎回読むと1件10秒以上かかる）
+  CACHE_DIR = Rails.root.join("tmp", "pdf_cache")
+  CACHE_LOCK = Mutex.new
+
   def with_original_file
-    blob_id, size = pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).pick(:id, :byte_size)
+    yield original_cache_path
+  end
+
+  def original_cache_path
+    blob_id, size, created = pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).pick(:id, :byte_size, :created_at)
     raise PdfSplitter::Error, "元PDFの保存期限が切れています。もう一度アップロードしてください。" unless blob_id
 
-    Tempfile.create([ "pdf_original", ".pdf" ], binmode: true) do |f|
-      offset = 0
-      loop do
-        chunk = PdfBlob.where(id: blob_id).pick(Arel.sql("substring(data from #{offset + 1} for #{CHUNK_BYTES})"))
-        break if chunk.blank?
-        f.write(chunk)
-        offset += chunk.bytesize
-        break if size && offset >= size
+    path = CACHE_DIR.join("#{id}-#{blob_id}-#{created.to_f.to_s.delete('.')}.pdf")
+    CACHE_LOCK.synchronize do
+      return path.to_s if path.exist? && path.size == size
+      FileUtils.mkdir_p(CACHE_DIR)
+      tmp = "#{path}.#{Process.pid}.part"
+      File.open(tmp, "wb") do |f|
+        offset = 0
+        loop do
+          chunk = PdfBlob.where(id: blob_id).pick(Arel.sql("substring(data from #{offset + 1} for #{CHUNK_BYTES})"))
+          break if chunk.blank?
+          f.write(chunk)
+          offset += chunk.bytesize
+          break if size && offset >= size
+        end
       end
-      f.flush
-      yield f.path
+      File.rename(tmp, path)
     end
+    path.to_s
+  end
+
+  def self.prune_original_cache(older_than: 1.day.ago)
+    Dir.glob(CACHE_DIR.join("*")).each { |p| File.delete(p) if File.mtime(p) < older_than rescue nil }
   end
 
   def original_blob_data
