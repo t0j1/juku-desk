@@ -1,0 +1,7 @@
+leap:
+  name: LEAP 改訂版
+  words_count: 50
+
+small:
+  name: 小さな単語帳
+  words_count: 10
