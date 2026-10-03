@@ -19,9 +19,9 @@ class Quiz
         count: [ [ 30, available ].min, MIN_COUNT ].max)
   end
 
-  # 重複なしで抽選し、見直しやすいよう単語の番号順に並べる
+  # 重複なしで抽選する。並びは抽選順のまま（番号は単語帳の見出し番号を添える）
   def draw
-    words_in_range.sample(count).sort_by(&:number)
+    words_in_range.sample(count)
   end
 
   def words_in_range

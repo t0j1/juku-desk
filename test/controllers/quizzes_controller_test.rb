@@ -51,10 +51,10 @@ class QuizzesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 25, terms.uniq.size
   end
 
-  test "sheet numbers are the headword numbers in ascending order, not 1..n" do
+  test "sheet shows each word's headword number next to it, in draw order" do
     create_quiz(start_no: 31, end_no: 50, count: 20)
     numbers = css_select("#quiz-sheet-question .sheet-no").map { |n| n.text.to_i }
-    assert_equal (31..50).to_a, numbers
+    assert_equal (31..50).to_a, numbers.sort
     terms = css_select("#quiz-sheet-question .sheet-term").map(&:text)
     assert_equal numbers.map { |n| "word#{n}" }, terms
   end
@@ -64,7 +64,8 @@ class QuizzesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#quiz-sheet-question .sheet-answer", count: 0
     assert_select "#quiz-sheet-answer .sheet-title", text: "LEAP 改訂版 No.31–50　解答"
     assert_select "#quiz-sheet-answer .sheet-row", count: 20
-    assert_select "#quiz-sheet-answer .sheet-row:first-child .sheet-answer", text: "[他] 意味31"
+    first_no = css_select("#quiz-sheet-answer .sheet-no").first.text.to_i
+    assert_select "#quiz-sheet-answer .sheet-row:first-child .sheet-answer", text: "[他] 意味#{first_no}"
     assert_equal css_select("#quiz-sheet-question .sheet-no").map(&:text), css_select("#quiz-sheet-answer .sheet-no").map(&:text)
   end
 
