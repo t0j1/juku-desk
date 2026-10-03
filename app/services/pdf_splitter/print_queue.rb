@@ -11,9 +11,11 @@ module PdfSplitter
     attr_reader :errors, :items
 
     # raw は ["第1回:both", "第2回:problem"] の形
-    def initialize(job, raw, pad_even: false)
+    def initialize(job, raw, pad_even: false, paper: nil, include_neighbor: false)
       @job = job
       @pad_even = pad_even
+      @paper = job.spread_split? && Imposer::PAPERS.key?(paper.to_s) ? paper.to_s : (job.spread_split? ? "b4" : "b5")
+      @include_neighbor = include_neighbor
       @errors = []
       @items = Array(raw).filter_map do |s|
         round, kind = s.to_s.split(":", 2)
@@ -47,6 +49,10 @@ module PdfSplitter
     end
 
     def to_pdf
+      if @paper != "b5"
+        sheets = Imposer.sheets(@job.page_map, ranges, include_neighbor: @include_neighbor)
+        return @job.with_spread_source_file { |src| Imposer.to_pdf(src, sheets, paper: @paper, pad_even: @pad_even) }
+      end
       @job.with_original_file do |src|
         Dir.mktmpdir do |dir|
           blank = File.join(dir, "blank.pdf")
@@ -64,10 +70,20 @@ module PdfSplitter
       end
     end
 
-    # A4 の白紙1ページ
-    def self.blank_pdf
-      objs = [ "<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-               "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> >>" ]
+    # 白紙1ページ（既定は A4 縦）
+    def self.blank_pdf(w = 595, h = 842)
+      raw_pdf([ "" ], w, h)
+    end
+
+    # 内容ストリームだけの最小PDF（1要素 = 1ページ）
+    def self.raw_pdf(contents, w, h)
+      n = contents.size
+      kids = (0...n).map { |i| "#{3 + i * 2} 0 R" }.join(" ")
+      objs = [ "<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [#{kids}] /Count #{n} >>" ]
+      contents.each_with_index do |c, i|
+        objs << "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 #{w} #{h}] /Resources << >> /Contents #{4 + i * 2} 0 R >>"
+        objs << "<< /Length #{c.bytesize} >>\nstream\n#{c}\nendstream"
+      end
       body = +"%PDF-1.4\n"
       offsets = objs.each_with_index.map do |o, i|
         off = body.bytesize

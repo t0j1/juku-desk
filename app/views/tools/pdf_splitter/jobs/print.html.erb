@@ -7,6 +7,22 @@
   <% labels = ::PdfSplitter::PrintQueue::KIND_LABELS %>
   <div data-controller="print-queue" data-print-queue-url-value="<%= print_queue_path_for(@job) %>" data-print-queue-key-value="juku-desk:print-queue:<%= @job.id %>"
        data-print-queue-max-value="<%= ::PdfSplitter::PrintQueue.max_rounds %>" data-print-queue-labels-value="<%= labels.to_json %>">
+    <% if @job.spread_split? && @rounds.any? %>
+      <section id="paper-select" class="mb-6">
+        <h2 class="font-bold mb-2">用紙</h2>
+        <div class="flex flex-wrap gap-2" role="group" aria-label="用紙">
+          <% ::PdfSplitter::Imposer::PAPERS.each do |key, label| %>
+            <button type="button" data-action="print-queue#paper" data-paper="<%= key %>" data-note="<%= ::PdfSplitter::Imposer::PAPER_NOTES[key] %>" aria-pressed="<%= key == @paper %>"
+                    class="inline-flex items-center h-10 px-4 rounded-full border text-sm border-line-strong bg-white text-ink aria-pressed:bg-primary aria-pressed:border-primary aria-pressed:text-white aria-pressed:font-bold"><%= label %></button>
+          <% end %>
+        </div>
+        <p class="mt-2 text-sm text-ink-sub">選択中：<span id="paper-note" data-print-queue-target="paperNote" class="font-bold text-ink"><%= ::PdfSplitter::Imposer::PAPER_NOTES[@paper] %></span></p>
+        <details class="mt-2 text-sm">
+          <summary class="cursor-pointer text-ink-sub">詳細</summary>
+          <label class="mt-2 flex items-center gap-2"><input type="checkbox" data-action="print-queue#neighbor" data-print-queue-target="neighbor"> 回の境目が見開きの真ん中にあるとき、隣の回の半分も入れる（初期値は空白）</label>
+        </details>
+      </section>
+    <% end %>
     <% if @rounds.any? %>
       <section id="print-queue" class="mb-6 max-w-2xl bg-amber-50 border border-amber-200 rounded p-3">
         <div class="flex items-center justify-between mb-1">
@@ -16,6 +32,8 @@
         <p data-print-queue-target="empty" class="text-sm text-stone-500">下の表の「＋ リストに追加」で、まとめて印刷する回を選んでください。</p>
         <ol data-print-queue-target="list" class="text-base"></ol>
         <%= form_with url: print_queue_path_for(@job), method: :get, data: { turbo: false, print_queue_target: "form" }, html: { target: "_blank", hidden: true }, class: "mt-2 flex flex-wrap items-center gap-3" do %>
+          <%= hidden_field_tag :paper, @paper, data: { print_queue_target: "paperField" } %>
+          <%= hidden_field_tag :include_neighbor, "0", data: { print_queue_target: "neighborField" } %>
           <label class="text-sm"><%= check_box_tag :pad_even, "1", false %> 両面印刷用に白紙を入れて、各ファイルを偶数ページにそろえる</label>
           <button type="submit" class="rounded px-4 py-2 bg-stone-800 text-white">まとめて印刷</button>
         <% end %>
