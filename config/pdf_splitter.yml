@@ -7,7 +7,7 @@ shared:
     problem_patterns: [ '問題|演習|練習|確認テスト|ドリル' ]
   limits:
     max_file_mb: 30
-    max_pages: 150
+    max_pages: 300
     max_jobs_per_day: 20
     max_outputs: 50
     thumbnail_pages: 20
