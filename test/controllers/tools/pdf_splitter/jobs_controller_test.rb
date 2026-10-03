@@ -88,6 +88,32 @@ class Tools::PdfSplitter::JobsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[前半 第2部_分割], job.outputs.reload.map(&:display_name)
   end
 
+  test "image-only scan is split with paired problem/answer rows (problems first, then answers)" do
+    job = create_pdf_job(fixture: "scanned_images.pdf")
+    get tools_pdf_splitter_job_path(job)
+    assert_select "#manual-notice", /自動判定できませんでした/
+    assert_select "#pairs-form template"
+
+    pairs = [ { round: "第1回", problem_from: 2, problem_to: 4, answer_from: 8, answer_to: 9 },
+              { round: "第2回", problem_from: 5, problem_to: 7, answer_from: 10, answer_to: 12 },
+              { round: "", problem_from: "", problem_to: "", answer_from: "", answer_to: "" } ]
+    patch update_boundaries_tools_pdf_splitter_job_path(job), params: { pairs: pairs }
+    assert_equal 4, job.reload.boundaries.size
+
+    perform_enqueued_jobs { post split_tools_pdf_splitter_job_path(job), params: { pairs: pairs } }
+    outputs = job.outputs.reload
+    assert_equal %w[第1回_問題 第2回_問題 第1回_解答 第2回_解答], outputs.map(&:display_name)
+    assert_equal [ [ 2, 4 ], [ 5, 7 ], [ 8, 9 ], [ 10, 12 ] ], outputs.map { |o| [ o.page_from, o.page_to ] }
+    assert_equal [ 3, 3, 2, 3 ], outputs.map { |o| PDF::Reader.new(StringIO.new(PdfSplitter::Builder.build(o))).page_count }
+  end
+
+  test "paired rows with a bad range are rejected" do
+    job = create_pdf_job(fixture: "scanned_images.pdf")
+    post split_tools_pdf_splitter_job_path(job), params: { pairs: [ { round: "第1回", problem_from: 2, problem_to: 4, answer_from: 8, answer_to: 99 } ] }
+    assert_match "2行目のページ範囲", flash[:alert]
+    assert_empty job.outputs.reload
+  end
+
   test "equal parts fills boundaries" do
     job = create_pdf_job(fixture: "plain.pdf")
     patch update_boundaries_tools_pdf_splitter_job_path(job), params: { equal_parts: 2 }
