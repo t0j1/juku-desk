@@ -19,8 +19,9 @@ class Quiz
         count: [ [ 30, available ].min, MIN_COUNT ].max)
   end
 
+  # 重複なしで抽選する。並びは抽選順のまま（番号は単語帳の見出し番号を添える）
   def draw
-    @drawn = words_in_range.sample(count)
+    words_in_range.sample(count)
   end
 
   def words_in_range

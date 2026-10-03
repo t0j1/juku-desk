@@ -59,10 +59,14 @@
 .sheet-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 10mm; }
 .sheet-col { display: grid; grid-template-rows: repeat(var(--rows), 1fr); }
 .sheet-row { display: flex; align-items: flex-end; gap: 2mm; padding-bottom: 1.6mm; font-size: 12pt; break-inside: avoid; }
-.sheet-no { width: 9mm; text-align: right; flex: none; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+.sheet-no { width: 12mm; text-align: right; flex: none; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
 .sheet-term { flex: none; font-weight: 600; }
-.sheet-blank { flex: 1; border-bottom: .3mm solid #000; min-width: 12mm; }
+.sheet-blank { flex: 1; border-bottom: .3mm solid #000; min-width: 12mm; display: flex; align-items: flex-end; }
+.sheet-answer { font-size: 9pt; line-height: 1.2; padding-bottom: .4mm; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.sheet-frame + .sheet-frame:not([hidden]) { margin-top: 24px; }
 @media print {
   .sheet-frame { zoom: 1; }
+  .sheet-frame + .sheet-frame:not([hidden]) { margin-top: 0; }
+  [data-mode="both"] .sheet-frame + .sheet-frame { break-before: page; }
   .sheet { height: 266mm; padding: 0; box-shadow: none; border: 0; }
 }
