@@ -1,0 +1,69 @@
+<%# 範囲と問題数。エラーはサーバーでも検証し、入力中は quiz-range コントローラーが同じ文言で出す %>
+<% wb = quiz.wordbook %>
+<% min, max = wb.min_number, wb.max_number %>
+<% error = ->(attr) { quiz.errors[attr].first } %>
+<% field_class = ->(attr) { "block w-40 h-12 px-3 rounded-lg border-2 bg-white text-base tnum focus:outline-2 focus:outline-primary " + (error.(attr) ? "border-ng" : "border-line-strong") } %>
+<%= form_with url: quizzes_path, method: :post, scope: :quiz, data: { controller: "quiz-range", turbo: false,
+      quiz_range_numbers_value: wb.words.pluck(:number), quiz_range_min_value: min, quiz_range_max_value: max,
+      quiz_range_min_count_value: Quiz::MIN_COUNT, quiz_range_max_count_value: Quiz::MAX_COUNT } do |f| %>
+  <%= hidden_field_tag "quiz[wordbook_id]", wb.id %>
+  <div class="flex gap-10 items-start">
+    <div class="flex-1 min-w-0 space-y-8">
+      <p class="text-sm text-ink-sub">単語帳：<span class="font-bold text-ink"><%= wb.name %></span>
+        <%= link_to "選び直す", new_quiz_path, class: "ml-3 text-primary font-bold hover:underline" %></p>
+
+      <section>
+        <h2 class="font-bold mb-3">範囲</h2>
+        <div class="flex items-center gap-3">
+          <div>
+            <%= label_tag "quiz_start_no", "開始", class: "block text-sm text-ink-sub mb-1" %>
+            <%= f.number_field :start_no, value: quiz.start_no, id: "quiz_start_no", inputmode: "numeric", class: field_class.(:start_no),
+                  data: { quiz_range_target: "start", action: "input->quiz-range#validate" }, "aria-invalid": error.(:start_no).present?, "aria-describedby": "quiz_range_hint" %>
+          </div>
+          <span class="mt-6" aria-hidden="true">〜</span>
+          <div>
+            <%= label_tag "quiz_end_no", "終了", class: "block text-sm text-ink-sub mb-1" %>
+            <%= f.number_field :end_no, value: quiz.end_no, id: "quiz_end_no", inputmode: "numeric", class: field_class.(:end_no),
+                  data: { quiz_range_target: "end", action: "input->quiz-range#validate" }, "aria-invalid": error.(:end_no).present?, "aria-describedby": "quiz_range_hint" %>
+          </div>
+        </div>
+        <p id="quiz_range_hint" class="mt-2 text-sm text-ink-sub tnum">範囲は <%= min %>〜<%= max %> です</p>
+        <p class="mt-2 text-sm font-bold text-ng" role="alert" data-quiz-range-target="startError" <%= "hidden" unless error.(:start_no) %>><%= "✕ #{error.(:start_no)}" if error.(:start_no) %></p>
+        <p class="mt-2 text-sm font-bold text-ng" role="alert" data-quiz-range-target="endError" <%= "hidden" unless error.(:end_no) %>><%= "✕ #{error.(:end_no)}" if error.(:end_no) %></p>
+      </section>
+
+      <section>
+        <h2 class="font-bold mb-3">問題数（<%= Quiz::MIN_COUNT %>〜<%= Quiz::MAX_COUNT %>）</h2>
+        <div class="flex items-center gap-3">
+          <button type="button" class="btn-secondary !h-12 !w-12 !text-lg" aria-label="問題数を減らす" data-action="quiz-range#decrement"><%= console_icon(:minus) %></button>
+          <%= f.number_field :count, value: quiz.count, id: "quiz_count", inputmode: "numeric", "aria-label": "問題数", class: field_class.(:count) + " !w-28 text-center",
+                data: { quiz_range_target: "count", action: "input->quiz-range#validate" }, "aria-invalid": error.(:count).present? %>
+          <button type="button" class="btn-secondary !h-12 !w-12 !text-lg" aria-label="問題数を増やす" data-action="quiz-range#increment"><%= console_icon(:plus) %></button>
+        </div>
+        <div class="mt-3 flex gap-2" role="group" aria-label="問題数のプリセット">
+          <% [ 20, 30, 40, 50 ].each do |n| %>
+            <button type="button" class="inline-flex items-center gap-1 h-10 px-4 rounded-full border text-sm font-bold cursor-pointer tnum bg-white border-line-strong text-ink"
+                    data-quiz-range-target="preset" data-count="<%= n %>" data-action="quiz-range#preset"><%= n %></button>
+          <% end %>
+        </div>
+        <p class="mt-2 text-sm font-bold text-ng" role="alert" data-quiz-range-target="countError" <%= "hidden" unless error.(:count) %>><%= "✕ #{error.(:count)}" if error.(:count) %></p>
+      </section>
+
+      <div class="flex items-center gap-4">
+        <%= f.button "問題を作成", type: "submit", class: "btn-primary !h-12 min-w-40", data: { quiz_range_target: "submit" } %>
+      </div>
+    </div>
+
+    <aside class="w-[200px] shrink-0 text-center" aria-label="用紙プレビュー">
+      <div class="mx-auto w-[150px] aspect-[210/297] border border-line-strong rounded bg-white p-3 flex flex-col gap-2 shadow-card" aria-hidden="true">
+        <div class="h-2 border-b border-ink-sub"></div>
+        <div class="flex-1 grid grid-cols-2 gap-2">
+          <% 2.times do %><div class="flex flex-col justify-between"><% 8.times do %><div class="border-b border-ink-sub h-px"></div><% end %></div><% end %>
+        </div>
+      </div>
+      <% left, right = Quiz.split(quiz.count.to_i) %>
+      <p class="mt-3 text-sm tnum" data-quiz-range-target="split">左 <%= left %>／右 <%= right %></p>
+      <p class="text-xs text-ink-sub">A4 縦・2列</p>
+    </aside>
+  </div>
+<% end %>

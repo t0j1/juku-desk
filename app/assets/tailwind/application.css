@@ -47,3 +47,22 @@
   .table-console tbody td { @apply h-14 px-4 border-b border-line; }
   .tnum { font-variant-numeric: tabular-nums; }
 }
+
+/* 小テスト用紙（A4 縦）。画面では縮小表示し、印刷では @page の余白 15mm の内側に原寸で出す。色は使わない */
+.sheet-frame { zoom: .62; width: max-content; }
+.sheet { width: 210mm; height: 297mm; padding: 15mm; box-sizing: border-box; display: flex; flex-direction: column;
+         background: #fff; color: #000; box-shadow: var(--shadow-card); border: 1px solid var(--color-line-strong); }
+.sheet-head { padding-bottom: 4mm; border-bottom: .4mm solid #000; margin-bottom: 4mm; }
+.sheet-title { font-size: 15pt; font-weight: 700; margin-bottom: 3mm; }
+.sheet-meta { display: flex; justify-content: space-between; align-items: flex-end; font-size: 11pt; }
+.sheet-line { display: inline-block; border-bottom: .3mm solid #000; vertical-align: baseline; }
+.sheet-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 10mm; }
+.sheet-col { display: grid; grid-template-rows: repeat(var(--rows), 1fr); }
+.sheet-row { display: flex; align-items: flex-end; gap: 2mm; padding-bottom: 1.6mm; font-size: 12pt; break-inside: avoid; }
+.sheet-no { width: 9mm; text-align: right; flex: none; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+.sheet-term { flex: none; font-weight: 600; }
+.sheet-blank { flex: 1; border-bottom: .3mm solid #000; min-width: 12mm; }
+@media print {
+  .sheet-frame { zoom: 1; }
+  .sheet { height: 266mm; padding: 0; box-shadow: none; border: 0; }
+}

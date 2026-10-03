@@ -1,0 +1,9 @@
+<% content_for :title, "小テスト作成" %>
+<h1 class="font-bold text-[22px] mb-6">小テスト作成</h1>
+<% if @wordbook %>
+  <%= render "quizzes/steps", current: 2 %>
+  <%= render "quizzes/range_form", quiz: @quiz %>
+<% else %>
+  <%= render "quizzes/steps", current: 1 %>
+  <%= render "quizzes/wordbook_form", wordbooks: @wordbooks %>
+<% end %>
