@@ -13,6 +13,15 @@ class PdfSplitJob < ApplicationRecord
 
   scope :created_today, -> { where(created_at: Time.current.all_day) }
 
+  STALE_AFTER = 10.minutes
+
+  # プロセスごと落ちると AnalyzeJob/SplitJob の rescue が走らず analyzing/splitting のまま残るので、
+  # 一定時間進まないものは failed に倒して再アップロードを促す
+  def fail_if_stale!
+    return unless (analyzing? || splitting?) && updated_at < STALE_AFTER.ago
+    update!(status: :failed, error_message: "処理中にサーバーが停止しました。ページ数の少ないPDFで再度お試しください。")
+  end
+
   def original_blob
     pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).first
   end

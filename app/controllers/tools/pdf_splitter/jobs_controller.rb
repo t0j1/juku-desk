@@ -8,6 +8,7 @@ module Tools
       end
 
       def show
+        @job.fail_if_stale!
         @boundaries = @job.boundaries.presence || []
       end
 
