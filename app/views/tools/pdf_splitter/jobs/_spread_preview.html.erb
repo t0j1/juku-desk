@@ -1,0 +1,14 @@
+<%# 分けたあとの最初の見開き1組のプレビュー。中央の切れ目に点線 %>
+<% left, right = job.first_spread_preview_pages %>
+<section id="spread-preview" class="mb-6 rounded-lg border border-line p-5">
+  <p class="font-bold mb-1">見開きを分けた結果（最初の1組）</p>
+  <p class="text-sm text-ink-sub mb-3"><%= PdfSplitJob::BINDINGS[job.binding] %> ・ 切れ目で文字が欠けていないか確認してください。</p>
+  <div class="inline-flex items-stretch bg-white shadow-card">
+    <% (job.binding == "right" ? [ right, left ] : [ left, right ]).each_with_index do |p, i| %>
+      <figure class="<%= 'border-l border-dashed border-ink-sub' if i == 1 %>">
+        <%= image_tag thumbnail_tools_pdf_splitter_job_path(job, page: p), alt: "#{p}ページ目", width: 160, class: "block" %>
+        <figcaption class="text-center text-xs text-ink-sub tnum py-1">p.<%= p %></figcaption>
+      </figure>
+    <% end %>
+  </div>
+</section>

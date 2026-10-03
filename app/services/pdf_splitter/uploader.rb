@@ -31,6 +31,8 @@ module PdfSplitter
         j.pdf_blobs.create!(kind: "original", data:, byte_size: data.bytesize, expires_at: @retention[:days].to_i.days.from_now)
         j
       end
+      spreads = Splitter.with_tempfile(data) { |path| Spread.landscape_pages(path, pages) }
+      job.update!(spread_state: :pending, spread_pages: spreads) if spreads.any?
       Result.new(job:)
     rescue InvalidPdf
       fail!(password.present? ? "PDFを開けませんでした。パスワードを確認してください。" : "PDFを開けませんでした。パスワード付きの場合は入力してください。")

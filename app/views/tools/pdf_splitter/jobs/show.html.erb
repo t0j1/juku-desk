@@ -1,12 +1,15 @@
 <% content_for :title, @job.original_filename %>
-<% if @job.uploaded? || @job.analyzing? || @job.splitting? %><meta http-equiv="refresh" content="2"><% end %>
+<% if (@job.uploaded? && !@job.spread_pending?) || @job.analyzing? || @job.splitting? %><meta http-equiv="refresh" content="2"><% end %>
 <h1 class="font-bold text-2xl mb-1"><%= @job.original_filename %></h1>
 <p class="text-sm text-stone-500 mb-4"><%= @job.page_count %>ページ ・ 状態: <span id="status"><%= t("pdf_splitter.status.#{@job.status}") %></span>
   <% if @job.expires_at %> ・ <%= l @job.expires_at, format: :short %> に自動削除<% end %></p>
 
 <% if @job.failed? %><p class="mb-4 py-2 px-3 bg-red-50 text-red-700 rounded">処理に失敗しました: <%= @job.error_message %></p><% end %>
 
-<% if @job.uploaded? || @job.analyzing? %>
+<% if @job.spread_pending? %>
+  <%= render "spread_confirm", job: @job %>
+<% elsif @job.uploaded? || @job.analyzing? %>
+  <%= render "spread_preview", job: @job if @job.spread_split? %>
   <p>解析しています…</p>
 <% else %>
   <% if @job.outputs.any? %>
@@ -37,6 +40,7 @@
     </section>
   <% end %>
 
+  <%= render "spread_preview", job: @job if @job.spread_split? && @job.outputs.empty? %>
   <section>
     <h2 class="font-bold mb-2">分割範囲</h2>
     <% if @job.auto_detected? %>

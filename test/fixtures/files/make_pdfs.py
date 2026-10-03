@@ -30,3 +30,17 @@ make('workbook_p1.pdf', p1)
 make('workbook_p2.pdf', [f'第{z((i//2)+1)}回 {"問題" if i % 2 == 0 else "解答"}' for i in range(6)])
 # 見出しなし 5ページ
 make('plain.pdf', [None] * 5)
+
+# 見開き（B4横 = 2×B5）: 表紙(B5縦) + 見開き3枚。左右に別の回・種別
+def make_spread(name):
+    c = canvas.Canvas(os.path.join(here, name))
+    W, H = 1031.8, 728.5
+    c.setPageSize((W / 2, H)); c.setFont('JP', 20); c.drawString(50, 650, '表紙'); c.showPage()
+    heads = [('第１回 問題', '第１回 問題'), ('第２回 問題', '第２回 問題'), ('第１回 解答', '第２回 解答')]
+    for l, r in heads:
+        c.setPageSize((W, H)); c.setFont('JP', 20)
+        c.drawString(50, 650, l); c.drawString(W / 2 + 50, 650, r)
+        c.setFont('JP', 11); c.drawString(50, 600, '本文テキスト'); c.drawString(W / 2 + 50, 600, '本文テキスト')
+        c.showPage()
+    c.save()
+make_spread('spread_b4.pdf')
