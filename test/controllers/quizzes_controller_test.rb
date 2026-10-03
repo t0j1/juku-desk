@@ -30,6 +30,17 @@ class QuizzesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-quiz-range-target=split]", text: "左 15／右 15"
   end
 
+  test "step 2 keeps the previous values when coming back from the preview" do
+    create_quiz(start_no: 11, end_no: 40, count: 25)
+    assert_select "a[href=?]", new_quiz_path(wordbook_id: wordbooks(:leap).id, start_no: 11, end_no: 40, count: 25), text: "範囲を変更"
+
+    get new_quiz_path(wordbook_id: wordbooks(:leap).id, start_no: 11, end_no: 40, count: 25)
+    assert_select "input[name='quiz[start_no]'][value='11']"
+    assert_select "input[name='quiz[end_no]'][value='40']"
+    assert_select "input[name='quiz[count]'][value='25']"
+    assert_select "[data-quiz-range-target=startError]:not([hidden])", count: 0
+  end
+
   test "invalid range re-renders step 2 with errors" do
     create_quiz(start_no: 0, end_no: 60, count: 10)
     assert_response :unprocessable_entity

@@ -62,6 +62,11 @@ class QuizzesTest < ApplicationSystemTestCase
     assert_no_selector "body[data-old]"
     assert_selector "#quiz-sheet-question .sheet-row", count: 49
     assert_not_equal first, all("#quiz-sheet-question .sheet-term").map(&:text)
+
+    click_on "範囲を変更"
+    assert_field "quiz_start_no", with: "1"
+    assert_field "quiz_end_no", with: "50"
+    assert_field "quiz_count", with: "49"
   end
 
   test "choose what to print: question, answer or both" do
