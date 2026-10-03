@@ -45,6 +45,25 @@
       <p id="manual-notice" class="text-sm mb-2 py-2 px-3 bg-amber-50 text-amber-800 rounded">自動判定できませんでした<%= "（候補: #{@job.pattern_label}・信頼度 #{(@job.confidence.to_f * 100).round}%）" if @job.pattern %>。範囲を確認・入力してから分割してください。</p>
     <% end %>
 
+    <%= form_with url: split_tools_pdf_splitter_job_path(@job), method: :post, class: "text-sm mb-6", id: "pairs-form", data: { controller: "pair-rows" } do |f| %>
+      <h3 class="font-bold mb-1">問題と解答を回ごとに入力</h3>
+      <p class="text-xs text-stone-500 mb-1">1行が1回分です。問題と解答のページ範囲を入れると、問題をすべて並べたあとに解答が並ぶ順で分割します。</p>
+      <% pairs = ::PdfSplitter::PairRows.from_boundaries(@boundaries).presence || [ {} ] %>
+      <table class="bg-white border border-stone-200">
+        <thead class="bg-stone-100 text-left"><tr><th class="p-2">回</th><th class="p-2">問題（開始〜終了）</th><th class="p-2">解答（開始〜終了）</th><th></th></tr></thead>
+        <tbody data-pair-rows-target="body">
+          <% pairs.each_with_index do |pair, i| %><%= render "pair_row", pair: pair, n: i + 1, max: @job.page_count %><% end %>
+        </tbody>
+      </table>
+      <template data-pair-rows-target="template"><%= render "pair_row", pair: { "round" => "第__N__回" }, n: "__N__", max: @job.page_count %></template>
+      <div class="mt-2 flex gap-2">
+        <button type="button" data-action="pair-rows#add" class="rounded px-3 py-2 border">＋ 回を追加（問題と解答）</button>
+        <%= f.submit "この範囲で分割する", class: "rounded px-3 py-2 bg-stone-800 text-white", id: "split-pairs" %>
+        <%= f.submit "範囲だけ保存", formaction: update_boundaries_tools_pdf_splitter_job_path(@job), name: "save_only", class: "rounded px-3 py-2 border", data: { turbo: false } %>
+      </div>
+    <% end %>
+
+    <h3 class="font-bold mb-1">1ファイルずつ入力</h3>
     <%= form_with url: split_tools_pdf_splitter_job_path(@job), method: :post, class: "text-sm", id: "boundaries-form" do |f| %>
       <table class="bg-white border border-stone-200">
         <thead class="bg-stone-100 text-left"><tr><th class="p-2">開始</th><th class="p-2">終了</th><th class="p-2">回</th><th class="p-2">種別</th><th class="p-2">ファイル名（空欄なら自動）</th><th class="p-2">先頭ページ</th></tr></thead>

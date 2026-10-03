@@ -1,0 +1,6 @@
+<tr class="border-t border-stone-200">
+  <td class="p-1"><%= text_field_tag "pairs[][round]", pair["round"] || "第#{n}回", class: "border rounded px-1 w-24", aria: { label: "#{n}組目 回" } %></td>
+  <td class="p-1"><%= number_field_tag "pairs[][problem_from]", pair["problem_from"], min: 1, max: max, class: "border rounded px-1 w-16", aria: { label: "#{n}組目 問題 開始" } %>〜<%= number_field_tag "pairs[][problem_to]", pair["problem_to"], min: 1, max: max, class: "border rounded px-1 w-16", aria: { label: "#{n}組目 問題 終了" } %></td>
+  <td class="p-1"><%= number_field_tag "pairs[][answer_from]", pair["answer_from"], min: 1, max: max, class: "border rounded px-1 w-16", aria: { label: "#{n}組目 解答 開始" } %>〜<%= number_field_tag "pairs[][answer_to]", pair["answer_to"], min: 1, max: max, class: "border rounded px-1 w-16", aria: { label: "#{n}組目 解答 終了" } %></td>
+  <td class="p-1"><button type="button" data-action="pair-rows#remove" class="underline text-stone-500">削除</button></td>
+</tr>

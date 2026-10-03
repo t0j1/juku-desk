@@ -53,7 +53,7 @@ module Tools
 
       # 境界を確定して出力を作る（自動判定は提案まで。確定は人がこのボタンで行う）
       def split
-        set = ::PdfSplitter::BoundarySet.new(params.key?(:boundaries) ? boundary_rows : @job.boundaries, page_count: @job.page_count)
+        set = ::PdfSplitter::BoundarySet.new((params.key?(:boundaries) || params.key?(:pairs)) ? boundary_rows : @job.boundaries, page_count: @job.page_count)
         return redirect_to(tools_pdf_splitter_job_path(@job), alert: set.errors.join(" ")) unless set.valid?
 
         names = ::PdfSplitter::Namer.new.then do |namer|
@@ -121,6 +121,10 @@ module Tools
 
       private
         def boundary_rows
+          if params.key?(:pairs)
+            pairs = params.fetch(:pairs, []).map { |r| r.permit(:round, :problem_from, :problem_to, :answer_from, :answer_to) }
+            return ::PdfSplitter::PairRows.expand(pairs)
+          end
           params.fetch(:boundaries, []).map { |r| r.permit(:from, :to, :round, :kind, :name) }
         end
     end
