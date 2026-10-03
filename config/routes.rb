@@ -11,7 +11,6 @@ Rails.application.routes.draw do
       resources :jobs, only: %i[ index show create destroy ] do
         member do
           post  :analyze
-          post  :spreads
           post  :split
           match :update_boundaries, via: %i[ patch post ]
           patch :update_names

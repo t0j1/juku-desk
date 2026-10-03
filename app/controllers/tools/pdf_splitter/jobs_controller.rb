@@ -21,7 +21,7 @@ module Tools
           redirect_to tools_pdf_splitter_jobs_path, alert: result.error
         else
           AuditLog.record!(:create, result.job, metadata: { filename: result.job.original_filename, pages: result.job.page_count })
-          ::PdfSplitter::AnalyzeJob.perform_later(result.job.id) unless result.job.spread_pending?
+          ::PdfSplitter::AnalyzeJob.perform_later(result.job.id)
           redirect_to tools_pdf_splitter_job_path(result.job)
         end
       end
@@ -30,21 +30,6 @@ module Tools
         AuditLog.record!(:delete, @job, metadata: { filename: @job.original_filename })
         @job.destroy!
         redirect_to tools_pdf_splitter_jobs_path, notice: "削除しました。", status: :see_other
-      end
-
-      # 見開きページを分ける／分けない
-      def spreads
-        if params[:decision] == "split"
-          binding = ::PdfSplitJob::BINDINGS.key?(params[:binding]) ? params[:binding] : "left"
-          @job.split_spreads!(binding:)
-          AuditLog.record!(:update, @job, metadata: { spreads: "split", binding:, pages: @job.spread_pages.size })
-          notice = "見開きを1ページずつに分けました（#{@job.page_count}ページ）。"
-        else
-          @job.update!(spread_state: :declined)
-          notice = nil
-        end
-        ::PdfSplitter::AnalyzeJob.perform_later(@job.id)
-        redirect_to tools_pdf_splitter_job_path(@job), notice:, status: :see_other
       end
 
       # 解析をやり直す
@@ -111,12 +96,11 @@ module Tools
         @outputs = @job.outputs.to_a
         @bundles = @outputs.select(&:round_label).group_by(&:round_label).select { |_, os| os.size > 1 }
         @rounds = @outputs.select(&:round_label).group_by(&:round_label)
-        @paper = @job.spread_split? ? "b4" : "b5"
       end
 
       # 印刷リスト（回ごとに 問題/解答/両方）を1つのPDFにして開く
       def print_queue
-        queue = ::PdfSplitter::PrintQueue.new(@job, params[:items], pad_even: params[:pad_even] == "1", paper: params[:paper], include_neighbor: params[:include_neighbor] == "1")
+        queue = ::PdfSplitter::PrintQueue.new(@job, params[:items], pad_even: params[:pad_even] == "1")
         return redirect_to(print_tools_pdf_splitter_job_path(@job), alert: queue.errors.join(" ")) unless queue.valid?
         AuditLog.record!(:print, @job, metadata: { job_id: @job.id, queue: params[:items], pad_even: params[:pad_even] == "1" })
         send_pdf queue.to_pdf, filename: queue.filename, disposition: "inline"

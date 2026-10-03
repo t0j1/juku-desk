@@ -17,12 +17,11 @@ module Kiosk
     def show
       @outputs = @job.outputs.to_a
       @rounds = @outputs.select(&:round_label).group_by(&:round_label)
-      @paper = @job.spread_split? ? "b4" : "b5"
       render "tools/pdf_splitter/jobs/print"
     end
 
     def print_queue
-      queue = ::PdfSplitter::PrintQueue.new(@job, params[:items], pad_even: params[:pad_even] == "1", paper: params[:paper], include_neighbor: params[:include_neighbor] == "1")
+      queue = ::PdfSplitter::PrintQueue.new(@job, params[:items], pad_even: params[:pad_even] == "1")
       return redirect_to(kiosk_job_path(token: params[:token], id: @job), alert: queue.errors.join(" ")) unless queue.valid?
       audit(@job, queue: params[:items], pad_even: params[:pad_even] == "1")
       send_pdf queue.to_pdf, filename: queue.filename, disposition: "inline"
