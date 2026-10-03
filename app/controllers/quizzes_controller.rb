@@ -4,7 +4,11 @@ class QuizzesController < ApplicationController
   # 1: 単語帳を選ぶ（wordbook_id なし） / 2: 範囲と問題数（wordbook_id あり）
   def new
     @wordbooks = Wordbook.order(:name)
-    @quiz = Quiz.defaults_for(@wordbook) if @wordbook
+    return unless @wordbook
+
+    # 「範囲を変更」で戻ってきたときは、前回の入力値を初期値にする
+    @quiz = Quiz.defaults_for(@wordbook)
+    @quiz.assign_attributes(params.permit(:start_no, :end_no, :count))
   end
 
   # 検証して抽選し、印刷プレビュー（3）を出す。「問題を入れ替える」も同じ条件でここへ送る
