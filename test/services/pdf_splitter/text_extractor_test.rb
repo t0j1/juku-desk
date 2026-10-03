@@ -7,13 +7,21 @@ class PdfSplitter::TextExtractorTest < ActiveSupport::TestCase
     stub_const_chunk(2) do
       texts = PdfSplitter::TextExtractor.pages(data)
       assert_equal n, texts.size
-      assert texts.any?(&:present?)
+      assert texts.count { |t| t.strip.present? } > PdfSplitter::TextExtractor::PROBE_PAGES
     end
   end
 
-  test "image-only pages give empty strings" do
+  test "image-only PDF stops after the probe pages but keeps the page count" do
+    calls = []
+    original = PdfSplitter::TextExtractor.method(:extract)
+    PdfSplitter::TextExtractor.define_singleton_method(:extract) { |*a| calls << a; original.call(*a) }
     texts = PdfSplitter::TextExtractor.pages(file_fixture("scanned_images.pdf").binread)
+    assert_equal 12, texts.size
     assert texts.all? { |t| t.strip.empty? }
+    assert_equal 1, calls.size
+  ensure
+    PdfSplitter::TextExtractor.singleton_class.send(:remove_method, :extract)
+    PdfSplitter::TextExtractor.define_singleton_method(:extract, original)
   end
 
   private

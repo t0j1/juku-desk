@@ -30,8 +30,9 @@ class PdfSplitJob < ApplicationRecord
     original_blob&.data or raise PdfSplitter::Error, "元PDFの保存期限が切れています。もう一度アップロードしてください。"
   end
 
+  # data 列（数十MB）を読み込まないように期限だけ取る
   def expires_at
-    original_blob&.expires_at
+    pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).pick(:expires_at)
   end
 
   def pattern_label
