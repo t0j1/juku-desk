@@ -6,12 +6,12 @@ class PdfSplitJobOriginalFileTest < ActiveSupport::TestCase
     FileUtils.rm_f(job.original_cache_path)
     original = file_fixture("scanned_images.pdf").binread
     stub = 4096
-    PdfSplitJob.send(:remove_const, :CHUNK_BYTES)
-    PdfSplitJob.const_set(:CHUNK_BYTES, stub)
+    PdfBlob.send(:remove_const, :CHUNK_BYTES)
+    PdfBlob.const_set(:CHUNK_BYTES, stub)
     job.with_original_file { |path| assert_equal original, File.binread(path) }
   ensure
-    PdfSplitJob.send(:remove_const, :CHUNK_BYTES)
-    PdfSplitJob.const_set(:CHUNK_BYTES, 8.megabytes)
+    PdfBlob.send(:remove_const, :CHUNK_BYTES)
+    PdfBlob.const_set(:CHUNK_BYTES, 8.megabytes)
   end
 
   test "SplitJob reads the original once for all outputs" do
