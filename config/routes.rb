@@ -51,6 +51,9 @@ Rails.application.routes.draw do
       post :unapprove
     end
   end
+  resources :marking_tests, path: "marking/tests", only: %i[ index new create show ] do
+    get :print, on: :member
+  end
   resources :uploads, path: "marking", only: %i[ index new create show ] do
     get :image, on: :member
     post :extract, on: :member

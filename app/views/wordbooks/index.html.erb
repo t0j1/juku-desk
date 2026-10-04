@@ -1,5 +1,8 @@
 <% content_for :title, "単語帳の登録" %>
-<h1 class="font-bold text-[22px] mb-6">単語帳の登録</h1>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="font-bold text-[22px] mr-auto">単語帳の登録</h1>
+  <%= link_to "マーキング問題から出題", new_marking_test_path, class: "btn-secondary" %>
+</div>
 <% if @errors.present? %>
   <div class="mb-6 rounded-xl bg-ng-bg border border-ng p-4 text-sm text-ng" role="alert">
     <ul class="space-y-1"><% @errors.each do |e| %><li class="font-bold">✕ <%= e %></li><% end %></ul>

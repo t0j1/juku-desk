@@ -1,0 +1,20 @@
+<% content_for :title, @test.title %>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="font-bold text-[22px] mr-auto"><%= @test.title %></h1>
+  <%= link_to "問題用を印刷", print_marking_test_path(@test, kind: "question"), target: "_blank", rel: "noopener", class: "btn-primary" %>
+  <%= link_to "解答用を印刷", print_marking_test_path(@test, kind: "answer"), target: "_blank", rel: "noopener", class: "btn-primary" %>
+  <%= link_to "作成済みの小テスト", marking_tests_path, class: "btn-secondary" %>
+</div>
+<% if @test.short? %>
+  <div id="shortfall" class="mb-4 rounded-xl border border-ng bg-ng-bg p-4 text-sm text-ng font-bold">
+    条件に合う承認済みの問題が足りないため、<%= @test.requested_count %> 問のうち <%= @items.size %> 問で作成しました（<%= @test.shortfall %> 問不足）。
+  </div>
+<% end %>
+<p class="mb-4 text-sm text-ink-sub">印刷画面でブラウザの印刷を開き、「PDF として保存」もできます（用紙は A4、余白 15mm）。</p>
+<ol id="test-items" class="space-y-3">
+  <% @items.each do |item| %>
+    <li id="test_item_<%= item.position %>" class="rounded-xl border border-line bg-white/70 p-3">
+      <span class="tnum font-bold mr-2"><%= item.position %></span><span class="whitespace-pre-wrap"><%= item.question.question_text %></span>
+    </li>
+  <% end %>
+</ol>

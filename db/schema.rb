@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -260,6 +260,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_170000) do
     t.index ["name"], name: "index_students_on_name"
   end
 
+  create_table "test_items", force: :cascade do |t|
+    t.bigint "test_id", null: false
+    t.bigint "question_id", null: false
+    t.integer "position", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["question_id"], name: "index_test_items_on_question_id"
+    t.index ["test_id", "position"], name: "index_test_items_on_test_id_and_position", unique: true
+    t.index ["test_id", "question_id"], name: "index_test_items_on_test_id_and_question_id", unique: true
+  end
+
+  create_table "tests", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "mode", null: false
+    t.string "subject"
+    t.jsonb "filter", default: {}, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_tests_on_created_by_id"
+    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying, 'by_tag'::character varying]::text[])", name: "tests_mode_values"
+  end
+
   create_table "uploads", force: :cascade do |t|
     t.bigint "user_id"
     t.string "sha256", null: false
@@ -333,6 +356,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_170000) do
   add_foreign_key "sessions", "users"
   add_foreign_key "sessions", "users", column: "impersonator_id", on_delete: :cascade
   add_foreign_key "student_weekdays", "students"
+  add_foreign_key "test_items", "questions", on_delete: :restrict
+  add_foreign_key "test_items", "tests", on_delete: :cascade
+  add_foreign_key "tests", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "uploads", "users", on_delete: :nullify
   add_foreign_key "words", "wordbooks"
 end
