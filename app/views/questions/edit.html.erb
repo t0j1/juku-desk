@@ -5,9 +5,9 @@
 </div>
 <% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
 <% if current_user.can_write? && GeminiConfig.configured? %>
-  <div class="mb-4 text-sm"><%= button_to "この領域の構造化をやり直す", restructure_question_path(@question), method: :post, class: "btn-secondary cursor-pointer", data: { turbo_confirm: "この領域の問題を作り直します（手で直した内容は消えます）。よろしいですか？" } %></div>
+  <div class="mb-4 text-sm"><%= button_to "この領域の構造化をやり直す", restructure_question_path(@question), method: :post, class: "btn-secondary cursor-pointer", data: { turbo_confirm: "この領域の問題をすべて作り直します。手で直した内容と、同じ領域の承認済みの問題（小テストで使っていないもの）も消えて作り直されます。作り直している間は一覧に表示されません。失敗したときは取り込み画面で確認してください。よろしいですか？" } %></div>
 <% end %>
-<% if current_user.can_write? && Marking::Splitter.call(@question) %>
+<% if current_user.can_write? && !@question.used_in_exam? && Marking::Splitter.call(@question) %>
   <div id="split-question" class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-line p-3 text-sm">
     <span class="mr-auto">この問題には〔n〕の番号で複数の問題が入っています。番号の位置で、問題文・解答・解説を問題ごとに分けられます。</span>
     <%= button_to "問題ごとに分割", split_question_path(@question), method: :post, class: "btn-secondary cursor-pointer", data: { turbo_confirm: "〔n〕の位置で問題ごとに分けます。よろしいですか？" } %>

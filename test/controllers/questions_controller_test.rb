@@ -218,4 +218,30 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[〔12〕 〔13〕 〔14〕], q.region.questions.order(:id).pluck(:source_label)
     assert_raises(ActiveRecord::RecordNotFound) { q.reload }
   end
+
+  test "split is refused for a question used in an exam" do
+    q = make_question(question_text: "〔12〕A〔13〕B", answer_text: "〔12〕a〔13〕b")
+    q.approve!(users(:staff))
+    Exam.create!(title: "小テスト", mode: "random", filter: {}).items.create!(question: q, position: 1)
+    get edit_question_path(q)
+    assert_select "#split-question", 0
+    post split_question_path(q)
+    assert_redirected_to edit_question_path(q)
+    assert_match(/小テストで使われている/, flash[:alert])
+    assert_equal 1, q.region.questions.count
+    assert_equal "〔12〕A〔13〕B", q.reload.question_text
+  end
+
+  test "restructure does not enqueue twice while the region is queued or processing" do
+    q = make_question
+    with_gemini(gemini_questions_json({ "source_label" => "〔12〕" }))
+    %w[queued processing].each do |status|
+      q.region.update!(status: status)
+      assert_no_enqueued_jobs only: Marking::ExtractJob do
+        post restructure_question_path(q)
+      end
+      assert_redirected_to upload_path(q.region.upload_id)
+      assert_match(/すでに構造化の順番待ち/, flash[:alert])
+    end
+  end
 end

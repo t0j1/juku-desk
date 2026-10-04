@@ -58,6 +58,10 @@ class QuestionsController < ApplicationController
   def restructure
     return redirect_to edit_question_path(@question), alert: "GEMINI_API_KEY が設定されていません。", status: :see_other unless GeminiConfig.configured?
 
+    if @question.region.queued? || @question.region.processing?
+      return redirect_to upload_path(@question.region.upload_id), alert: "この領域はすでに構造化の順番待ち（または処理中）です。", status: :see_other
+    end
+
     Marking::Enqueuer.call(CropRegion.where(id: @question.region_id))
     AuditLog.record!(:update, @question, metadata: { restructure: true })
     redirect_to upload_path(@question.region.upload_id), notice: "この領域を構造化の順番待ちに入れました。", status: :see_other
@@ -65,6 +69,10 @@ class QuestionsController < ApplicationController
 
   # 〔n〕の位置で問題ごとに分ける（PR #55 より前に、複数の問題が 1 つにまとめられたもの）
   def split
+    if @question.used_in_exam?
+      return redirect_to edit_question_path(@question), alert: "この問題は小テストで使われているので分割できません（印刷済みのテストの内容が変わるため）。", status: :see_other
+    end
+
     parts = Marking::Splitter.call(@question)
     unless parts
       return redirect_to edit_question_path(@question), alert: "〔n〕の位置で確実に分けられませんでした。問題文・解答・解説を手で直してください。", status: :see_other
@@ -100,7 +108,10 @@ class QuestionsController < ApplicationController
 
   private
     def set_question
-      @question = Question.reviewable.find(params[:id])
+      # restructure は順番待ち・処理中の領域も見つけて「すでに順番待ち」と返す（連打で Gemini を 2 回呼ばない）
+      scope = Question.reviewable
+      scope = Question.joins(:region).where(crop_regions: { status: %w[extracted needs_review queued processing] }) if action_name == "restructure"
+      @question = scope.find(params[:id])
     end
 
     # 編集すると承認は外れる（直した内容をもう一度確認してから承認する）
