@@ -1,25 +1,25 @@
 <%# 印刷する教材の一覧。locals: jobs, query, search_path, job_path(lambda) %>
-<%= form_with url: search_path, method: :get, class: "mb-6", role: "search" do |f| %>
+<%= form_with url: search_path, method: :get, role: "search" do |f| %>
   <label for="q" class="sr-only">ファイル名で検索</label>
   <div class="relative max-w-[480px]">
-    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-sub"><%= console_icon(:search) %></span>
-    <%= f.search_field :q, value: query, id: "q", placeholder: "ファイル名で検索", class: "block w-full h-12 pl-11 pr-3 rounded-lg border border-line-strong bg-white text-base text-ink focus:outline-2 focus:outline-primary" %>
+    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-text-sub"><%= console_icon(:search) %></span>
+    <%= f.search_field :q, value: query, id: "q", placeholder: "ファイル名で検索", class: "input pl-12" %>
   </div>
 <% end %>
 <% if jobs.empty? %>
-  <div id="print-empty" class="flex flex-col items-center justify-center py-16 text-center">
-    <span class="flex items-center justify-center size-16 rounded-full bg-busy-bg text-primary mb-4"><%= console_icon(:printer, size: 32) %></span>
-    <p class="text-ink-sub text-base"><%= query.present? ? "該当する教材はありません" : "印刷できる教材はまだありません" %></p>
+  <div id="print-empty" class="card flex flex-col items-center justify-center py-16 text-center">
+    <span class="flex items-center justify-center size-16 rounded-full bg-bg shadow-inset text-primary mb-4"><%= console_icon(:printer, size: 32) %></span>
+    <p class="text-text-sub text-base"><%= query.present? ? "該当する教材はありません" : "印刷できる教材はまだありません" %></p>
   </div>
 <% else %>
-  <ul id="print-jobs" class="border-t border-line">
+  <ul id="print-jobs" class="card !py-3">
     <% jobs.each do |job| %>
-      <li class="relative flex items-center gap-4 min-h-16 py-2 px-2 border-b border-line hover:bg-console-bg-from">
+      <li class="relative flex items-center gap-4 min-h-16 py-2 px-2 border-b border-row-line last:border-b-0">
         <div class="flex-1 min-w-0">
-          <%= link_to job.original_filename, job_path.(job), class: "block font-bold text-base text-ink truncate after:absolute after:inset-0" %>
-          <p class="text-[13px] text-ink-sub tnum"><%= job.output_count %>ファイル ・ <time datetime="<%= job.created_at.iso8601 %>"><%= l job.created_at, format: "%Y/%m/%d %H:%M" %></time> 作成</p>
+          <%= link_to job.original_filename, job_path.(job), class: "block font-bold text-base text-text truncate after:absolute after:inset-0" %>
+          <p class="text-[13px] text-text-sub tnum"><%= job.output_count %>ファイル ・ <time datetime="<%= job.created_at.iso8601 %>"><%= l job.created_at, format: "%Y/%m/%d %H:%M" %></time> 作成</p>
         </div>
-        <span class="btn-secondary h-12 px-4 text-[15px] shrink-0" aria-hidden="true">印刷 ›</span>
+        <span class="btn-secondary shrink-0" aria-hidden="true">印刷 ›</span>
       </li>
     <% end %>
   </ul>

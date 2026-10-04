@@ -5,11 +5,11 @@
     <% n = i + 1 %>
     <% state = n < current ? :done : (n == current ? :current : :todo) %>
     <li class="flex items-center gap-2" <%= tag.attributes(aria: { current: (state == :current ? "step" : nil) }) %>>
-      <span class="inline-flex items-center gap-2 h-10 px-4 rounded-full text-sm font-bold <%= { current: 'bg-primary text-white', done: 'bg-white border border-primary text-primary', todo: 'bg-white border border-line-strong text-ink-sub' }[state] %>">
+      <span class="inline-flex items-center gap-2 h-10 px-4 rounded-full text-[15px] font-bold <%= { current: 'bg-primary text-white', done: 'bg-white border border-primary text-primary', todo: 'bg-white border border-field-border text-text-sub' }[state] %>">
         <% if state == :done %><%= console_icon(:check, size: 16) %><span class="sr-only">完了:</span><% else %><span class="tnum"><%= n %></span><% end %>
         <%= label %>
       </span>
-      <% if n < labels.size %><span class="text-ink-sub" aria-hidden="true">→</span><% end %>
+      <% if n < labels.size %><span class="text-text-sub" aria-hidden="true">→</span><% end %>
     </li>
   <% end %>
 </ol>

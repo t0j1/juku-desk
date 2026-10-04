@@ -1,38 +1,40 @@
 <% content_for :title, "PDF分割" %>
-<h1 class="font-bold text-[22px] mb-6">PDF分割</h1>
-<%= form_with url: tools_pdf_splitter_jobs_path, multipart: true, class: "mb-8 space-y-4", data: { controller: "dropzone" } do |f| %>
-  <p class="text-ink-sub">問題集のPDFを選ぶと、「第1回_問題」「第1回_解答」…のように分けます。上限は <%= PdfSplitter.config.dig(:limits, :max_file_mb) %>MB・<%= PdfSplitter.config.dig(:limits, :max_pages) %>ページです。</p>
-  <label class="relative flex flex-col items-center justify-center gap-1 max-w-[480px] h-[120px] rounded-lg border-2 border-dashed border-line-strong bg-console-bg-from/50 text-ink-sub cursor-pointer hover:border-primary data-[dragging]:border-primary data-[dragging]:bg-busy-bg has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary"
+<h1 class="page-title">PDF分割</h1>
+<%= form_with url: tools_pdf_splitter_jobs_path, multipart: true, class: "card space-y-5", data: { controller: "dropzone" } do |f| %>
+  <p class="text-text">問題集のPDFを選ぶと、「第1回_問題」「第1回_解答」…のように分けます。上限は <%= PdfSplitter.config.dig(:limits, :max_file_mb) %>MB・<%= PdfSplitter.config.dig(:limits, :max_pages) %>ページです。</p>
+  <label class="relative flex flex-col items-center justify-center gap-1 max-w-[480px] h-[120px] rounded-drop border border-dashed border-field-border bg-bg shadow-inset text-text-sub cursor-pointer hover:border-primary data-[dragging]:border-primary data-[dragging]:text-primary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary"
          data-action="dragover->dropzone#dragover dragleave->dropzone#dragleave drop->dropzone#drop">
     <%= console_icon(:upload, size: 24) %>
     <span class="text-[15px]" data-dropzone-target="label" data-empty="PDFをドラッグ、またはクリックして選択">PDFをドラッグ、またはクリックして選択</span>
     <%= f.file_field :file, accept: "application/pdf", required: true, class: "absolute inset-0 opacity-0 cursor-pointer", data: { dropzone_target: "input", action: "change->dropzone#update" } %>
   </label>
   <div>
-    <%= f.label :password, "PDFのパスワード（ある場合のみ・保存しません）", class: "block text-sm text-ink-sub mb-1" %>
+    <%= f.label :password, "PDFのパスワード（ある場合のみ・保存しません）", class: "label" %>
     <%= f.password_field :password, autocomplete: "off", class: "input" %>
   </div>
   <%= f.button type: "submit", class: "btn-primary", data: { dropzone_target: "submit" } do %><%= console_icon(:upload) %>アップロードして解析<% end %>
 <% end %>
-<div class="flex items-baseline justify-between mb-2">
-  <h2 class="font-bold text-base">これまでのファイル <span class="text-xs font-normal text-ink-sub">（新しい順）</span></h2>
-  <p class="text-xs text-ink-sub">ファイルは<%= PdfBlob.retention_days %>日後にサーバーから自動で消えます。</p>
+<div class="card">
+<div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+  <h2 class="section-title">これまでのファイル <span class="text-[13px] font-normal text-text-sub">（新しい順）</span></h2>
+  <p class="caption">ファイルは<%= PdfBlob.retention_days %>日後にサーバーから自動で消えます。</p>
 </div>
 <table id="jobs" class="table-console">
   <thead><tr><th>ファイル</th><th>ページ</th><th>状態</th><th aria-sort="descending">作成 ↓</th></tr></thead>
   <tbody>
     <% @jobs.each do |job| %>
       <tr>
-        <td><%= link_to job.original_filename, tools_pdf_splitter_job_path(job), class: "font-bold text-ink hover:text-primary hover:underline" %></td>
+        <td><%= link_to job.original_filename, tools_pdf_splitter_job_path(job), class: "font-bold text-text hover:text-primary hover:underline" %></td>
         <td class="tnum"><%= job.page_count %></td>
         <td>
           <div class="flex items-center gap-2">
             <%= status_pill t("pdf_splitter.status.#{job.status}"), pdf_job_pill_kind(job) %>
-            <% if job.failed? %><%= button_to "再試行", analyze_tools_pdf_splitter_job_path(job), class: "btn-secondary", form_class: "inline" %><% end %>
+            <% if job.failed? %><%= button_to "再試行", analyze_tools_pdf_splitter_job_path(job), class: "btn-secondary btn-sm", form_class: "inline" %><% end %>
           </div>
         </td>
-        <td class="tnum text-ink-sub"><time datetime="<%= job.created_at.iso8601 %>"><%= l job.created_at, format: "%Y/%m/%d %H:%M" %></time></td>
+        <td class="tnum text-text-sub"><time datetime="<%= job.created_at.iso8601 %>"><%= l job.created_at, format: "%Y/%m/%d %H:%M" %></time></td>
       </tr>
     <% end %>
   </tbody>
 </table>
+</div>

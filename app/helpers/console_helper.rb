@@ -21,8 +21,8 @@ module ConsoleHelper
   end
 
   def nav_item(label, path, icon, active:)
-    classes = "flex items-center gap-3 h-12 px-4 rounded-xl text-[15px] " +
-      (active ? "bg-white font-bold text-ink shadow-card" : "text-ink-sub hover:bg-white/60")
+    classes = "flex items-center gap-3 h-12 px-4 rounded-button text-base " +
+      (active ? "bg-bg font-bold text-text shadow-inset" : "text-text-sub hover:text-text")
     link_to path, class: classes, aria: { current: (active ? "page" : nil) } do
       safe_join([ console_icon(icon), tag.span(label) ])
     end

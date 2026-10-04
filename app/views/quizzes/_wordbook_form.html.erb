@@ -1,5 +1,5 @@
 <% if wordbooks.empty? %>
-  <div id="wordbooks-empty" class="py-12 text-center text-ink-sub">
+  <div id="wordbooks-empty" class="py-12 text-center text-text-sub">
     <p class="mb-4">まだ単語帳が登録されていません</p>
     <%= link_to "単語帳を登録", wordbooks_path, class: "btn-primary" if current_user.admin? %>
   </div>
@@ -11,11 +11,11 @@
         <% wordbooks.each do |wb| %>
           <label class="relative block cursor-pointer">
             <%= radio_button_tag :wordbook_id, wb.id, false, class: "peer sr-only", required: true, data: { action: "change->enable-when-checked#update", enable_when_checked_target: "input" } %>
-            <span class="block min-h-24 p-4 rounded-xl border-2 border-line-strong bg-white peer-checked:border-primary peer-checked:bg-busy-bg peer-focus-visible:outline-2 peer-focus-visible:outline-primary">
-              <span class="block font-bold text-ink"><%= wb.name %></span>
-              <span class="block text-sm text-ink-sub mt-1 tnum">収録 No.<%= wb.min_number %>–<%= wb.max_number %>（<%= wb.words_count %>語）</span>
+            <span class="block min-h-24 p-4 rounded-xl border-2 border-field-border bg-white peer-checked:border-primary peer-checked:bg-run-bg peer-focus-visible:outline-2 peer-focus-visible:outline-primary">
+              <span class="block font-bold text-text"><%= wb.name %></span>
+              <span class="block text-[15px] text-text-sub mt-1 tnum">収録 No.<%= wb.min_number %>–<%= wb.max_number %>（<%= wb.words_count %>語）</span>
             </span>
-            <span class="absolute top-3 right-3 hidden peer-checked:flex items-center gap-1 text-primary text-sm font-bold">
+            <span class="absolute top-3 right-3 hidden peer-checked:flex items-center gap-1 text-primary text-[15px] font-bold">
               <%= console_icon(:check, size: 16) %>選択中
             </span>
           </label>
@@ -24,7 +24,7 @@
     </fieldset>
     <div class="mt-8 flex items-center gap-4">
       <%= button_tag "次へ", type: "submit", class: "btn-primary !h-12 min-w-32", disabled: true, data: { enable_when_checked_target: "button" } %>
-      <%= link_to "単語帳を登録", wordbooks_path, class: "text-sm text-primary font-bold hover:underline" if current_user.admin? %>
+      <%= link_to "単語帳を登録", wordbooks_path, class: "text-[15px] text-primary font-bold hover:underline" if current_user.admin? %>
     </div>
   <% end %>
 <% end %>

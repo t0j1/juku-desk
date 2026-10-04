@@ -1,42 +1,42 @@
-<%= form_with model: student, class: "space-y-4 max-w-xl" do |form| %>
+<%= form_with model: student, class: "card space-y-5 max-w-xl" do |form| %>
   <% if student.errors.any? %>
-    <div id="error_explanation" class="py-2 px-3 bg-red-50 text-red-700 rounded">
-      <ul><% student.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul>
+    <div id="error_explanation" class="alert-err">
+      <ul><% student.errors.full_messages.each do |m| %><li>✕ <%= m %></li><% end %></ul>
     </div>
   <% end %>
   <%= form.hidden_field :lock_version %>
   <div>
-    <%= form.label :name, class: "block text-sm" %>
-    <%= form.text_field :name, required: true, class: "block rounded border border-stone-400 px-3 py-2 mt-1 w-full" %>
+    <%= form.label :name, class: "label" %>
+    <%= form.text_field :name, required: true, class: "input max-w-none" %>
   </div>
   <div>
-    <%= form.label :grade, class: "block text-sm" %>
-    <%= form.text_field :grade, class: "block rounded border border-stone-400 px-3 py-2 mt-1 w-full" %>
+    <%= form.label :grade, class: "label" %>
+    <%= form.text_field :grade, class: "input max-w-none" %>
   </div>
   <fieldset>
-    <legend class="text-sm">通い曜日</legend>
+    <legend class="label">通い曜日</legend>
     <%= hidden_field_tag "student[weekdays][]", "" %>
-    <div class="flex gap-3 mt-1">
+    <div class="flex flex-wrap gap-4 mt-1">
       <% StudentWeekday::NAMES.each_with_index do |n, i| %>
-        <label class="flex items-center gap-1">
-          <%= check_box_tag "student[weekdays][]", i, student.weekdays.include?(i), id: "student_weekday_#{i}" %><%= n %>
+        <label class="flex items-center gap-2 min-h-11 text-base">
+          <%= check_box_tag "student[weekdays][]", i, student.weekdays.include?(i), id: "student_weekday_#{i}", class: "size-5 accent-primary" %><%= n %>
         </label>
       <% end %>
     </div>
   </fieldset>
-  <div class="flex gap-4">
+  <div class="flex flex-wrap gap-4">
     <div>
-      <%= form.label :enrolled_on, class: "block text-sm" %>
-      <%= form.date_field :enrolled_on, class: "block rounded border border-stone-400 px-3 py-2 mt-1" %>
+      <%= form.label :enrolled_on, class: "label" %>
+      <%= form.date_field :enrolled_on, class: "input tnum" %>
     </div>
     <div>
-      <%= form.label :left_on, class: "block text-sm" %>
-      <%= form.date_field :left_on, class: "block rounded border border-stone-400 px-3 py-2 mt-1" %>
+      <%= form.label :left_on, class: "label" %>
+      <%= form.date_field :left_on, class: "input tnum" %>
     </div>
   </div>
   <div>
-    <%= form.label :note, class: "block text-sm" %>
-    <%= form.text_area :note, rows: 4, class: "block rounded border border-stone-400 px-3 py-2 mt-1 w-full" %>
+    <%= form.label :note, class: "label" %>
+    <%= form.text_area :note, rows: 4, class: "input max-w-none" %>
   </div>
-  <%= form.submit "保存", class: "rounded px-4 py-2 bg-stone-800 text-white cursor-pointer" %>
+  <%= form.submit "保存", class: "btn-primary" %>
 <% end %>

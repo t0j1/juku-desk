@@ -3,7 +3,7 @@
   <iframe src="<%= @schedule_src %>" title="<%= title %>" id="schedule-frame" class="block w-full flex-1 min-h-0 border-0" referrerpolicy="strict-origin-when-cross-origin"></iframe>
 <% else %>
   <div id="schedule-unset" class="p-6 md:p-8">
-    <h1 class="text-xl font-bold text-ink mb-2">スケジュールは未設定です</h1>
-    <p class="text-ink-sub">環境変数 SCHEDULE_WEB_URL（schedule-web の URL）が設定されていないため、表示できません。</p>
+    <h1 class="page-title mb-2">スケジュールは未設定です</h1>
+    <p class="text-text-sub">環境変数 SCHEDULE_WEB_URL（schedule-web の URL）が設定されていないため、表示できません。</p>
   </div>
 <% end %>

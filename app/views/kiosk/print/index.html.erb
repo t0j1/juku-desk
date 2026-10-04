@@ -1,5 +1,7 @@
 <% content_for :title, "教材を印刷" %>
-<h1 class="font-bold text-[22px] mb-1">教材を印刷</h1>
-<p class="text-ink-sub mb-6 text-[13px]">新しい順に表示しています。教材をタップすると印刷画面が開きます。</p>
+<div>
+  <h1 class="page-title">教材を印刷</h1>
+  <p class="caption mt-1">新しい順に表示しています。教材をタップすると印刷画面が開きます。</p>
+</div>
 <%= render "shared/print_list", jobs: @jobs, query: @query, search_path: kiosk_print_path(token: params[:token]),
            job_path: ->(job) { kiosk_job_path(token: params[:token], id: job) } %>
