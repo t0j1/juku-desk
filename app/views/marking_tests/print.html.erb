@@ -1,0 +1,48 @@
+<% subjects = @test.subject || @items.map { |i| i.question.subject }.compact.uniq.join("・") %>
+<% content_for :title, "#{@test.title}（#{@kind == :answer ? "解答用" : "問題用"}）" %>
+<% content_for :head do %>
+  <style>
+    @page { size: A4 portrait; margin: 15mm; @bottom-center { content: counter(page) " / " counter(pages); font-family: var(--marking-font); font-size: 9pt; } }
+  </style>
+  <%= stylesheet_link_tag "katex/katex" %>
+<% end %>
+<div data-controller="page-print" class="marking-print">
+  <div class="flex flex-wrap items-center gap-3 mb-6 print:hidden">
+    <button type="button" class="btn-primary !h-12 min-w-32" data-action="page-print#print"><%= console_icon(:printer) %>印刷</button>
+    <%= link_to "もう一方（#{@kind == :answer ? "問題用" : "解答用"}）", print_marking_test_path(@test, kind: @kind == :answer ? "question" : "answer"), class: "btn-secondary" %>
+    <%= link_to "戻る", marking_test_path(@test), class: "btn-secondary" %>
+    <span class="text-sm text-ink-sub">印刷ダイアログで「PDF として保存」もできます。</span>
+  </div>
+  <article class="mt-sheet" data-controller="math">
+    <header class="mt-head">
+      <div class="mt-title"><%= @test.title %><span class="mt-kind"><%= @kind == :answer ? "【解答】" : "" %></span></div>
+      <div class="mt-meta">
+        <span>科目：<%= subjects.presence || "—" %></span>
+        <span>作成日：<%= @test.created_at.strftime("%Y年%-m月%-d日") %></span>
+        <% if @kind == :question %><span>名前：<span class="mt-name-line"></span></span><% end %>
+      </div>
+    </header>
+    <% if @test.short? %><p class="mt-short print:hidden">※ 問題が足りないため <%= @items.size %> 問で作成されています。</p><% end %>
+    <ol class="mt-list">
+      <% @items.each do |item| %>
+        <% q = item.question %>
+        <li class="mt-item" id="print_item_<%= item.position %>">
+          <span class="mt-no"><%= item.position %></span>
+          <div class="mt-main">
+            <% if @kind == :question %>
+              <div class="mt-text"><%= q.question_text %></div>
+              <% if q.options.any? %>
+                <ol class="mt-options"><% q.options.each.with_index(1) do |o, i| %><li><span class="mt-opt-no"><%= i %></span><%= o %></li><% end %></ol>
+              <% else %>
+                <div class="mt-ruled" aria-label="解答欄"></div>
+              <% end %>
+            <% else %>
+              <div class="mt-answer"><%= q.answer_text %></div>
+              <% if q.explanation.present? %><div class="mt-expl"><%= q.explanation %></div><% end %>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+  </article>
+</div>

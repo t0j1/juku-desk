@@ -1,0 +1,64 @@
+<% content_for :title, "ユーザー管理" %>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="font-bold text-[22px] mr-auto">ユーザー管理</h1>
+  <%= link_to "ユーザーを招待", new_admin_user_path, class: "btn-primary" %>
+  <%= link_to "CSVで一括登録", new_admin_user_import_path, class: "btn-secondary" %>
+  <%= link_to "CSVで一括停止", new_admin_user_suspension_path, class: "btn-secondary" %>
+  <%= link_to "CSV出力", admin_users_path(format: :csv), class: "btn-secondary" %>
+</div>
+<% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
+<% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
+<table id="users" class="table-console">
+  <thead>
+    <tr><th>氏名</th><th>メールアドレス</th><th>権限</th><th>状態</th><th>2段階認証</th><th>操作</th></tr>
+  </thead>
+  <tbody>
+    <% @users.each do |user| %>
+      <tr id="user_<%= user.id %>">
+        <td class="font-bold"><%= user.name %></td>
+        <td><%= user.email_address %></td>
+        <td>
+          <% if user == current_user %>
+            <%= t("roles.#{user.role}") %>（自分）
+          <% else %>
+            <%= form_with model: user, url: admin_user_path(user), method: :patch, class: "flex items-center gap-2" do |f| %>
+              <%= f.select :role, User.roles.keys.map { |r| [ t("roles.#{r}"), r ] }, {}, class: "input !h-9 !w-auto", "aria-label": "#{user.name} の権限" %>
+              <%= f.submit "変更", class: "btn-secondary cursor-pointer" %>
+            <% end %>
+          <% end %>
+        </td>
+        <td>
+          <% if user.locked? %>
+            <%= status_pill("ロック中（#{l user.locked_until, format: :short}まで）", :ng) %>
+          <% elsif user.suspended? %>
+            <%= status_pill("停止中", :neutral) %>
+          <% elsif user.invited? %>
+            <%= status_pill("招待中", :busy) %>
+          <% else %>
+            <%= status_pill("通常", :ok) %>
+          <% end %>
+        </td>
+        <td><%= user.otp_enabled? ? status_pill("有効", :ok) : (user.two_factor_required? ? status_pill("未設定（必須）", :ng) : status_pill("未設定", :neutral)) %></td>
+        <td class="flex items-center gap-2">
+          <% if user.invited? %>
+            <%= button_to "招待を再送", resend_invitation_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
+          <% end %>
+          <% if user.suspended? %>
+            <%= button_to "停止を解除", activate_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
+          <% elsif user != current_user %>
+            <%= button_to "停止", suspend_admin_user_path(user), method: :post, class: "btn-danger", data: { turbo_confirm: "#{user.name} を停止します。ログイン中のセッションも切断されます。よろしいですか？" } %>
+          <% end %>
+          <% if user.locked? || user.failed_attempts.positive? %>
+            <%= button_to "ロック解除", unlock_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
+          <% end %>
+          <% if user.active? && !user.system_admin? && user != current_user %>
+            <%= link_to "代理ログイン", new_admin_user_impersonation_path(user), class: "btn-secondary" %>
+          <% end %>
+          <% if (user.otp_enabled? || user.otp_setup_required?) && user != current_user %>
+            <%= button_to "2FAをリセット", reset_two_factor_admin_user_path(user), method: :post, class: "btn-danger", data: { turbo_confirm: "#{user.name} の 2 段階認証をリセットします。この人は次のログインで再設定が必要になります。よろしいですか？" } %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

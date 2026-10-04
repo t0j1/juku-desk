@@ -1,26 +1,37 @@
 <% password_digest = BCrypt::Password.create("password") %>
+<%# system_admin は 2FA 必須。テストでは設定済みにしておく（秘密鍵は TotpTestHelper::SECRET と同じ） %>
+<% otp_secret = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP" %>
 
-instructor:
-  email_address: instructor@example.com
+staff:
+  email_address: staff@example.com
   password_digest: <%= password_digest %>
-  name: 講師 太郎
-  role: instructor
+  name: スタッフ 太郎
+  role: staff
 
-manager:
-  email_address: manager@example.com
-  password_digest: <%= password_digest %>
-  name: 上長 花子
-  role: manager
-
-admin:
+system_admin:
   email_address: admin@example.com
   password_digest: <%= password_digest %>
   name: 管理 次郎
-  role: admin
+  role: system_admin
+  otp_secret_ciphertext: <%= User.otp_encryptor.encrypt_and_sign(otp_secret) %>
+  otp_enabled_at: <%= Time.utc(2026, 1, 1).to_fs(:db) %>
+
+viewer:
+  email_address: viewer@example.com
+  password_digest: <%= password_digest %>
+  name: 閲覧 花子
+  role: viewer
 
 inactive:
   email_address: inactive@example.com
   password_digest: <%= password_digest %>
   name: 退職 三郎
-  role: instructor
-  active: false
+  role: staff
+  status: suspended
+
+invited:
+  email_address: invited@example.com
+  password_digest: <%= password_digest %>
+  name: 招待 四郎
+  role: staff
+  status: invited

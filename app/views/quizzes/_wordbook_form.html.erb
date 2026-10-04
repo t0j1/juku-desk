@@ -1,7 +1,7 @@
 <% if wordbooks.empty? %>
   <div id="wordbooks-empty" class="py-12 text-center text-text-sub">
     <p class="mb-4">まだ単語帳が登録されていません</p>
-    <%= link_to "単語帳を登録", wordbooks_path, class: "btn-primary" if current_user.admin? %>
+    <%= link_to "単語帳を登録", wordbooks_path, class: "btn-primary" if current_user.system_admin? %>
   </div>
 <% else %>
   <%= form_with url: new_quiz_path, method: :get, data: { controller: "enable-when-checked", turbo: false } do %>
@@ -24,7 +24,7 @@
     </fieldset>
     <div class="mt-8 flex items-center gap-4">
       <%= button_tag "次へ", type: "submit", class: "btn-primary !h-12 min-w-32", disabled: true, data: { enable_when_checked_target: "button" } %>
-      <%= link_to "単語帳を登録", wordbooks_path, class: "text-[15px] text-primary font-bold hover:underline" if current_user.admin? %>
+      <%= link_to "単語帳を登録", wordbooks_path, class: "text-[15px] text-primary font-bold hover:underline" if current_user.system_admin? %>
     </div>
   <% end %>
 <% end %>

@@ -1,0 +1,30 @@
+<% content_for :title, "小テストの出題（マーキング）" %>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="font-bold text-[22px] mr-auto">小テストの出題（承認済みの問題から）</h1>
+  <%= link_to "作成済みの小テスト", marking_tests_path, class: "btn-secondary" %>
+  <%= link_to "問題のレビュー", questions_path, class: "btn-secondary" %>
+</div>
+<p class="mb-4 text-sm text-ink-sub">出題の対象は<strong>承認済みの問題</strong>だけです（現在 <span id="approved-count" class="tnum font-bold"><%= @approved_count %></span> 問）。</p>
+<%= form_with model: @builder, scope: :marking_test, url: marking_tests_path, class: "space-y-4 max-w-xl" do |f| %>
+  <% if @builder.errors.any? %>
+    <div id="error_explanation" class="py-2 px-3 bg-ng-bg text-ng rounded-lg"><ul><% @builder.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul></div>
+  <% end %>
+  <div><%= f.label :title, "タイトル", class: "block text-sm" %><%= f.text_field :title, class: "input mt-1", maxlength: 100 %></div>
+  <div>
+    <%= f.label :mode, "出題方法", class: "block text-sm" %>
+    <%= f.select :mode, [ [ "ランダム", "random" ], [ "タグ別", "by_tag" ] ], {}, class: "input mt-1" %>
+  </div>
+  <div><%= f.label :count, "問題数", class: "block text-sm" %><%= f.number_field :count, min: 1, max: Marking::QuestionPicker.max_count, class: "input mt-1 !w-32" %></div>
+  <div><%= f.label :subject, "科目", class: "block text-sm" %><%= f.select :subject, Question::SUBJECTS, { include_blank: "すべて" }, class: "input mt-1 !w-48" %></div>
+  <div><%= f.label :tags_text, "タグ（スペースかカンマ区切り。タグ別のときは必須）", class: "block text-sm" %><%= f.text_field :tags_text, class: "input mt-1" %></div>
+  <div>
+    <%= f.label :tag_logic, "タグの条件", class: "block text-sm" %>
+    <%= f.select :tag_logic, [ [ "どれか 1 つでも含む（OR）", "or" ], [ "すべて含む（AND）", "and" ] ], {}, class: "input mt-1 !w-64" %>
+  </div>
+  <div class="flex items-end gap-3">
+    <div><%= f.label :difficulty_min, "難易度（下限）", class: "block text-sm" %><%= f.select :difficulty_min, (1..5).to_a, { include_blank: "指定なし" }, class: "input mt-1 !w-32" %></div>
+    <div><%= f.label :difficulty_max, "難易度（上限）", class: "block text-sm" %><%= f.select :difficulty_max, (1..5).to_a, { include_blank: "指定なし" }, class: "input mt-1 !w-32" %></div>
+  </div>
+  <p class="text-xs text-ink-sub">条件に合う問題が足りないときは、ある分だけで作成します（別の条件の問題では補いません）。</p>
+  <% if current_user.can_write? %><%= f.submit "小テストを作成", class: "btn-primary cursor-pointer" %><% end %>
+<% end %>

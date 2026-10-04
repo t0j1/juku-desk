@@ -14,9 +14,9 @@
   <dt class="text-text-sub font-bold">メモ</dt><dd class="whitespace-pre-wrap"><%= @student.note %></dd>
 </dl>
 <div class="flex flex-wrap items-center gap-4">
-  <%= link_to "編集", edit_student_path(@student), class: "btn-secondary" %>
+  <%= link_to "編集", edit_student_path(@student), class: "btn-secondary" if current_user.can_write? %>
   <%= link_to "一覧に戻る", students_path, class: "link" %>
-  <% if current_user.manager_or_above? %>
+  <% if current_user.system_admin? %>
     <%= button_to "削除", @student, method: :delete, class: "btn-danger", data: { turbo_confirm: "本当に削除しますか？退塾の場合は退塾日を設定してください。" } %>
   <% end %>
 </div>

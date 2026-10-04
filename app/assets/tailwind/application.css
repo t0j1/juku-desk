@@ -116,6 +116,30 @@
   .sheet { height: 266mm; padding: 0; box-shadow: none; border: 0; }
 }
 
+/* マーキングの小テスト印刷（問題用・解答用）。A4・余白 15mm は印刷ビューの @page で指定。色は使わず、日本語フォントは明示する */
+:root { --marking-font: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic", "Meiryo", sans-serif; }
+.mt-sheet { font-family: var(--marking-font); color: #000; background: #fff; max-width: 210mm; padding: 15mm; box-sizing: border-box; box-shadow: var(--shadow-card); border: 1px solid var(--color-line-strong); }
+.mt-head { padding-bottom: 4mm; border-bottom: .4mm solid #000; margin-bottom: 6mm; }
+.mt-title { font-size: 15pt; font-weight: 700; margin-bottom: 3mm; }
+.mt-kind { margin-left: 2mm; }
+.mt-meta { display: flex; flex-wrap: wrap; gap: 2mm 8mm; font-size: 10.5pt; }
+.mt-name-line { display: inline-block; width: 45mm; border-bottom: .3mm solid #000; }
+.mt-short { font-size: 10pt; margin-bottom: 4mm; }
+.mt-list { list-style: none; margin: 0; padding: 0; }
+.mt-item { display: flex; gap: 3mm; margin-bottom: 6mm; font-size: 11.5pt; line-height: 1.7; break-inside: avoid; page-break-inside: avoid; }
+.mt-no { flex: none; width: 9mm; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mt-main { flex: 1; min-width: 0; }
+.mt-text, .mt-answer, .mt-expl { white-space: pre-wrap; overflow-wrap: anywhere; }
+.mt-expl { margin-top: 1mm; font-size: 10pt; }
+.mt-options { list-style: none; margin: 1.5mm 0 0; padding: 0; }
+.mt-options li { display: flex; gap: 2mm; }
+.mt-opt-no { flex: none; width: 6mm; text-align: center; border: .3mm solid #000; border-radius: 50%; font-size: 9.5pt; line-height: 5mm; height: 5mm; margin-top: 1mm; }
+.mt-ruled { margin-top: 3mm; height: 16mm; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 7.5mm, #000 7.5mm, #000 8mm); }
+@media print {
+  .mt-sheet { padding: 0; box-shadow: none; border: 0; max-width: none; }
+  .marking-print, .mt-sheet { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+
 /* 吹き出しの左向きのしっぽ */
 .speech-bubble { position: relative; }
 .speech-bubble::before { content: ""; position: absolute; left: -10px; top: 50%; margin-top: -10px; border: 10px solid transparent; border-left-width: 0; border-right-color: var(--color-bg); }

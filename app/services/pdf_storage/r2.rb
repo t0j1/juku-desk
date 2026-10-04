@@ -7,6 +7,7 @@ module PdfStorage
   # アップロードは 1 回の PutObject（ファイルは IO のままストリーミング）なので、ETag は MD5 になる。
   class R2
     CHUNK_BYTES = 8 * 1024 * 1024
+    PDF_CONTENT_TYPE = "application/pdf".freeze
 
     Result = Struct.new(:size, :checksum, keyword_init: true)
 
@@ -31,15 +32,15 @@ module PdfStorage
     end
 
     # path のファイルをアップロードする。SHA-256 は先にファイルをなめて求める（メモリには載せない）。
-    def put_file(key, path)
+    def put_file(key, path, content_type: PDF_CONTENT_TYPE)
       checksum = Digest::SHA256.file(path).hexdigest
-      File.open(path, "rb") { |io| put(key, io, checksum) }
+      File.open(path, "rb") { |io| put(key, io, checksum, content_type) }
       Result.new(size: File.size(path), checksum:)
     end
 
-    def put_string(key, data)
+    def put_string(key, data, content_type: PDF_CONTENT_TYPE)
       checksum = Digest::SHA256.hexdigest(data)
-      put(key, StringIO.new(data), checksum)
+      put(key, StringIO.new(data), checksum, content_type)
       Result.new(size: data.bytesize, checksum:)
     end
 
@@ -87,8 +88,8 @@ module PdfStorage
         digest.hexdigest
       end
 
-      def put(key, io, checksum)
-        client.put_object(bucket:, key:, body: io, content_type: "application/pdf",
+      def put(key, io, checksum, content_type)
+        client.put_object(bucket:, key:, body: io, content_type:,
                           checksum_algorithm: "SHA256", checksum_sha256: [ [ checksum ].pack("H*") ].pack("m0"))
       end
 

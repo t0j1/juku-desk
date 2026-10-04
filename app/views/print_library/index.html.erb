@@ -4,7 +4,7 @@
     <h1 class="page-title">印刷</h1>
     <p class="caption mt-1">分割済みのファイルを新しい順に表示しています。</p>
   </div>
-  <% if current_user.admin? %>
+  <% if current_user.system_admin? %>
     <div id="print-link" class="card ml-auto max-w-[480px] !p-5 text-[15px]">
       <p class="font-bold mb-1">共用iPad用の印刷リンク</p>
       <% if @print_link %>

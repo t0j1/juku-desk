@@ -7,7 +7,7 @@ class ScheduleEmbedTest < ApplicationSystemTestCase
 
   def log_in
     visit new_session_path
-    fill_in "メールアドレス", with: users(:instructor).email_address
+    fill_in "メールアドレス", with: users(:staff).email_address
     fill_in "パスワード", with: "password"
     click_on "ログイン"
     assert_selector "#students"

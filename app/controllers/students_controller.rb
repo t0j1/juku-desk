@@ -1,6 +1,6 @@
 class StudentsController < ApplicationController
+  before_action :require_system_admin!, only: :destroy # 削除は system_admin だけ（退塾は left_on で扱う）
   before_action :set_student, only: %i[ show edit update destroy ]
-  before_action :require_manager!, only: :destroy
 
   def index
     @students = Student.includes(:student_weekdays).order(:left_on, :name)
@@ -46,7 +46,7 @@ class StudentsController < ApplicationController
     render :edit, status: :unprocessable_entity
   end
 
-  # 退塾は left_on で表す。物理削除は manager 以上のみ（誤登録の取消用）
+  # 退塾は left_on で表す。物理削除は誤登録の取消用（viewer は Authorization で 403）
   def destroy
     AuditLog.record!(:delete, @student, metadata: { id: @student.id })
     @student.destroy!

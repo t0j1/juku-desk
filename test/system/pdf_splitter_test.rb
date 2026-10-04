@@ -5,7 +5,7 @@ class PdfSplitterTest < ApplicationSystemTestCase
 
   test "upload a workbook, split into named files, rename and open the print page" do
     visit new_session_path
-    fill_in "メールアドレス", with: users(:instructor).email_address
+    fill_in "メールアドレス", with: users(:staff).email_address
     fill_in "パスワード", with: "password"
     click_on "ログイン"
     click_on "PDF分割"
@@ -60,7 +60,7 @@ class PdfSplitterTest < ApplicationSystemTestCase
     job = create_pdf_job(fixture: "scanned_images.pdf")
     job.update!(boundaries: [])
     visit new_session_path
-    fill_in "メールアドレス", with: users(:instructor).email_address
+    fill_in "メールアドレス", with: users(:staff).email_address
     fill_in "パスワード", with: "password"
     click_on "ログイン"
     assert_link "PDF分割"

@@ -13,6 +13,7 @@ groups:
       - { label: PDF分割, route: tools_pdf_splitter_jobs, icon: scissors, controllers: [ "tools/pdf_splitter*" ], except: [ "tools/pdf_splitter/jobs#print" ] }
       - { label: 印刷, route: print_library, icon: printer, controllers: [ print_library, "tools/pdf_splitter/jobs#print" ] }
       - { label: 小テスト作成, route: new_quiz, icon: pencil, controllers: [ quizzes ] }
+      - { label: マーキング検出, route: uploads, icon: upload, controllers: [ uploads, crop_regions, questions, marking_tests ] }
   - label: スケジュール
     env: SCHEDULE_WEB_URL
     items:

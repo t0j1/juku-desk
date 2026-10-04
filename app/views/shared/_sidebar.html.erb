@@ -18,11 +18,22 @@
         <% end %>
       </div>
     <% end %>
+    <% if current_user.system_admin? %>
+      <div role="group" aria-label="システム管理" class="space-y-1">
+        <p class="px-4 pb-1 text-xs font-bold text-ink-sub">システム管理</p>
+        <%= nav_item "ユーザー管理", admin_users_path, :users, active: controller_path == "admin/users" %>
+        <%= nav_item "お知らせ", admin_announcements_path, :bell, active: controller_path == "admin/announcements" %>
+        <%= nav_item "メール文面", admin_mail_templates_path, :mail, active: controller_path == "admin/mail_templates" %>
+        <%= nav_item "ログイン履歴", admin_login_events_path, :search, active: controller_path == "admin/login_events" %>
+      </div>
+    <% end %>
   </nav>
   <div class="mt-auto pt-6">
     <div class="rounded-card bg-bg shadow-raise-sm p-4">
       <p class="font-bold text-[15px] text-text"><%= current_user.name %></p>
       <p class="text-[13px] text-text-sub mb-3"><%= t("roles.#{current_user.role}") %></p>
+      <%= link_to "2段階認証", two_factor_path, class: "block mb-1 text-[15px] text-text-sub hover:text-text underline" %>
+      <%= link_to "ログイン中の端末", user_sessions_path, class: "block mb-2 text-[15px] text-text-sub hover:text-text underline" %>
       <%= button_to session_path, method: :delete, class: "inline-flex items-center gap-2 text-[15px] text-text-sub hover:text-text cursor-pointer" do %>
         <%= console_icon(:logout, size: 16) %>ログアウト
       <% end %>
