@@ -8,6 +8,9 @@ class CropRegion < ApplicationRecord
   has_one :question, foreign_key: :region_id, inverse_of: :region, dependent: :destroy
 
   scope :waiting, -> { where(status: %w[queued quota_exceeded]) }
+  # processing のまま戻らないもの（ワーカーが Gemini の待ちの途中で落ちた等）。ExtractJob の limits_concurrency の duration と揃える
+  STALE_PROCESSING_AFTER = 15.minutes
+  scope :stale_processing, -> { where(status: "processing").where(updated_at: ...STALE_PROCESSING_AFTER.ago) }
 
   enum :status, STATUSES.index_with(&:itself), validate: true
 

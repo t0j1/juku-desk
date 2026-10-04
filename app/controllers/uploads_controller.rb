@@ -16,12 +16,13 @@ class UploadsController < ApplicationController
     @regions = @upload.crop_regions.order(:id)
   end
 
-  # 構造化の開始・やり直し（confirmed / failed の領域を順番待ちに積む）。API キー設定前に取り込んだ画像用
+  # 構造化の開始・やり直し（confirmed / failed と、処理中のまま止まった領域を順番待ちに積む）。API キー設定前に取り込んだ画像用
   def extract
     upload = Upload.find(params[:id])
     return redirect_to upload_path(upload), alert: "GEMINI_API_KEY が設定されていません。" unless GeminiConfig.configured?
 
-    count = Marking::Enqueuer.call(upload.crop_regions.where(status: %w[confirmed failed]))
+    regions = upload.crop_regions
+    count = Marking::Enqueuer.call(regions.where(status: %w[confirmed failed]).or(regions.stale_processing))
     redirect_to upload_path(upload), notice: "#{count} 件を構造化の順番待ちに入れました。", status: :see_other
   end
 

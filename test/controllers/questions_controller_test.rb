@@ -137,6 +137,15 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#extraction-status", /完了/
   end
 
+  test "restart also picks up regions stuck in processing for over 15 minutes (a worker died mid-request), but not fresh ones" do
+    with_gemini(gemini_json)
+    stuck, fresh = make_regions(2, status: :processing)
+    stuck.update_columns(updated_at: 16.minutes.ago)
+    post extract_upload_path(stuck.upload)
+    assert_equal "queued", stuck.reload.status
+    assert_equal "processing", fresh.reload.status
+  end
+
   test "restart is refused without GEMINI_API_KEY" do
     upload = make_regions(1, status: :confirmed).first.upload
     post extract_upload_path(upload)
