@@ -2,14 +2,14 @@
 <% content_for :head do %>
   <style>@page { size: A4 portrait; margin: 15mm; }</style>
 <% end %>
-<h1 class="font-bold text-[22px] mb-6 print:hidden">小テスト作成</h1>
+<h1 class="page-title mb-6 print:hidden">小テスト作成</h1>
 <%= render "quizzes/steps", current: 3 %>
 <div data-controller="print">
 <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mb-6 print:hidden">
   <div class="flex items-center gap-2">
-    <%= label_tag :print_kind, "印刷する内容", class: "text-sm text-ink-sub whitespace-nowrap" %>
+    <%= label_tag :print_kind, "印刷する内容", class: "text-lg text-text-sub whitespace-nowrap" %>
     <%= select_tag :print_kind, options_for_select([ [ "問題のみ", "question" ], [ "解答のみ", "answer" ], [ "問題と解答", "both" ] ], "question"),
-          class: "h-12 px-3 rounded-lg border border-line-strong bg-white text-base", data: { print_target: "kind", action: "change->print#choose" } %>
+          class: "h-12 px-3 rounded-lg border border-field-border bg-bg text-base", data: { print_target: "kind", action: "change->print#choose" } %>
   </div>
   <button type="button" class="btn-primary !h-12 min-w-32" data-action="print#print"><%= console_icon(:printer) %>印刷</button>
   <%= form_with url: quizzes_path, method: :post, scope: :quiz, data: { turbo: false } do |f| %>
@@ -19,8 +19,8 @@
     <%= f.hidden_field :count, value: @quiz.count %>
     <%= f.button "問題を入れ替える", type: "submit", class: "inline-flex items-center h-12 px-2 text-primary font-bold cursor-pointer hover:underline whitespace-nowrap" %>
   <% end %>
-  <%= link_to "範囲を変更", new_quiz_path(wordbook_id: @wordbook.id, start_no: @quiz.start_no, end_no: @quiz.end_no, span: @quiz.span, count: @quiz.count), class: "inline-flex items-center h-12 px-2 text-ink-sub font-bold hover:underline whitespace-nowrap" %>
-  <span class="ml-auto text-sm text-ink-sub tnum whitespace-nowrap">左 <%= @left %>／右 <%= @right %></span>
+  <%= link_to "範囲を変更", new_quiz_path(wordbook_id: @wordbook.id, start_no: @quiz.start_no, end_no: @quiz.end_no, span: @quiz.span, count: @quiz.count), class: "inline-flex items-center h-12 px-2 text-text-sub font-bold hover:underline whitespace-nowrap" %>
+  <span class="ml-auto text-lg text-text-sub tnum whitespace-nowrap">左 <%= @left %>／右 <%= @right %></span>
 </div>
 <div data-print-target="sheets" data-mode="question">
   <div class="sheet-frame" data-print-target="sheet" data-kind="question">

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -31,8 +31,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_010000) do
     t.bigint "created_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "system_key"
     t.index ["created_by_id"], name: "index_announcements_on_created_by_id"
     t.index ["starts_at", "ends_at"], name: "index_announcements_on_starts_at_and_ends_at"
+    t.index ["system_key"], name: "index_announcements_on_system_key", unique: true
   end
 
   create_table "answer_events", force: :cascade do |t|
@@ -287,7 +289,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_010000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["created_by_id"], name: "index_tests_on_created_by_id"
-    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying::text, 'by_tag'::character varying::text])", name: "tests_mode_values"
+    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying, 'by_tag'::character varying]::text[])", name: "tests_mode_values"
   end
 
   create_table "uploads", force: :cascade do |t|

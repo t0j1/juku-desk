@@ -1,40 +1,40 @@
 <% content_for :head do %><%= stylesheet_link_tag "katex/katex" %><% end %>
 <% content_for :title, "問題の編集" %>
 <div class="flex flex-wrap items-center gap-3 mb-6">
-  <h1 class="font-bold text-[22px] mr-auto">問題の編集 #<%= @question.id %></h1>
+  <h1 class="page-title mr-auto">問題の編集 #<%= @question.id %></h1>
   <%= link_to "一覧に戻る", questions_path, class: "btn-secondary" %>
 </div>
-<% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
+<% if alert %><p id="alert" class="mb-4 text-lg font-bold text-err-fg"><%= alert %></p><% end %>
 <% if current_user.can_write? && GeminiConfig.configured? %>
-  <div class="mb-4 text-sm"><%= button_to "この領域の構造化をやり直す", restructure_question_path(@question), method: :post, class: "btn-secondary cursor-pointer", data: { turbo_confirm: "この領域の問題をすべて作り直します。手で直した内容と、同じ領域の承認済みの問題（小テストで使っていないもの）も消えて作り直されます。作り直している間は一覧に表示されません。失敗したときは取り込み画面で確認してください。よろしいですか？" } %></div>
+  <div class="mb-4 text-lg"><%= button_to "この領域の構造化をやり直す", restructure_question_path(@question), method: :post, class: "btn-secondary cursor-pointer", data: { turbo_confirm: "この領域の問題をすべて作り直します。手で直した内容と、同じ領域の承認済みの問題（小テストで使っていないもの）も消えて作り直されます。作り直している間は一覧に表示されません。失敗したときは取り込み画面で確認してください。よろしいですか？" } %></div>
 <% end %>
 <% if current_user.can_write? && !@question.used_in_exam? && Marking::Splitter.call(@question) %>
-  <div id="split-question" class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-line p-3 text-sm">
+  <div id="split-question" class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-row-line p-3 text-lg">
     <span class="mr-auto">この問題には〔n〕の番号で複数の問題が入っています。番号の位置で、問題文・解答・解説を問題ごとに分けられます。</span>
     <%= button_to "問題ごとに分割", split_question_path(@question), method: :post, class: "btn-secondary cursor-pointer", data: { turbo_confirm: "〔n〕の位置で問題ごとに分けます。よろしいですか？" } %>
   </div>
 <% end %>
 <div class="flex flex-col gap-6 lg:flex-row">
   <div class="lg:basis-1/2">
-    <img src="<%= image_crop_region_path(@question.region) %>" alt="切り出した画像" class="max-w-full h-auto rounded-xl border border-line">
-    <p class="mt-2 text-xs text-ink-sub">AI の自信：<%= (@question.raw_ai.dig("response", "confidence").to_f * 100).round %>%<% if @question.region.needs_review? %>・科目を確認してください<% end %></p>
+    <img src="<%= image_crop_region_path(@question.region) %>" alt="切り出した画像" class="max-w-full h-auto rounded-xl border border-row-line">
+    <p class="mt-2 text-base text-text-sub">AI の自信：<%= (@question.raw_ai.dig("response", "confidence").to_f * 100).round %>%<% if @question.region.needs_review? %>・科目を確認してください<% end %></p>
   </div>
   <%= form_with model: @question, url: question_path(@question), method: :patch, class: "space-y-4 lg:basis-1/2", data: { controller: "math-preview" } do |f| %>
     <% if @question.errors.any? %>
-      <div id="error_explanation" class="py-2 px-3 bg-ng-bg text-ng rounded-lg"><ul><% @question.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul></div>
+      <div id="error_explanation" class="py-2 px-3 bg-err-bg text-err-fg rounded-lg"><ul><% @question.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul></div>
     <% end %>
-    <div><%= f.label :subject, "科目", class: "block text-sm" %><%= f.select :subject, Question::SUBJECTS, { include_blank: "要確認（未選択）" }, class: "input mt-1" %></div>
-    <div><%= f.label :question_type, "形式（英語のみ）", class: "block text-sm" %><%= f.select :question_type, Question::TYPE_LABELS.invert, { include_blank: "なし" }, class: "input mt-1 !w-60" %></div>
-    <div><%= f.label :payload_text, "形式ごとのデータ（JSON）", class: "block text-sm" %><%= f.text_area :payload_text, value: @question.payload_text, rows: 6, class: "input mt-1 !h-auto font-mono text-sm" %>
-      <p class="mt-1 text-xs text-ink-sub">並べ替え：ja, words, prefix, suffix, extra_count ／ 和訳：source ／ 英作文：ja, template（空所は ___）, blank_count ／ 長文：body（下線は &lt;u&gt;）, sub_questions（prompt, answer）／ 空所補充：body, blank_count</p></div>
-    <div><%= f.label :question_text, "問題文", class: "block text-sm" %><%= f.text_area :question_text, rows: 4, class: "input mt-1 !h-auto", data: { math_preview_target: "input", action: "input->math-preview#refresh" } %><div class="mt-1 rounded-lg border border-line bg-white p-2 text-sm whitespace-pre-wrap" data-math-preview-target="preview" aria-label="数式のプレビュー" hidden></div></div>
-    <div><%= f.label :options_text, "選択肢（1 行に 1 つ。記述式なら空）", class: "block text-sm" %><%= f.text_area :options_text, value: @question.options_text, rows: 4, class: "input mt-1 !h-auto", data: { math_preview_target: "input", action: "input->math-preview#refresh" } %><div class="mt-1 rounded-lg border border-line bg-white p-2 text-sm whitespace-pre-wrap" data-math-preview-target="preview" aria-label="数式のプレビュー" hidden></div></div>
-    <div><%= f.label :answer_text, "解答", class: "block text-sm" %><% if @question.ai_answer? %> <span id="ai-answer" class="text-xs font-bold text-ng">AI作成（教材に解答がありませんでした。確認してから承認してください）</span><% end %><%= f.text_field :answer_text, class: "input mt-1", data: { math_preview_target: "input", action: "input->math-preview#refresh" } %><div class="mt-1 rounded-lg border border-line bg-white p-2 text-sm whitespace-pre-wrap" data-math-preview-target="preview" aria-label="数式のプレビュー" hidden></div></div>
-    <div><%= f.label :explanation, "解説", class: "block text-sm" %><%= f.text_area :explanation, rows: 3, class: "input mt-1 !h-auto", data: { math_preview_target: "input", action: "input->math-preview#refresh" } %><div class="mt-1 rounded-lg border border-line bg-white p-2 text-sm whitespace-pre-wrap" data-math-preview-target="preview" aria-label="数式のプレビュー" hidden></div></div>
-    <div><%= f.label :tags_text, "タグ（スペースかカンマ区切り）", class: "block text-sm" %><%= f.text_field :tags_text, value: @question.tags_text, class: "input mt-1" %></div>
-    <div><%= f.label :difficulty, "難易度（1〜5・任意）", class: "block text-sm" %><%= f.select :difficulty, (1..5).to_a, { include_blank: "未設定" }, class: "input mt-1 !w-40" %></div>
-    <p class="text-xs text-ink-sub">数式は $…$（行の中）か $$…$$（独立した行）で LaTeX を囲むと、入力欄の下に表示されます。</p>
-    <p class="text-xs text-ink-sub">「保存」だけだと承認は外れます。内容を確認できたら「保存して承認」を押してください。</p>
+    <div><%= f.label :subject, "科目", class: "label" %><%= f.select :subject, Question::SUBJECTS, { include_blank: "要確認（未選択）" }, class: "input mt-1" %></div>
+    <div><%= f.label :question_type, "形式（英語のみ）", class: "label" %><%= f.select :question_type, Question::TYPE_LABELS.invert, { include_blank: "なし" }, class: "input mt-1 !w-60" %></div>
+    <div><%= f.label :payload_text, "形式ごとのデータ（JSON）", class: "label" %><%= f.text_area :payload_text, value: @question.payload_text, rows: 6, class: "input mt-1 !h-auto font-mono" %>
+      <p class="mt-1 text-base text-text-sub">並べ替え：ja, words, prefix, suffix, extra_count ／ 和訳：source ／ 英作文：ja, template（空所は ___）, blank_count ／ 長文：body（下線は &lt;u&gt;）, sub_questions（prompt, answer）／ 空所補充：body, blank_count</p></div>
+    <div><%= f.label :question_text, "問題文", class: "label" %><%= f.text_area :question_text, rows: 4, class: "input mt-1 !h-auto", data: { math_preview_target: "input", action: "input->math-preview#refresh" } %><div class="mt-1 rounded-lg border border-row-line bg-bg p-2 text-lg whitespace-pre-wrap" data-math-preview-target="preview" aria-label="数式のプレビュー" hidden></div></div>
+    <div><%= f.label :options_text, "選択肢（1 行に 1 つ。記述式なら空）", class: "label" %><%= f.text_area :options_text, value: @question.options_text, rows: 4, class: "input mt-1 !h-auto", data: { math_preview_target: "input", action: "input->math-preview#refresh" } %><div class="mt-1 rounded-lg border border-row-line bg-bg p-2 text-lg whitespace-pre-wrap" data-math-preview-target="preview" aria-label="数式のプレビュー" hidden></div></div>
+    <div><%= f.label :answer_text, "解答", class: "label" %><% if @question.ai_answer? %> <span id="ai-answer" class="text-base font-bold text-err-fg">AI作成（教材に解答がありませんでした。確認してから承認してください）</span><% end %><%= f.text_field :answer_text, class: "input mt-1", data: { math_preview_target: "input", action: "input->math-preview#refresh" } %><div class="mt-1 rounded-lg border border-row-line bg-bg p-2 text-lg whitespace-pre-wrap" data-math-preview-target="preview" aria-label="数式のプレビュー" hidden></div></div>
+    <div><%= f.label :explanation, "解説", class: "label" %><%= f.text_area :explanation, rows: 3, class: "input mt-1 !h-auto", data: { math_preview_target: "input", action: "input->math-preview#refresh" } %><div class="mt-1 rounded-lg border border-row-line bg-bg p-2 text-lg whitespace-pre-wrap" data-math-preview-target="preview" aria-label="数式のプレビュー" hidden></div></div>
+    <div><%= f.label :tags_text, "タグ（スペースかカンマ区切り）", class: "label" %><%= f.text_field :tags_text, value: @question.tags_text, class: "input mt-1" %></div>
+    <div><%= f.label :difficulty, "難易度（1〜5・任意）", class: "label" %><%= f.select :difficulty, (1..5).to_a, { include_blank: "未設定" }, class: "input mt-1 !w-40" %></div>
+    <p class="text-base text-text-sub">数式は $…$（行の中）か $$…$$（独立した行）で LaTeX を囲むと、入力欄の下に表示されます。</p>
+    <p class="text-base text-text-sub">「保存」だけだと承認は外れます。内容を確認できたら「保存して承認」を押してください。</p>
     <% if current_user.can_write? %>
       <div class="flex flex-wrap gap-3">
         <%= f.button "保存して承認", type: "submit", name: "approve", value: "1", class: "btn-primary cursor-pointer" %>

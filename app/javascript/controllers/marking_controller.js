@@ -106,13 +106,13 @@ export default class extends Controller {
     item.regions.forEach((region, index) => {
       const box = document.createElement("div")
       box.dataset.box = region.id
-      box.className = "absolute border-2 border-ng bg-ng/10 cursor-move"
+      box.className = "absolute border-2 border-err-fg bg-err-fg/10 cursor-move"
       Object.assign(box.style, this.boxStyle(item, region))
       const tag = document.createElement("span")
-      tag.className = "absolute -top-6 left-0 rounded bg-ng px-1.5 text-xs font-bold text-white"
+      tag.className = "absolute -top-6 left-0 rounded bg-err-fg px-1.5 text-base font-bold text-white"
       tag.textContent = String(index + 1)
       const handle = document.createElement("span")
-      handle.className = "absolute -bottom-2 -right-2 size-4 rounded-full border-2 border-white bg-ng cursor-nwse-resize"
+      handle.className = "absolute -bottom-2 -right-2 size-4 rounded-full border-2 border-white bg-err-fg cursor-nwse-resize"
       handle.dataset.handle = ""
       box.append(tag, handle)
       box.addEventListener("pointerdown", (e) => { e.stopPropagation(); this.startDrag(e, item, region, e.target === handle ? "resize" : "move") })

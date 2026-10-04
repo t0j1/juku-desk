@@ -2,7 +2,7 @@
 <% wb = quiz.wordbook %>
 <% min, max = wb.min_number, wb.max_number %>
 <% error = ->(attr) { quiz.errors[attr].first } %>
-<% field_class = ->(attr) { "block w-full min-w-0 h-12 px-3 rounded-xl border-2 bg-white text-base tnum focus:outline-2 focus:outline-primary " + (error.(attr) ? "border-ng" : "border-quiz-line") } %>
+<% field_class = ->(attr) { "block w-full min-w-0 h-12 px-3 rounded-xl border-2 bg-bg text-base tnum focus:outline-2 focus:outline-primary " + (error.(attr) ? "border-err-fg" : "border-field-border") } %>
 <% counts = ((Quiz::MIN_COUNT..Quiz::MAX_COUNT).step(10).to_a + [ quiz.count ]).compact.uniq.sort %>
 <% greeting = quiz.count.nil? ? "今日は何問いってみる？" : "#{quiz.count}問！いいね" %>
 <% span = quiz.span || Quiz::DEFAULT_SPAN %>
@@ -16,65 +16,65 @@
       quiz_range_default_span_value: Quiz::DEFAULT_SPAN,
       quiz_range_min_count_value: Quiz::MIN_COUNT, quiz_range_max_count_value: Quiz::MAX_COUNT } do |f| %>
   <%= hidden_field_tag "quiz[wordbook_id]", wb.id %>
-  <p class="text-sm text-quiz-sub mb-4">単語帳：<span class="font-bold text-quiz-ink"><%= wb.name %></span>
+  <p class="text-lg text-text-sub mb-4">単語帳：<span class="font-bold text-text"><%= wb.name %></span>
     <%= link_to "選び直す", new_quiz_path, class: "ml-3 text-primary font-bold hover:underline" %></p>
 
-  <div class="bg-surface rounded-[24px] p-6 max-w-[720px] text-quiz-ink flex flex-col gap-6">
-    <section class="bg-white rounded-[24px] shadow-quiz p-7 flex items-center gap-5" aria-label="あいさつ">
+  <div class="bg-surface rounded-[24px] p-6 max-w-[720px] text-text flex flex-col gap-6">
+    <section class="bg-bg rounded-[24px] shadow-raise-sm p-7 flex items-center gap-5" aria-label="あいさつ">
       <svg width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="フクロウ" class="shrink-0"><ellipse cx="48" cy="54" rx="36" ry="38" fill="#2A4E9A"/><path d="M18 26 L28 38 L22 40Z M78 26 L68 38 L74 40Z" fill="#1B2440"/><ellipse cx="48" cy="64" rx="22" ry="22" fill="#DCE6FA"/><circle cx="34" cy="44" r="14" fill="#fff"/><circle cx="62" cy="44" r="14" fill="#fff"/><circle cx="36" cy="46" r="7" fill="#1B2440"/><circle cx="60" cy="46" r="7" fill="#1B2440"/><circle cx="38" cy="43" r="2.4" fill="#fff"/><circle cx="62" cy="43" r="2.4" fill="#fff"/><path d="M44 56 L52 56 L48 63Z" fill="#F2A93B"/><ellipse cx="22" cy="58" rx="5" ry="3" fill="#F6B4C4" opacity=".8"/><ellipse cx="74" cy="58" rx="5" ry="3" fill="#F6B4C4" opacity=".8"/></svg>
-      <p class="speech-bubble bg-bubble rounded-[20px] px-6 py-4 text-[22px] font-bold ml-2" role="status" data-quiz-range-target="greeting"><%= greeting %></p>
+      <p class="speech-bubble bg-bg rounded-[20px] px-6 py-4 text-[22px] font-bold ml-2" role="status" data-quiz-range-target="greeting"><%= greeting %></p>
     </section>
 
-    <section class="bg-white rounded-[24px] shadow-quiz p-7" aria-labelledby="range_heading">
-      <h2 id="range_heading" class="text-base text-quiz-sub font-bold mb-2">① 範囲をえらぶ</h2>
+    <section class="bg-bg rounded-[24px] shadow-raise-sm p-7" aria-labelledby="range_heading">
+      <h2 id="range_heading" class="text-base text-text-sub font-bold mb-2">① 範囲をえらぶ</h2>
       <p class="text-2xl leading-8 font-bold tnum mb-4" aria-live="polite">No.<span class="text-primary" data-quiz-range-target="rangeA"><%= start_no %></span> 〜 No.<span class="text-primary" data-quiz-range-target="rangeB"><%= end_no %></span><span class="inline-block whitespace-nowrap">（<span data-quiz-range-target="rangeWords"><%= in_range || "–" %></span>語）</span></p>
 
       <div class="flex flex-wrap items-start gap-4">
         <div class="w-40">
-          <%= label_tag "quiz_start_no", "開始No.", class: "block text-sm text-quiz-sub mb-1" %>
+          <%= label_tag "quiz_start_no", "開始No.", class: "block text-lg text-text-sub mb-1" %>
           <%= f.number_field :start_no, value: start_no, id: "quiz_start_no", inputmode: "numeric", min: min, max: max, class: field_class.(:start_no),
                 data: { quiz_range_target: "start", action: "input->quiz-range#validate" }, "aria-invalid": error.(:start_no).present?, "aria-describedby": "quiz_range_hint quiz_start_error" %>
         </div>
         <div class="w-40">
-          <%= label_tag "quiz_span_preset", "単語数", class: "block text-sm text-quiz-sub mb-1" %>
+          <%= label_tag "quiz_span_preset", "単語数", class: "block text-lg text-text-sub mb-1" %>
           <%= select_tag "span_preset", options_for_select(span_choices.map { |n| [ "#{n}語", n ] } + [ [ "自分で入力…", "custom" ] ], custom_span ? "custom" : span),
-                id: "quiz_span_preset", class: field_class.(:span) + " bg-white", data: { quiz_range_target: "preset", action: "change->quiz-range#presetChanged" } %>
+                id: "quiz_span_preset", class: field_class.(:span) + " bg-bg", data: { quiz_range_target: "preset", action: "change->quiz-range#presetChanged" } %>
         </div>
         <div class="w-[120px]" data-quiz-range-target="customWrap" <%= "hidden" unless custom_span %>>
-          <%= label_tag "quiz_span_custom", "単語数（自由入力）", class: "block text-sm text-quiz-sub mb-1 whitespace-nowrap" %>
+          <%= label_tag "quiz_span_custom", "単語数（自由入力）", class: "block text-lg text-text-sub mb-1 whitespace-nowrap" %>
           <div class="flex items-center gap-2">
             <%= number_field_tag "span_custom", (span if custom_span), id: "quiz_span_custom", inputmode: "numeric", min: 1, class: field_class.(:span),
                   data: { quiz_range_target: "custom", action: "input->quiz-range#validate" }, "aria-describedby": "quiz_span_error" %>
-            <span class="text-sm text-quiz-sub shrink-0">語</span>
+            <span class="text-lg text-text-sub shrink-0">語</span>
           </div>
         </div>
       </div>
       <%= hidden_field_tag "quiz[span]", span, id: "quiz_span", data: { quiz_range_target: "span" } %>
-      <p id="quiz_range_hint" class="mt-3 text-sm text-quiz-sub tnum">No.<%= min %>〜<%= max %> から選べます</p>
-      <p id="quiz_start_error" class="mt-2 text-xs font-bold text-ng" role="alert" data-quiz-range-target="startError" <%= "hidden" unless error.(:start_no) %>><%= "✕ #{error.(:start_no)}" if error.(:start_no) %></p>
-      <p id="quiz_span_error" class="mt-2 text-xs font-bold text-ng" role="alert" data-quiz-range-target="spanError" <%= "hidden" unless error.(:span) %>><%= "✕ #{error.(:span)}" if error.(:span) %></p>
-      <p class="mt-2 inline-flex items-center gap-2 rounded-lg bg-warn-bg text-warn-ink px-3 py-2 text-sm font-bold" role="status" data-quiz-range-target="notice" hidden></p>
+      <p id="quiz_range_hint" class="mt-3 text-lg text-text-sub tnum">No.<%= min %>〜<%= max %> から選べます</p>
+      <p id="quiz_start_error" class="mt-2 text-base font-bold text-err-fg" role="alert" data-quiz-range-target="startError" <%= "hidden" unless error.(:start_no) %>><%= "✕ #{error.(:start_no)}" if error.(:start_no) %></p>
+      <p id="quiz_span_error" class="mt-2 text-base font-bold text-err-fg" role="alert" data-quiz-range-target="spanError" <%= "hidden" unless error.(:span) %>><%= "✕ #{error.(:span)}" if error.(:span) %></p>
+      <p class="mt-2 inline-flex items-center gap-2 rounded-lg bg-warn-bg text-warn-fg px-3 py-2 text-lg font-bold" role="status" data-quiz-range-target="notice" hidden></p>
     </section>
 
-    <section class="bg-white rounded-[24px] shadow-quiz p-7" aria-labelledby="count_heading">
-      <h2 id="count_heading" class="text-base text-quiz-sub font-bold mb-4">② 問題数をえらぶ</h2>
+    <section class="bg-bg rounded-[24px] shadow-raise-sm p-7" aria-labelledby="count_heading">
+      <h2 id="count_heading" class="text-base text-text-sub font-bold mb-4">② 問題数をえらぶ</h2>
       <div class="flex flex-wrap justify-center gap-4" role="radiogroup" aria-labelledby="count_heading">
         <% counts.each do |n| %>
           <% checked = quiz.count == n %>
           <label class="relative block w-[88px] h-[88px] cursor-pointer">
             <%= radio_button_tag "quiz[count]", n, checked, id: "quiz_count_#{n}", class: "peer sr-only", "aria-checked": checked.to_s,
                   data: { quiz_range_target: "count", action: "change->quiz-range#fromCount" } %>
-            <span class="flex flex-col items-center justify-center w-full h-full rounded-full border-2 border-quiz-line bg-white text-quiz-ink
+            <span class="flex flex-col items-center justify-center w-full h-full rounded-full border-2 border-field-border bg-bg text-text
                          peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white peer-checked:scale-[.96] peer-checked:shadow-[inset_0_3px_6px_rgba(0,0,0,.25)]
                          peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary transition-transform">
               <span class="text-[32px] font-bold leading-none tnum"><%= n %></span>
-              <span class="text-sm leading-none mt-1">問</span>
+              <span class="text-lg leading-none mt-1">問</span>
             </span>
-            <span class="hidden peer-checked:flex absolute -top-1 -right-1 w-[30px] h-[30px] rounded-full bg-white items-center justify-center text-primary shadow-quiz" aria-hidden="true"><%= console_icon(:check, size: 18) %></span>
+            <span class="hidden peer-checked:flex absolute -top-1 -right-1 w-[30px] h-[30px] rounded-full bg-bg items-center justify-center text-primary shadow-raise-sm" aria-hidden="true"><%= console_icon(:check, size: 18) %></span>
           </label>
         <% end %>
       </div>
-      <p class="mt-3 text-sm font-bold text-ng text-center" role="alert" data-quiz-range-target="countError" <%= "hidden" unless error.(:count) %>><%= "✕ #{error.(:count)}" if error.(:count) %></p>
+      <p class="mt-3 text-lg font-bold text-err-fg text-center" role="alert" data-quiz-range-target="countError" <%= "hidden" unless error.(:count) %>><%= "✕ #{error.(:count)}" if error.(:count) %></p>
     </section>
 
     <%= f.button "テストをつくる", type: "submit", class: "w-full h-14 rounded-[28px] text-xl font-bold text-white cursor-pointer bg-primary hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed",

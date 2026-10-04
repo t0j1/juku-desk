@@ -1,11 +1,11 @@
 <% content_for :title, "ログイン中の端末" %>
 <div class="flex items-center mb-6">
-  <h1 class="font-bold text-[22px]">ログイン中の端末</h1>
+  <h1 class="page-title">ログイン中の端末</h1>
   <% if @sessions.size > 1 %>
     <%= button_to "ほかの端末をすべて切断", destroy_others_user_sessions_path, method: :delete, class: "btn-danger ml-auto", data: { turbo_confirm: "この端末以外のログインをすべて切断します。よろしいですか？" } %>
   <% end %>
 </div>
-<% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
+<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
 <table id="user_sessions" class="table-console">
   <thead>
     <tr><th>端末（UA）</th><th>IP</th><th>ログイン日時</th><th></th></tr>

@@ -84,8 +84,8 @@ export default class extends Controller {
   show(input, errorElement, message) {
     this.showMessage(errorElement, message)
     input.setAttribute("aria-invalid", message ? "true" : "false")
-    input.classList.toggle("border-ng", Boolean(message))
-    input.classList.toggle("border-quiz-line", !message)
+    input.classList.toggle("border-err-fg", Boolean(message))
+    input.classList.toggle("border-field-border", !message)
   }
 
   showMessage(errorElement, message) {

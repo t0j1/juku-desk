@@ -1,40 +1,40 @@
 <% content_for :head do %><%= stylesheet_link_tag "katex/katex" %><% end %>
 <% content_for :title, "問題のレビュー" %>
 <div class="flex flex-wrap items-center gap-3 mb-6">
-  <h1 class="font-bold text-[22px] mr-auto">問題のレビュー</h1>
+  <h1 class="page-title mr-auto">問題のレビュー</h1>
   <% if @approved_count.positive? %>
     <%= link_to "小テストを作成", new_marking_test_path(subject: @subject), id: "new-test-link", class: "btn-primary" %>
   <% else %>
     <span class="inline-flex flex-col items-end">
       <button type="button" id="new-test-link" class="btn-primary opacity-50 !cursor-not-allowed" disabled aria-describedby="no-approved-note">小テストを作成</button>
-      <span id="no-approved-note" class="mt-1 text-xs text-ink-sub">承認済みの問題がありません</span>
+      <span id="no-approved-note" class="mt-1 text-base text-text-sub">承認済みの問題がありません</span>
     </span>
   <% end %>
   <%= link_to "取り込み済みの画像", uploads_path, class: "btn-secondary" %>
 </div>
-<% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
-<% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
+<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
+<% if alert %><p id="alert" class="mb-4 text-lg font-bold text-err-fg"><%= alert %></p><% end %>
 
-<p class="mb-4 text-sm text-ink-sub">AI が作った問題を確認して、承認してください。<strong>承認した問題だけ</strong>が小テストの出題対象になります。
+<p class="mb-4 text-lg text-text-sub">AI が作った問題を確認して、承認してください。<strong>承認した問題だけ</strong>が小テストの出題対象になります。
   <% if @waiting_count.positive? %><span id="waiting-count" class="font-bold">（構造化の順番待ち：<%= @waiting_count %> 件）</span><% end %></p>
 
-<div class="mb-4 flex flex-wrap items-center gap-2 text-sm">
+<div class="mb-4 flex flex-wrap items-center gap-2 text-lg">
   <%= link_to "すべて", questions_path, class: "btn-secondary" %>
   <%= link_to "未承認", questions_path(filter: "unreviewed"), class: "btn-secondary" %>
   <%= link_to "承認済み", questions_path(filter: "approved"), class: "btn-secondary" %>
   <% Question::SUBJECTS.each do |s| %><%= link_to s, questions_path(subject: s, filter: @filter.presence), class: "btn-secondary" %><% end %>
-  <% if @needs_confirmation_count.positive? %><span id="needs-confirmation-count" class="ml-2 font-bold text-ng">要確認 <%= @needs_confirmation_count %> 件</span><% end %>
+  <% if @needs_confirmation_count.positive? %><span id="needs-confirmation-count" class="ml-2 font-bold text-err-fg">要確認 <%= @needs_confirmation_count %> 件</span><% end %>
 </div>
 
 <% if @model_unavailable_count.positive? %>
-  <div id="model-unavailable" role="alert" class="mb-6 rounded-xl border-2 border-ng bg-ng-bg p-4 text-sm text-ng">
+  <div id="model-unavailable" role="alert" class="mb-6 rounded-xl border-2 border-err-fg bg-err-bg p-4 text-lg text-err-fg">
     <p class="font-bold"><%= CropRegion::MODEL_UNAVAILABLE_MESSAGE %>（<%= @model_unavailable_count %> 件）</p>
     <p class="mt-1">更新後、各画像の「構造化を開始・やり直す」で再開できます。</p>
   </div>
 <% end %>
 
 <% if @failed_regions.any? %>
-  <div id="failed-regions" class="mb-6 rounded-xl border border-ng bg-ng-bg p-4 text-sm text-ng">
+  <div id="failed-regions" class="mb-6 rounded-xl border border-err-fg bg-err-bg p-4 text-lg text-err-fg">
     <p class="font-bold mb-1">構造化に失敗した領域（エラー）<%= @failed_regions.size %> 件</p>
     <ul class="space-y-1">
       <% @failed_regions.each do |r| %><li><%= link_to "画像 ##{r.upload_id}", upload_path(r.upload), class: "underline" %>：<%= r.error_message %></li><% end %>
@@ -45,9 +45,9 @@
 <div data-controller="image-zoom bulk-select">
 <% if current_user.can_write? %>
   <%= form_with url: bulk_approve_questions_path, method: :post, id: "bulk-approve-form" do %>
-    <div class="mb-3 flex items-center gap-3 text-sm">
+    <div class="mb-3 flex items-center gap-3 text-lg">
       <%= button_tag type: "submit", id: "bulk-approve", class: "btn-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed", data: { bulk_select_target: "button" } do %>選択した問題を承認（<span data-bulk-select-target="count">0</span> 件）<% end %>
-      <span class="text-ink-sub">承認できるのは、科目・問題文・解答がそろった未承認の問題です。</span>
+      <span class="text-text-sub">承認できるのは、科目・問題文・解答がそろった未承認の問題です。</span>
     </div>
   <% end %>
 <% end %>
@@ -58,11 +58,11 @@
       <tr id="question_<%= q.id %>" data-needs-confirmation="<%= q.needs_confirmation? %>">
         <td><% if current_user.can_write? && !q.approved? && q.approvable? %><input type="checkbox" name="question_ids[]" value="<%= q.id %>" form="bulk-approve-form" aria-label="問題 <%= q.id %> を選ぶ" data-bulk-select-target="item" data-action="bulk-select#update"><% end %></td>
         <td><button type="button" class="block cursor-zoom-in" title="クリックで拡大" data-action="image-zoom#open" data-image-zoom-src="<%= image_crop_region_path(q.region) %>"><img src="<%= image_crop_region_path(q.region) %>" alt="問題 <%= q.id %> の切り出し" loading="lazy" class="w-28 max-h-20 object-contain rounded"></button></td>
-        <td><%= q.subject || tag.span("要確認", class: "font-bold text-ng") %></td>
-        <td class="text-sm"><%= q.type_label %></td>
+        <td><%= q.subject || tag.span("要確認", class: "font-bold text-err-fg") %></td>
+        <td class="text-lg"><%= q.type_label %></td>
         <td class="max-w-[360px]"><% if q.source_label.present? %><span class="font-bold mr-1"><%= q.source_label %></span><% end %><%= truncate(q.question_text, length: 80) %></td>
-        <td class="max-w-[160px]"><% if q.source_label.present? %><span class="font-bold mr-1" data-answer-label><%= q.source_label %></span><% end %><%= truncate(q.answer_text, length: 40) %><% if q.ai_answer? %> <span class="text-xs font-bold text-ng" data-ai-answer>AI作成</span><% end %></td>
-        <td class="text-sm"><%= q.tags.join("・") %></td>
+        <td class="max-w-[160px]"><% if q.source_label.present? %><span class="font-bold mr-1" data-answer-label><%= q.source_label %></span><% end %><%= truncate(q.answer_text, length: 40) %><% if q.ai_answer? %> <span class="text-base font-bold text-err-fg" data-ai-answer>AI作成</span><% end %></td>
+        <td class="text-lg"><%= q.tags.join("・") %></td>
         <td><%= q.approved? ? status_pill("承認済み", :ok) : status_pill("未承認", :neutral) %></td>
         <td class="flex items-center gap-2">
           <%= link_to "編集", edit_question_path(q), class: "btn-secondary" %>
@@ -76,7 +76,7 @@
         </td>
       </tr>
     <% end %>
-    <% if @questions.empty? %><tr><td colspan="8" class="text-center text-ink-sub">レビューする問題はありません</td></tr><% end %>
+    <% if @questions.empty? %><tr><td colspan="8" class="text-center text-text-sub">レビューする問題はありません</td></tr><% end %>
   </tbody>
 </table>
 <dialog id="image-zoom" class="m-auto max-w-[95vw] max-h-[95vh] rounded-xl p-0 backdrop:bg-black/60" data-image-zoom-target="dialog" data-action="click->image-zoom#backdrop">

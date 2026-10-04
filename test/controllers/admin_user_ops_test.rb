@@ -133,7 +133,7 @@ class AdminUserOpsTest < ActionDispatch::IntegrationTest
     end
     assert_response :success
     assert_select "#import-summary", /7行中、取り込めるのは 2行、エラーは 5行/
-    assert_select "tr.bg-ng-bg", 5
+    assert_select "tr.bg-err-bg", 5
   end
 
   test "import confirm creates only the valid rows as invited users and mails them" do
