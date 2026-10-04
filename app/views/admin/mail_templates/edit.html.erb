@@ -1,0 +1,25 @@
+<% content_for :title, "#{@template.label}の文面" %>
+<h1 class="font-bold text-[22px] mb-4"><%= @template.label %>の文面</h1>
+<p class="mb-4 text-sm text-ink-sub">
+  差し込み：<% MailTemplate::PLACEHOLDERS.each do |k, desc| %><code class="mr-3">{{<%= k %>}}</code><%= desc %>　<% end %>
+  本文には必ず <code>{{url}}</code> を入れてください。
+</p>
+<%= form_with model: @template, url: admin_mail_template_path(@template.key), method: :patch, scope: :mail_template, class: "space-y-4 max-w-2xl" do |f| %>
+  <% if @template.errors.any? %>
+    <div id="error_explanation" class="py-2 px-3 bg-ng-bg text-ng rounded-lg"><ul><% @template.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul></div>
+  <% end %>
+  <div><%= f.label :subject, "件名", class: "block text-sm" %><%= f.text_field :subject, required: true, maxlength: 200, class: "input mt-1 !max-w-full" %></div>
+  <div><%= f.label :body, "本文", class: "block text-sm" %><%= f.text_area :body, rows: 12, required: true, maxlength: 5000, class: "block w-full rounded-lg border border-line-strong bg-white px-3 py-2 mt-1 font-mono text-sm" %></div>
+  <div class="flex items-center gap-3">
+    <%= f.submit "保存", class: "btn-primary cursor-pointer" %>
+    <%= f.button "プレビュー", type: "submit", formaction: preview_admin_mail_template_path(@template.key), formmethod: "post", class: "btn-secondary cursor-pointer" %>
+    <%= link_to "一覧に戻る", admin_mail_templates_path, class: "text-sm underline" %>
+  </div>
+<% end %>
+<% if @rendered %>
+  <section id="mail-preview" class="mt-8 max-w-2xl rounded-xl border border-line bg-white p-4" aria-label="プレビュー">
+    <p class="text-xs text-ink-sub mb-2">プレビュー（見本の値で差し込み。まだ保存されていません）<%= " ※このままでは保存できません" unless @valid %></p>
+    <p class="mb-3 font-bold">件名：<%= @rendered.subject %></p>
+    <pre class="whitespace-pre-wrap text-sm font-sans"><%= @rendered.body %></pre>
+  </section>
+<% end %>
