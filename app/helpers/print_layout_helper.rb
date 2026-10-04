@@ -27,10 +27,6 @@ module PrintLayoutHelper
     html.html_safe # rubocop:disable Rails/OutputSafety -- エスケープ済みの文字列に、決まった要素だけを足している
   end
 
-  def print_ai_badge(question)
-    tag.span("AI", class: "mt-ai", title: "AI が作成した解答") if question.ai_answer?
-  end
-
   # 形式別のレイアウトに必要なデータがそろっているか（足りなければ従来の表示にする）
   def print_layout_for(question)
     p = question.payload || {}

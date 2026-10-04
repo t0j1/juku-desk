@@ -12,9 +12,9 @@
       <% when "passage" %>
         <% if q.question_text.present? && ![ p["body"], @instructions&.dig("passage") ].include?(q.question_text) %><div class="mt-text"><%= q.question_text %></div><% end %>
         <div class="mt-passage"><%= print_passage_body(p["body"]) %></div>
-        <% if Array(p["sub_questions"]).any? %>
+        <% if Array(p["sub_questions"]).grep(Hash).any? %>
           <ol class="mt-subs">
-            <% p["sub_questions"].each.with_index(1) do |sq, i| %>
+            <% Array(p["sub_questions"]).grep(Hash).each.with_index(1) do |sq, i| %>
               <li class="mt-sub"><span class="mt-sub-no">(<%= i %>)</span><div class="mt-sub-main"><div class="mt-text"><%= print_passage_body(sq["prompt"]) %></div><div class="mt-ruled mt-ruled-1" aria-label="解答欄"></div></div></li>
             <% end %>
           </ol>
@@ -40,15 +40,14 @@
         <% end %>
       <% end %>
     <% else %>
-      <% if layout == "passage" && Array(p["sub_questions"]).any? { |sq| sq["answer"].present? } %>
+      <% if layout == "passage" && Array(p["sub_questions"]).grep(Hash).any? { |sq| sq["answer"].present? } %>
         <ol class="mt-subs">
-          <% p["sub_questions"].each.with_index(1) do |sq, i| %>
+          <% Array(p["sub_questions"]).grep(Hash).each.with_index(1) do |sq, i| %>
             <li class="mt-sub"><span class="mt-sub-no">(<%= i %>)</span><div class="mt-answer"><%= sq["answer"] %></div></li>
           <% end %>
         </ol>
-        <div class="mt-answer-badge"><%= print_ai_badge(q) %></div>
       <% else %>
-        <div class="mt-answer"><%= q.answer_text %><%= print_ai_badge(q) %></div>
+        <div class="mt-answer"><%= q.answer_text %></div>
       <% end %>
       <% if q.explanation.present? %><div class="mt-expl"><%= q.explanation %></div><% end %>
     <% end %>

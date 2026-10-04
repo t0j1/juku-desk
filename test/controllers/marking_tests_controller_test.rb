@@ -104,4 +104,15 @@ class MarkingTestsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".mt-expl", text: "解説です"
     assert_select ".mt-text", 0
   end
+
+  test "passage print ignores sub_questions that are not objects" do
+    q = make_q(question_text: "読め", answer_text: "答え")
+    q.update_columns(question_type: "passage", payload: { "body" => "本文", "sub_questions" => [ 1, nil, { "prompt" => "問い", "answer" => "正答" } ] })
+    create_test(count: 1)
+    %w[question answer].each do |kind|
+      get print_marking_test_path(Exam.last, kind: kind)
+      assert_response :success
+      assert_select ".mt-sub", 1
+    end
+  end
 end

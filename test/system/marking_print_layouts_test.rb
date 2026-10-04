@@ -77,6 +77,7 @@ class MarkingPrintLayoutsTest < ApplicationSystemTestCase
         assert_equal 1, widths.uniq.size
       end
       assert_no_selector ".mt-answer"
+      assert_no_text "AI"
       save_layout_screenshot("question")
 
       click_on "もう一方（解答用）"
@@ -85,9 +86,9 @@ class MarkingPrintLayoutsTest < ApplicationSystemTestCase
       assert_selector "#print_section_1 .mt-answer", text: "The plan is worth trying."
       assert_equal %w[(1) (2)], all("#print_section_2 .mt-sub-no").map(&:text)
       assert_selector "#print_section_2 .mt-answer", text: "彼は宇宙についての本を借りたかった。"
-      assert_selector ".mt-ai", count: 2
-      assert_selector "#print_section_3 .mt-ai", text: "AI"
-      assert_no_selector "#print_section_4 .mt-ai"
+      # AI 作成の解答（2 問）があっても、印刷には AI の印を出さない（#62 の決定）
+      assert_no_selector ".mt-ai"
+      assert_no_text "AI"
       save_layout_screenshot("answer")
     end
   end

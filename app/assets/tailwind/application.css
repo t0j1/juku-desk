@@ -139,7 +139,7 @@
 .mt-options li { display: flex; gap: 2mm; }
 .mt-opt-no { flex: none; width: 6mm; text-align: center; border: .3mm solid #000; border-radius: 50%; font-size: 9.5pt; line-height: 5mm; height: 5mm; margin-top: 1mm; }
 .mt-ruled { margin-top: 3mm; height: 16mm; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 7.5mm, #000 7.5mm, #000 8mm); }
-/* 形式別のレイアウト（英語）：並べ替え・長文・英作文・和訳。解答用の AI 作成の印 */
+/* 形式別のレイアウト（英語）：並べ替え・長文・英作文・和訳（AI 作成の印は印刷に出さない。#62 の決定） */
 .mt-ja { margin-bottom: .5mm; }
 .mt-reorder, .mt-compose, .mt-source { overflow-wrap: anywhere; }
 .mt-extra { margin-left: 2mm; white-space: nowrap; }
@@ -155,7 +155,6 @@
 .mt-ruled-1 { height: 8mm; margin-top: 1mm; }
 .mt-ruled-translate { height: 24mm; }
 .mt-item-passage { break-inside: auto; page-break-inside: auto; }
-.mt-ai { display: inline-block; margin-left: 2mm; padding: 0 1mm; border: .25mm solid #000; border-radius: .8mm; font-size: 7pt; line-height: 1.3; vertical-align: .3em; font-weight: 400; }
 @media print {
   .mt-sheet { padding: 0; box-shadow: none; border: 0; max-width: none; }
   .marking-print, .mt-sheet { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
