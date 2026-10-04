@@ -1,5 +1,6 @@
 class PasswordsController < ApplicationController
   allow_unauthenticated_access
+  forbid_during_impersonation
   before_action :set_user_by_token, only: %i[ edit update ]
   rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to new_password_path, alert: "しばらくしてから再度お試しください。" }
 
@@ -20,6 +21,7 @@ class PasswordsController < ApplicationController
   def update
     if @user.update(params.permit(:password, :password_confirmation))
       @user.sessions.destroy_all
+      @user.unlock! # ロック中の本人が再設定した場合も、すぐログインできるようにする
       AuditLog.record!(:password_change, @user, user: @user, ip: request.remote_ip, metadata: { via: "reset" })
       redirect_to new_session_path, notice: "パスワードを再設定しました。"
     else

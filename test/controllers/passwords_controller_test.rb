@@ -49,6 +49,14 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     assert_notice "パスワードを再設定しました"
   end
 
+  test "update unlocks a locked account" do
+    5.times { @user.register_failed_login! }
+    assert @user.reload.locked?
+    put password_path(@user.password_reset_token), params: { password: "Blue Moon Rises 7", password_confirmation: "Blue Moon Rises 7" }
+    assert_not @user.reload.locked?
+    assert_equal 0, @user.failed_attempts
+  end
+
   test "update rejects a weak password and a reused one" do
     token = @user.password_reset_token
     put password_path(token), params: { password: "short1", password_confirmation: "short1" }
