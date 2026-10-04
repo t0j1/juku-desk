@@ -22,6 +22,8 @@ class Question < ApplicationRecord
   def needs_confirmation? = subject.blank?
 
   # 承認できるのは、科目が決まっていて、問題文と解答が入っているものだけ
+  # 小テストで使われている（印刷済みの内容が変わるので、分割はしない）
+  def used_in_exam? = ExamItem.exists?(question_id: id)
   def approvable? = subject.present? && question_text.present? && answer_text.present?
 
   def approve!(user)

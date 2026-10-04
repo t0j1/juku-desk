@@ -267,7 +267,7 @@ export default class extends Controller {
     return body
   }
 
-  // 8px の余白つきで切り出す。傾きが検出されていれば、傾きを補正して回す
+  // 余白（MARKING_CROP_PADDING、既定 4px）つきで切り出す。傾きが検出されていれば、傾きを補正して回す
   crop(item, region) {
     const box = paddedBox(region, item.width, item.height, this.configValue.padding)
     const canvas = document.createElement("canvas")

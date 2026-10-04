@@ -10,10 +10,11 @@ module MarkingConfig
   def max_regions = int("MARKING_MAX_REGIONS", 100)
 
   # ブラウザへ渡す設定（detector のしきい値、縮小後の長辺、余白、JPEG 品質）
+  # 余白は赤枠の外側に足す px（縮小後の画像で）。8px だと問題の間隔が詰まった教材で隣の問題の上端が写り込むので 4px にした
   def to_h
     {
       maxLongSide: int("MARKING_MAX_LONG_SIDE", 1600),
-      padding: int("MARKING_CROP_PADDING", 8),
+      padding: int("MARKING_CROP_PADDING", 4),
       jpegQuality: float("MARKING_JPEG_QUALITY", 0.85),
       maxBytes: max_bytes,
       detector: {
