@@ -1,0 +1,12 @@
+<%# まとめて再構造化の進み具合。処理中（残りあり）のあいだは restructure-progress コントローラが数秒ごとに読み直す %>
+<%= turbo_frame_tag "restructure-progress" do %>
+  <% if batch %>
+    <% p = batch.progress %>
+    <div id="restructure-progress-box" class="mb-4 rounded-xl border border-row-line p-3 text-lg" data-controller="restructure-progress" data-restructure-progress-active-value="<%= p[:waiting].positive? %>" data-restructure-progress-url-value="<%= restructure_progress_questions_path %>">
+      <p class="font-bold">まとめて再構造化：<span id="restructure-progress-count"><%= p[:total] %> 件中 <%= p[:done] %> 件</span>が終わりました
+        <% if p[:waiting].positive? %><span class="font-normal">（残り <%= p[:waiting] %> 件を 1 件ずつ処理中）</span><% end %></p>
+      <% if p[:held].positive? %><p id="restructure-progress-held" class="mt-1 text-warn-fg"><%= p[:held] %> 件は Gemini の 1 日の上限のため保留中です（上限のリセット後に自動で再開します）。</p><% end %>
+      <% if p[:waiting].zero? && p[:held].zero? %><p class="mt-1 text-text-sub">すべて終わりました。作り直した問題を確認して、承認してください。</p><% end %>
+    </div>
+  <% end %>
+<% end %>

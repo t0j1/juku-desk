@@ -80,4 +80,30 @@ class MarkingReviewTest < ApplicationSystemTestCase
     within("#question_#{c.id}") { assert_text "承認済み" }
     assert c.reload.approved?
   end
+
+  test "E-4: selected images are restructured only after the confirmation, which warns that approval is dropped, and progress is shown" do
+    with_gemini(gemini_questions_json({ "question_type" => "choice", "answer_in_material" => true }))
+    a = make_question
+    a.approve!(users(:staff))
+    b = make_question
+    visit questions_path
+    assert_selector "#bulk-restructure-outdated[value='未対応の問題をすべて再構造化（2 問）']"
+    find("input[aria-label='問題 #{a.id} の画像を再構造化に選ぶ']").check
+    find("input[aria-label='問題 #{b.id} の画像を再構造化に選ぶ']").check
+    click_on "選択した画像を再構造化"
+    assert_selector "#approved-warning", text: "承認済みの問題が 1 問あります"
+    click_on "いいえ（やめる）"
+    assert_selector "#questions"
+    assert a.region.reload.extracted?
+
+    find("input[aria-label='問題 #{b.id} の画像を再構造化に選ぶ']").check
+    click_on "選択した画像を再構造化"
+    assert_no_selector "#approved-warning"
+    click_on "はい、再構造化する"
+    assert_selector "#notice", text: "1 件の画像を構造化の順番待ちに入れました"
+    assert_selector "#restructure-progress-count", text: "1 件中 0 件"
+    assert a.reload.approved?
+  ensure
+    reset_gemini
+  end
 end
