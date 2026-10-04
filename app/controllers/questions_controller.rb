@@ -50,12 +50,24 @@ class QuestionsController < ApplicationController
 
     # 編集すると承認は外れる（直した内容をもう一度確認してから承認する）
     def question_params
-      permitted = params.require(:question).permit(:subject, :question_text, :answer_text, :explanation, :difficulty, :options_text, :tags_text)
-      attrs = permitted.except(:options_text, :tags_text).to_h
+      permitted = params.require(:question).permit(:subject, :question_type, :question_text, :answer_text, :explanation, :difficulty, :options_text, :tags_text, :payload_text)
+      attrs = permitted.except(:options_text, :tags_text, :payload_text).to_h
       attrs["subject"] = nil if attrs["subject"].blank?
+      attrs["question_type"] = nil if attrs.key?("question_type") && attrs["question_type"].blank?
+      attrs["payload"] = parse_payload(attrs.fetch("question_type", @question.question_type), permitted[:payload_text]) if permitted.key?(:payload_text)
       attrs["difficulty"] = nil if attrs["difficulty"].blank?
       attrs["options"] = permitted[:options_text].to_s.lines.map(&:strip).reject(&:empty?) if permitted.key?(:options_text)
       attrs["tags"] = permitted[:tags_text].to_s.split(/[,、\s]+/).map(&:strip).reject(&:empty?).uniq if permitted.key?(:tags_text)
       attrs.merge("reviewed_at" => nil, "reviewed_by_id" => nil)
+    end
+
+    # payload は JSON で編集する。読めない JSON はそのまま保存せず、エラーにする（payload_is_object で弾く）
+    def parse_payload(type, text)
+      return {} if text.to_s.strip.empty?
+
+      data = JSON.parse(text)
+      data.is_a?(Hash) ? Question.normalize_payload(type, data) : data
+    rescue JSON::ParserError
+      "invalid"
     end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -72,6 +72,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_190000) do
     t.datetime "updated_at", null: false
     t.text "error_message"
     t.datetime "extracted_at"
+    t.boolean "generate_answers", default: true, null: false
     t.index ["status"], name: "index_crop_regions_on_status"
     t.index ["upload_id"], name: "index_crop_regions_on_upload_id"
   end
@@ -208,12 +209,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_190000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "source_label"
+    t.string "question_type"
+    t.jsonb "payload", default: {}, null: false
+    t.string "answer_source", default: "material", null: false
     t.index ["region_id"], name: "index_questions_on_region_id"
     t.index ["reviewed_at"], name: "index_questions_on_reviewed_at"
     t.index ["reviewed_by_id"], name: "index_questions_on_reviewed_by_id"
     t.index ["subject"], name: "index_questions_on_subject"
     t.index ["tags"], name: "index_questions_on_tags", using: :gin
+    t.check_constraint "answer_source::text = ANY (ARRAY['material'::character varying, 'ai'::character varying]::text[])", name: "questions_answer_source_values"
     t.check_constraint "difficulty IS NULL OR difficulty >= 1 AND difficulty <= 5", name: "questions_difficulty_range"
+    t.check_constraint "question_type IS NULL OR (question_type::text = ANY (ARRAY['reorder'::character varying, 'translate_en_ja'::character varying, 'compose_ja_en'::character varying, 'passage'::character varying, 'fill_blank'::character varying, 'choice'::character varying, 'free'::character varying]::text[]))", name: "questions_question_type_values"
   end
 
   create_table "recovery_codes", force: :cascade do |t|
@@ -281,7 +287,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_190000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["created_by_id"], name: "index_tests_on_created_by_id"
-    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying, 'by_tag'::character varying]::text[])", name: "tests_mode_values"
+    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying::text, 'by_tag'::character varying::text])", name: "tests_mode_values"
   end
 
   create_table "uploads", force: :cascade do |t|

@@ -34,14 +34,15 @@
 <% end %>
 
 <table id="questions" class="table-console">
-  <thead><tr><th>切り出し</th><th>科目</th><th>問題</th><th>解答</th><th>タグ</th><th>状態</th><th></th></tr></thead>
+  <thead><tr><th>切り出し</th><th>科目</th><th>形式</th><th>問題</th><th>解答</th><th>タグ</th><th>状態</th><th></th></tr></thead>
   <tbody>
     <% @questions.each do |q| %>
       <tr id="question_<%= q.id %>" data-needs-confirmation="<%= q.needs_confirmation? %>">
         <td><img src="<%= image_crop_region_path(q.region) %>" alt="問題 <%= q.id %> の切り出し" loading="lazy" class="w-28 max-h-20 object-contain rounded"></td>
         <td><%= q.subject || tag.span("要確認", class: "font-bold text-ng") %></td>
+        <td class="text-sm"><%= q.type_label %></td>
         <td class="max-w-[360px]"><% if q.source_label.present? %><span class="font-bold mr-1"><%= q.source_label %></span><% end %><%= truncate(q.question_text, length: 80) %></td>
-        <td class="max-w-[160px]"><%= truncate(q.answer_text, length: 40) %></td>
+        <td class="max-w-[160px]"><%= truncate(q.answer_text, length: 40) %><% if q.ai_answer? %> <span class="text-xs font-bold text-ng" data-ai-answer>AI作成</span><% end %></td>
         <td class="text-sm"><%= q.tags.join("・") %></td>
         <td><%= q.approved? ? status_pill("承認済み", :ok) : status_pill("未承認", :neutral) %></td>
         <td class="flex items-center gap-2">
@@ -56,6 +57,6 @@
         </td>
       </tr>
     <% end %>
-    <% if @questions.empty? %><tr><td colspan="7" class="text-center text-ink-sub">レビューする問題はありません</td></tr><% end %>
+    <% if @questions.empty? %><tr><td colspan="8" class="text-center text-ink-sub">レビューする問題はありません</td></tr><% end %>
   </tbody>
 </table>

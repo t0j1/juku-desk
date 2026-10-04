@@ -22,7 +22,7 @@ class UploadsController < ApplicationController
     return redirect_to upload_path(upload), alert: "GEMINI_API_KEY が設定されていません。" unless GeminiConfig.configured?
 
     regions = upload.crop_regions
-    count = Marking::Enqueuer.call(regions.where(status: CropRegion::RETRYABLE_STATUSES).or(regions.stale_processing))
+    count = Marking::Enqueuer.call(regions.where(status: CropRegion::RETRYABLE_STATUSES).or(regions.stale_processing), generate_answers: generate_answers?)
     redirect_to upload_path(upload), notice: "#{count} 件を構造化の順番待ちに入れました。", status: :see_other
   end
 
@@ -50,7 +50,7 @@ class UploadsController < ApplicationController
     return render_error(error) if error
 
     upload = save_upload(file, content_type, sha256, regions)
-    Marking::Enqueuer.call(upload.crop_regions) # 構造化は順番待ちに積むだけ（すぐ返す）
+    Marking::Enqueuer.call(upload.crop_regions, generate_answers: generate_answers?) # 構造化は順番待ちに積むだけ（すぐ返す）
     render json: { id: upload.id, duplicate: false, regions: upload.crop_regions.size, url: upload_path(upload) }, status: :created
   rescue ActiveRecord::RecordNotUnique
     existing = Upload.find_by!(sha256:)
@@ -58,6 +58,11 @@ class UploadsController < ApplicationController
   end
 
   private
+    # 「解答を AI で作る」チェックボックス（初期値 ON。送られてこなければ ON とみなす）
+    def generate_answers?
+      params[:generate_answers].nil? || ActiveModel::Type::Boolean.new.cast(params[:generate_answers])
+    end
+
     # viewer は閲覧だけ（取り込み画面は開かせない）
     def require_writer!
       redirect_to uploads_path, alert: "閲覧のみの権限では取り込めません。" unless current_user.can_write?
