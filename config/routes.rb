@@ -33,6 +33,11 @@ Rails.application.routes.draw do
     end
   end
 
+  # schedule-web を juku-desk のレイアウト（サイドバー）の中に iframe で埋め込む（SCHEDULE_WEB_URL が必要）
+  get "schedule" => "schedule#index", as: :schedule
+  get "schedule/admin" => "schedule#admin", as: :schedule_admin
+  get "schedule/pickup" => "schedule#pickup", as: :schedule_pickup
+
   # 印刷（講師ログイン）
   get  "print" => "print_library#index", as: :print_library
   post "print/reissue" => "print_library#reissue", as: :reissue_print_link

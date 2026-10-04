@@ -19,14 +19,20 @@ class NavigationMenuTest < ActiveSupport::TestCase
     end
   end
 
-  test "schedule-web links are built from SCHEDULE_WEB_URL and are not marked active" do
+  test "the schedule group links to the embedded pages inside juku-desk" do
     groups = menu(env: { "SCHEDULE_WEB_URL" => "https://sekigaku.example.pages.dev/" })
     assert_equal [ "塾日報ステーション", "スケジュール" ], groups.map(&:label)
     items = groups.last.items
     assert_equal %w[年間スケジュール 管理画面 生徒ページ], items.map(&:label)
-    assert_equal %w[https://sekigaku.example.pages.dev/index.html https://sekigaku.example.pages.dev/admin.html https://sekigaku.example.pages.dev/pickup.html], items.map(&:href)
-    assert items.all?(&:external)
-    assert items.none?(&:active)
+    assert_equal %w[/schedule /schedule/admin /schedule/pickup], items.map(&:href)
+    assert items.none?(&:external)
+  end
+
+  test "the embedded page is highlighted in the schedule group" do
+    env = { "SCHEDULE_WEB_URL" => "https://sekigaku.example.pages.dev" }
+    { "index" => "年間スケジュール", "admin" => "管理画面", "pickup" => "生徒ページ" }.each do |action, label|
+      assert_equal [ label ], active_labels(menu(controller_path: "schedule", action_name: action, env:))
+    end
   end
 
   test "the current screen is highlighted" do

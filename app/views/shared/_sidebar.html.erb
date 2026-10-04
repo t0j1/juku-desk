@@ -1,7 +1,7 @@
 <%# サイドバー（ログイン後の画面で共通）。項目は config/navigation.yml。768px 未満では ☰ で開閉する（sidebar_controller） %>
 <aside id="app-sidebar" data-sidebar-target="panel" class="hidden data-[open=true]:flex md:flex flex-col print:hidden
        max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:w-[280px] max-md:overflow-y-auto max-md:bg-[#F3F1FE] max-md:p-4 max-md:shadow-xl
-       md:w-[220px] lg:w-[300px] md:shrink-0">
+       md:w-[220px] lg:w-[300px] md:shrink-0 md:min-h-0 md:overflow-y-auto">
   <button type="button" data-action="sidebar#close" class="md:hidden self-end mb-2 inline-flex items-center gap-2 h-12 px-4 rounded-xl text-sm font-bold text-ink-sub bg-white/70 cursor-pointer" aria-label="メニューを閉じる">
     <span aria-hidden="true">✕</span>閉じる
   </button>
