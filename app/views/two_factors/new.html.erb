@@ -8,8 +8,11 @@
   <li>アプリに表示された6桁のコードを入力して「有効にする」を押す</li>
   <li>表示されるリカバリーコードを安全な場所に保管する</li>
 </ol>
-<div class="mb-4 size-48 bg-white p-2 border border-line rounded-lg" aria-label="2段階認証の QR コード" role="img"><%= qr_svg(@otpauth_uri) %></div>
-<p class="mb-6 text-sm text-ink-sub">QR コードが読めないとき：手入力用キー <code id="otp-secret" class="font-mono font-bold text-ink select-all"><%= @secret %></code></p>
+<div id="otp-qr" class="mb-4 w-[220px] max-w-full aspect-square bg-white p-2 border border-line rounded-lg [&>svg]:block [&>svg]:w-full [&>svg]:h-full" aria-label="2段階認証の QR コード" role="img"><%= qr_svg(@otpauth_uri, viewbox: true) %></div>
+<div class="mb-6 max-w-md text-sm text-ink-sub">
+  <p>QR コードが読めないとき：手入力用キー</p>
+  <code id="otp-secret" class="block mt-1 font-mono font-bold text-ink select-all break-all"><%= @secret %></code>
+</div>
 <%= form_with url: two_factor_path, class: "space-y-4 max-w-md" do |form| %>
   <div>
     <%= form.label :code, "認証コード（6桁）", class: "block text-sm" %>
