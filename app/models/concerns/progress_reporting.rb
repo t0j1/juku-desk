@@ -53,7 +53,15 @@ module ProgressReporting
   def flush!
     @saved_at = monotonic_now
     update_columns(done: done, message: message, updated_at: Time.current)
-    self.cancel_requested_at = self.class.where(id: id).pick(:cancel_requested_at)
+    self.cancel_requested_at, db_status = self.class.where(id: id).pick(:cancel_requested_at, :status)
+    revive! if db_status == "failed" && self.status.to_s == "running" # 生きていたのに止まったと見なされた
+  end
+
+  # 実際の状態が優先：止まったと見なして failed にされた後でもジョブが動き続けていたら、実行中に戻す
+  # （対象も、止まったと見なされた時に failed にされていたなら、処理中に戻す）。完了は succeed! がそのまま上書きする
+  def revive!
+    update_columns(status: self.class.statuses[:running], finished_at: nil, message: nil)
+    subject.try(:progress_revived!, self)
   end
 
   # total が後から分かる処理のため
@@ -61,6 +69,7 @@ module ProgressReporting
     update_columns(total: n, updated_at: Time.current)
   end
 
+  # 止まったと見なされた後に実際は完了していた場合も、こちらが勝つ（対象は呼び出し側が done にする）
   def succeed!
     self.done = total if total
     finish!(:succeeded)

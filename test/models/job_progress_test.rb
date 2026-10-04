@@ -105,4 +105,34 @@ class JobProgressTest < ActiveSupport::TestCase
     fresh.fail_if_stale!
     assert fresh.running?
   end
+
+  # 止まったと見なして failed にした後に、ジョブが実は動いていて完了した（実際の状態を優先する）
+  test "a job judged stale that later keeps running and finishes ends as succeeded" do
+    progress = enqueue(10)
+    progress.start!(total: 10)
+    progress.step!(3, "3件目")
+    progress.update_columns(updated_at: 6.minutes.ago)
+    JobProgress.find(progress.id).fail_if_stale!
+    assert JobProgress.find(progress.id).stale_failed?
+
+    progress.step!(4, "4件目") # 動いていた：実行中に戻る
+    reloaded = JobProgress.find(progress.id)
+    assert reloaded.running?
+    assert_nil reloaded.finished_at
+    assert_equal false, reloaded.as_progress_json[:stale]
+
+    progress.succeed!
+    assert JobProgress.find(progress.id).succeeded?
+    assert_equal 100, JobProgress.find(progress.id).percent
+  end
+
+  test "stale_failed is exposed only for the stale failure, not for real failures" do
+    stale = JobProgress.create!(user: @user, kind: "dummy", title: "x", status: :running, started_at: 9.minutes.ago)
+    stale.update_columns(updated_at: 6.minutes.ago)
+    stale.fail_if_stale!
+    real = JobProgress.create!(user: @user, kind: "dummy", title: "y", status: :running)
+    real.finish!(:failed, message: "boom")
+    assert_equal true, stale.as_progress_json[:stale]
+    assert_equal false, real.as_progress_json[:stale]
+  end
 end

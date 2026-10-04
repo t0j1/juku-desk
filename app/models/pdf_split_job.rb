@@ -52,6 +52,12 @@ class PdfSplitJob < ApplicationRecord
     update!(status: :failed, error_message: progress.message) if analyzing? || splitting?
   end
 
+  # 止まったと見なして failed にした後、実際はジョブが動いていた。処理中の表示に戻す
+  def progress_revived!(progress)
+    return unless failed? && error_message == JobProgress::STALE_MESSAGE
+    update!(status: progress.kind == "pdf_split" ? :splitting : :analyzing, error_message: nil)
+  end
+
   # 画面に出す進捗（処理中のもの。なければ nil）
   def active_progress
     job_progresses.active.order(:id).last

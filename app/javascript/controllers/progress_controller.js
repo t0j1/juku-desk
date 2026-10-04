@@ -38,7 +38,8 @@ export default class extends Controller {
       const res = await fetch(this.urlValue, { headers: { Accept: "application/json" } })
       if (res.ok) (await res.json()).progresses.forEach((p) => this.update(p))
     } catch (_) { /* 通信が切れても次の周期でやり直す */ }
-    if (this.running().length) {
+    // 止まったと見なして failed にしたものも、実は動いていて後から完了することがあるので、読み続ける
+    if (this.running().length || [ ...this.items.values() ].some((i) => i.data.stale)) {
       this.timer = setTimeout(() => this.poll(), this.intervalValue)
     }
   }
@@ -55,7 +56,7 @@ export default class extends Controller {
     }
     item.data = p
     item.fetchedAt = Date.now()
-    if (!p.finished) item.sawRunning = true
+    if (!p.finished) { item.sawRunning = true; item.announced = false } // 止まったと見なされた後に動き出したら、終わった時にまた知らせる
     this.render(item)
     this.renderBadge()
     // 画面を開く前に終わっていたものは知らせない（知らせると、受け取った画面が読み直しを繰り返す）
