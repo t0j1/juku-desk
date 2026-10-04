@@ -49,6 +49,15 @@ Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を�
 - HTTPS 強制（`force_ssl`）。`/up` だけはリダイレクト対象外。
 - マイグレーションはコンテナ起動時に `bin/docker-entrypoint` の `db:prepare` が実行する。
 
+## 単語帳（小テスト用）の投入
+- 単語帳 CSV は著作権のためリポジトリに含めない。本番にすでに「LEAP 改訂版」があれば何もしなくてよい（seed は登録済みなら何もしない）。
+- 新しい環境に入れるとき: CSV を非公開ストレージ（R2 の非公開バケットなど）に置き、期限付きの署名付き URL を発行して、Render の Shell で一度だけ実行する:
+  ```
+  WORDBOOK_SEED_URL='<署名付き URL>' bin/rails wordbook:seed
+  ```
+  URL は Render の環境変数に常設しない（使い終わったら期限切れにする）。代わりに管理画面の CSV 取り込みからアップロードしてもよい。
+- 環境変数が無い場合、`db:seed` は単語帳をスキップする（エラーにならない）。
+
 ## 6. CI / デプロイのモノレポ対応
 - `ci.yml` は変更パスで判定する。`apps/schedule-web/` 以外が変わったときだけ Rails のジョブ、`apps/schedule-web/`（と Makefile / .mise.toml / ci.yml）が変わったときだけ `schedule-web` ジョブ（`node --test`、pglite は一時インストール）が走る。スキップされたジョブは必須チェックでも成功扱い。
 - `deploy.yml` は、直近に成功した Deploy 実行の `head_sha` から今回までの差分が `apps/schedule-web/`・`docs/`・`*.md` だけなら Render を叩かない。起点が取れないときは必ずデプロイする（Free は再起動で数分止まるため）。

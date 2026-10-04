@@ -13,10 +13,10 @@ class WordbookImporterTest < ActiveSupport::TestCase
     assert_equal "oppose", result.wordbook.words.find_by(number: 2).term
   end
 
-  test "seed CSV has 2300 words numbered 1 to 2300" do
-    result = import(File.binread(Rails.root.join("db/seeds/leap_modified_list.csv")), name: "LEAP seed")
+  test "sample wordbook CSV has 10 words numbered 1 to 10" do
+    result = import(File.binread(Rails.root.join("db/seeds/sample_wordbook.csv")), name: "サンプル")
     assert result.success?, result.errors.inspect
-    assert_equal [ 1, 2300, 2300 ], [ result.wordbook.min_number, result.wordbook.max_number, result.wordbook.words_count ]
+    assert_equal [ 1, 10, 10 ], [ result.wordbook.min_number, result.wordbook.max_number, result.wordbook.words_count ]
   end
 
   test "rejects a wrong header" do

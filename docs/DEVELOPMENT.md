@@ -15,6 +15,11 @@ make test       # bin/rails test + schedule-web の node --test
 - 詳細はルートの [README.md](../README.md)。`bin/rails test`、`bin/rails test:system`、`bin/rubocop`、`bin/brakeman --no-pager`。
 - 512MB 制限のため、PDF 全体を Ruby に載せない（ページ／チャンクごとに qpdf + 一時ファイル）。
 
+### 単語帳（小テスト用）
+- 市販の単語帳はリポジトリに置かない。`db:seed` は `WORDBOOK_SEED_PATH`（ローカルの CSV）か `WORDBOOK_SEED_URL`（非公開ストレージの https URL）から取り込み、どちらも無ければスキップする。名前は `WORDBOOK_SEED_NAME`（省略時「LEAP 改訂版」）。同名の単語帳があれば何もしない。
+- 開発では架空 10 語のサンプルで足りる: `WORDBOOK_SEED_PATH=db/seeds/sample_wordbook.csv bin/rails db:seed`。本物の CSV を手元に持っている場合はリポジトリ外に置いてそのパスを渡す（`db/seeds/` にコピーしない）。
+- 単語帳だけ入れ直すときは `bin/rails wordbook:seed`。テストは `db/seeds/sample_wordbook.csv` と fixture だけを使う。
+
 ## apps/schedule-web
 - 静的サイト。`make dev-web` は `python3 -m http.server -d apps/schedule-web/public`。
 - `package.json` は無く依存ゼロ。テストは Node 組み込み:
