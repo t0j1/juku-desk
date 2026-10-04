@@ -51,7 +51,7 @@ Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を�
 
 ## 6. CI / デプロイのモノレポ対応
 - `ci.yml` は変更パスで判定する。`apps/schedule-web/` 以外が変わったときだけ Rails のジョブ、`apps/schedule-web/`（と Makefile / .mise.toml / ci.yml）が変わったときだけ `schedule-web` ジョブ（`node --test`、pglite は一時インストール）が走る。スキップされたジョブは必須チェックでも成功扱い。
-- `deploy.yml` は、直近のコミットの変更が `apps/schedule-web/`・`docs/`・`*.md`・`schedule-backup.yml` だけなら Render を叩かない（Free は再起動で数分止まるため）。
+- `deploy.yml` は、直近に成功した Deploy 実行の `head_sha` から今回までの差分が `apps/schedule-web/`・`docs/`・`*.md` だけなら Render を叩かない。起点が取れないときは必ずデプロイする（Free は再起動で数分止まるため）。
 - Rails 側の secrets: `RENDER_DEPLOY_HOOK_URL`（上記 3）。
 
 ## 7. schedule-web（Cloudflare Pages + Supabase。現行のまま）
@@ -60,14 +60,14 @@ Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を�
 - Production branch: `main`、Branch control の確認は `apps/schedule-web/README.md` の「B. Cloudflare Pages の設定を確認する」
 - `keepalive-worker` は `cd apps/schedule-web/keepalive-worker && npx wrangler deploy`（手元から。秘密は `wrangler secret put`）
 
-### 週次バックアップ（`.github/workflows/schedule-backup.yml`）
-毎週日曜 23:00 JST に Supabase の予定を CSV/JSON にして `backup` ブランチへ push する。
-- Repository secrets に `SUPABASE_URL` と `SUPABASE_ANON_KEY`（anon のみ。service_role は入れない）を登録するまでは、通知を出して何もしない。
-- 旧リポジトリの同名ワークフローが動いている間に登録すると、バックアップが二重に取られる。切替時に旧側を止めること。
-- `backups/*.csv` は `backup` ブランチにだけ置く（main に入れない）。
+### 週次バックアップ（旧リポジトリで継続）
+`apps/schedule-web/.github/workflows/backup.yml` は、このリポジトリでは動かない位置にある（GitHub はルートの `.github/workflows` しか読まない）。**意図的にそのままにしている。**
+- バックアップは Supabase の予約・生徒関連データを CSV にして `backup` ブランチへ push する。このリポジトリは **public**、旧 sekigaku-schedule は **private**。ここに移すと個人情報が公開される。
+- よって、バックアップは旧 private リポジトリで動かし続ける。このリポジトリに `SUPABASE_URL` / `SUPABASE_ANON_KEY` を登録しない。
+- `backups/*.csv` を public リポジトリの Git に入れない。移すなら push 先を private にするか、暗号化した成果物にすること。
 
 ## トラブルシューティング
-- **Rails を変えていないのに Render が再デプロイされた**: `deploy.yml` の判定は直近 1 コミット（`HEAD^..HEAD`）の差分。複数コミットを 1 回で push すると最後のコミットしか見ない点に注意。
+- **Rails を変えていないのに Render が再デプロイされた**: `deploy.yml` は前回成功した Deploy 実行からの差分で判定する。前回の実行履歴が取れないとき（初回など）は安全側でデプロイする。
 - **schedule-web だけ変えたのに Rails の CI が走る**: 同じ PR で Rails 側や `ci.yml` 以外のルートのファイルも変えていないか確認する。
 - **schedule-web のテストが `import` で落ちる**: Node 24 が必要（`mise install`）。pglite 系は `npm i --no-save @electric-sql/pglite` を `apps/schedule-web` で実行してから。
-- **バックアップが何もしない**: secrets 未登録。Actions のログに notice が出る。
+- **バックアップが動かない**: 旧 private リポジトリ側の Actions を確認する（このリポジトリでは動かさない）。

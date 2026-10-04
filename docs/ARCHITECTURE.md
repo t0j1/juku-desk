@@ -8,7 +8,7 @@ juku-desk モノレポの構成（段階A時点・PR #31）。2つのアプリ�
 juku-desk/                      ← Rails 本体（ルートのまま・移動しない）
 ├─ app/ config/ db/ test/ …     Rails 8（Solid Cache/Queue/Cable）
 ├─ Dockerfile                   Render デプロイ用
-├─ .github/workflows/           ci.yml / deploy.yml / schedule-backup.yml
+├─ .github/workflows/           ci.yml / deploy.yml
 ├─ Makefile                     make setup / dev / test（両アプリの共通入口）
 ├─ .mise.toml                   Ruby + Node 24
 ├─ docs/                        DEPLOYMENT.md, DEVELOPMENT.md, MIGRATION_PLAN.md, ARCHITECTURE.md（本書）
@@ -17,7 +17,8 @@ juku-desk/                      ← Rails 本体（ルートのまま・移動�
       ├─ public/                静的サイト（index / admin / pickup / pickup-respond）
       ├─ supabase/              schema.sql, pickup.sql, absence.sql, functions/pickup-api
       ├─ keepalive-worker/      Cloudflare Worker（Supabase 自動停止防止）
-      └─ scripts/               backup.mjs ほか + *.test.mjs（package.json なし・依存ゼロ）
+      ├─ scripts/               backup.mjs ほか + *.test.mjs（package.json なし・依存ゼロ）
+      └─ .github/workflows/backup.yml   ⚠ この位置では動かない（意図的。旧 private リポジトリで稼働）
 ```
 
 ## 2. 実行時の構成図
@@ -49,6 +50,9 @@ flowchart LR
   subgraph GH["GitHub t0j1/juku-desk"]
     CI["ci.yml"]
     Deploy["deploy.yml<br>CI成功後 Deploy Hook"]
+  end
+
+  subgraph Old["GitHub t0j1/sekigaku-schedule（private・旧リポジトリ）"]
     Backup["backup.yml<br>毎週日 23:00 JST"]
   end
 
@@ -77,5 +81,5 @@ flowchart LR
 - `backups/*.csv` は `backup` ブランチのみ。main には入れない。
 
 ## 4. 段階Bで図が変わる点
-- `backup.yml` は `.github/workflows/schedule-backup.yml` としてルートへ移動済み（Supabase の secrets をこのリポジトリに登録するまでは何もしない）。
+- `backup.yml` は移動しない。このリポジトリは public で、バックアップは個人情報を含むため、private の旧リポジトリで動かし続ける（図の GH 枠の Backup は旧リポジトリ側）。
 - `ci.yml` にパスフィルタ付きで schedule-web の `*.test.mjs` を追加。
