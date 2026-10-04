@@ -1,6 +1,14 @@
 <% content_for :title, "問題のレビュー" %>
 <div class="flex flex-wrap items-center gap-3 mb-6">
   <h1 class="font-bold text-[22px] mr-auto">問題のレビュー</h1>
+  <% if @approved_count.positive? %>
+    <%= link_to "小テストを作成", new_marking_test_path(subject: @subject), id: "new-test-link", class: "btn-primary" %>
+  <% else %>
+    <span class="inline-flex flex-col items-end">
+      <button type="button" id="new-test-link" class="btn-primary opacity-50 !cursor-not-allowed" disabled aria-describedby="no-approved-note">小テストを作成</button>
+      <span id="no-approved-note" class="mt-1 text-xs text-ink-sub">承認済みの問題がありません</span>
+    </span>
+  <% end %>
   <%= link_to "取り込み済みの画像", uploads_path, class: "btn-secondary" %>
 </div>
 <% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
@@ -33,15 +41,25 @@
   </div>
 <% end %>
 
+<div data-controller="image-zoom bulk-select">
+<% if current_user.can_write? %>
+  <%= form_with url: bulk_approve_questions_path, method: :post, id: "bulk-approve-form" do %>
+    <div class="mb-3 flex items-center gap-3 text-sm">
+      <%= button_tag type: "submit", id: "bulk-approve", class: "btn-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed", data: { bulk_select_target: "button" } do %>選択した問題を承認（<span data-bulk-select-target="count">0</span> 件）<% end %>
+      <span class="text-ink-sub">承認できるのは、科目・問題文・解答がそろった未承認の問題です。</span>
+    </div>
+  <% end %>
+<% end %>
 <table id="questions" class="table-console">
-  <thead><tr><th>切り出し</th><th>科目</th><th>問題</th><th>解答</th><th>タグ</th><th>状態</th><th></th></tr></thead>
+  <thead><tr><th><% if current_user.can_write? %><input type="checkbox" id="select-all" aria-label="承認できる問題をすべて選ぶ" data-bulk-select-target="all" data-action="bulk-select#toggleAll"><% end %></th><th>切り出し</th><th>科目</th><th>問題</th><th>解答</th><th>タグ</th><th>状態</th><th></th></tr></thead>
   <tbody>
     <% @questions.each do |q| %>
       <tr id="question_<%= q.id %>" data-needs-confirmation="<%= q.needs_confirmation? %>">
-        <td><img src="<%= image_crop_region_path(q.region) %>" alt="問題 <%= q.id %> の切り出し" loading="lazy" class="w-28 max-h-20 object-contain rounded"></td>
+        <td><% if current_user.can_write? && !q.approved? && q.approvable? %><input type="checkbox" name="question_ids[]" value="<%= q.id %>" form="bulk-approve-form" aria-label="問題 <%= q.id %> を選ぶ" data-bulk-select-target="item" data-action="bulk-select#update"><% end %></td>
+        <td><button type="button" class="block cursor-zoom-in" title="クリックで拡大" data-action="image-zoom#open" data-image-zoom-src="<%= image_crop_region_path(q.region) %>"><img src="<%= image_crop_region_path(q.region) %>" alt="問題 <%= q.id %> の切り出し" loading="lazy" class="w-28 max-h-20 object-contain rounded"></button></td>
         <td><%= q.subject || tag.span("要確認", class: "font-bold text-ng") %></td>
         <td class="max-w-[360px]"><% if q.source_label.present? %><span class="font-bold mr-1"><%= q.source_label %></span><% end %><%= truncate(q.question_text, length: 80) %></td>
-        <td class="max-w-[160px]"><%= truncate(q.answer_text, length: 40) %></td>
+        <td class="max-w-[160px]"><% if q.source_label.present? %><span class="font-bold mr-1" data-answer-label><%= q.source_label %></span><% end %><%= truncate(q.answer_text, length: 40) %></td>
         <td class="text-sm"><%= q.tags.join("・") %></td>
         <td><%= q.approved? ? status_pill("承認済み", :ok) : status_pill("未承認", :neutral) %></td>
         <td class="flex items-center gap-2">
@@ -56,6 +74,11 @@
         </td>
       </tr>
     <% end %>
-    <% if @questions.empty? %><tr><td colspan="7" class="text-center text-ink-sub">レビューする問題はありません</td></tr><% end %>
+    <% if @questions.empty? %><tr><td colspan="8" class="text-center text-ink-sub">レビューする問題はありません</td></tr><% end %>
   </tbody>
 </table>
+<dialog id="image-zoom" class="m-auto max-w-[95vw] max-h-[95vh] rounded-xl p-0 backdrop:bg-black/60" data-image-zoom-target="dialog" data-action="click->image-zoom#backdrop">
+  <div class="flex justify-end p-2"><button type="button" class="btn-secondary" data-action="image-zoom#close">閉じる</button></div>
+  <img src="" alt="" class="block max-w-[90vw] max-h-[85vh] h-auto object-contain px-4 pb-4" data-image-zoom-target="image">
+</dialog>
+</div>

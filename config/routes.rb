@@ -49,7 +49,10 @@ Rails.application.routes.draw do
     member do
       post :approve
       post :unapprove
+      post :split
+      post :restructure
     end
+    post :bulk_approve, on: :collection
   end
   resources :marking_tests, path: "marking/tests", only: %i[ index new create show ] do
     get :print, on: :member

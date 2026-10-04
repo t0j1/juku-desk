@@ -152,4 +152,70 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to upload_path(upload)
     assert_match(/GEMINI_API_KEY/, flash[:alert])
   end
+
+  test "save and approve: approves after saving, or saves only and stays on edit when it cannot be approved" do
+    q = make_question
+    patch question_path(q), params: { approve: "1", question: { question_text: "直した問題" } }
+    assert_redirected_to questions_path
+    assert q.reload.approved?
+    assert_equal "直した問題", q.question_text
+
+    patch question_path(q), params: { approve: "1", question: { subject: "" } }
+    assert_redirected_to edit_question_path(q)
+    assert_not q.reload.approved?
+  end
+
+  test "bulk approve approves only the selected approvable, unapproved questions" do
+    a = make_question
+    b = make_question
+    c = make_question(subject: nil, status: :needs_review)
+    d = make_question
+    post bulk_approve_questions_path, params: { question_ids: [ a.id, b.id, c.id ] }
+    assert_redirected_to questions_path
+    assert_equal [ a.id, b.id ].sort, Question.approved.ids.sort
+    assert_match(/2 件を承認しました。（1 件は/, flash[:notice])
+    assert_not d.reload.approved?
+  end
+
+  test "viewer cannot bulk approve, split or restructure" do
+    q = make_question
+    sign_in_as users(:viewer)
+    post bulk_approve_questions_path, params: { question_ids: [ q.id ] }
+    assert_response :forbidden
+    post split_question_path(q)
+    assert_response :forbidden
+    post restructure_question_path(q)
+    assert_response :forbidden
+  end
+
+  test "split divides a merged question at 〔n〕 into questions on the same region; unsplittable ones are left for manual editing" do
+    q = make_question(question_text: "〔12〕A を答えよ〔13〕B を答えよ", answer_text: "〔12〕a〔13〕b", explanation: "〔12〕x〔13〕y", tags: %w[漢字])
+    q.approve!(users(:staff))
+    post split_question_path(q)
+    assert_redirected_to questions_path
+    rows = q.region.questions.order(:id).map { |x| [ x.source_label, x.question_text, x.answer_text, x.explanation, x.tags, x.approved? ] }
+    assert_equal [ [ "〔12〕", "A を答えよ", "a", "x", %w[漢字], false ], [ "〔13〕", "B を答えよ", "b", "y", %w[漢字], false ] ], rows
+
+    single = make_question(question_text: "1 問だけ", answer_text: "a")
+    post split_question_path(single)
+    assert_redirected_to edit_question_path(single)
+    assert_match(/手で直して/, flash[:alert])
+    assert_equal 1, single.region.questions.count
+  end
+
+  test "restructure re-queues only this question's region" do
+    q = make_question
+    other = make_question
+    with_gemini(gemini_questions_json({ "source_label" => "〔12〕" }, { "source_label" => "〔13〕" }, { "source_label" => "〔14〕" }))
+    assert_enqueued_jobs 1, only: Marking::ExtractJob do
+      post restructure_question_path(q)
+    end
+    assert_redirected_to upload_path(q.region.upload_id)
+    assert q.region.reload.queued?
+    assert other.region.reload.extracted?
+
+    perform_enqueued_jobs(only: Marking::ExtractJob)
+    assert_equal %w[〔12〕 〔13〕 〔14〕], q.region.questions.order(:id).pluck(:source_label)
+    assert_raises(ActiveRecord::RecordNotFound) { q.reload }
+  end
 end
