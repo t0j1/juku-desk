@@ -53,6 +53,16 @@ module PdfStorage
       nil
     end
 
+    Entry = Struct.new(:key, :last_modified, keyword_init: true)
+
+    # prefix 以下のオブジェクトを順に渡す（ページごとに取得するので、全件をメモリに載せない）
+    def each_object(prefix:, &block)
+      return enum_for(:each_object, prefix:) unless block
+      client.list_objects_v2(bucket:, prefix:).each_page do |page|
+        page.contents.each { |o| block.call(Entry.new(key: o.key, last_modified: o.last_modified)) }
+      end
+    end
+
     # 期待するサイズとチェックサムと一致するか照合する。違えば ChecksumMismatch。
     # head でチェックサムが返らないときは、ストリーミングで読み直して求める（R2 は転送料がかからない）
     def verify!(key, size:, checksum:)

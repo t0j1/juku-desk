@@ -18,6 +18,8 @@ shared:
     max_original_mb: 30
     max_outputs_mb_per_job: 40
     max_total_mb: 150
+    orphan_min_age_hours: 24     # DB に行が無い R2 オブジェクトを孤児として消すまでの猶予
+    orphan_sweep_limit: <%= ENV.fetch("PDF_ORPHAN_SWEEP_LIMIT", 100) %>   # 1 回の掃除で消す件数の上限
   naming:
     template: "{prefix}{round}_{kind}{suffix}"
     prefix: ""

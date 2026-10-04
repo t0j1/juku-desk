@@ -49,6 +49,8 @@ R2_BUCKET            = バケット名
 **切り替えの手順（人間）**
 1. R2 でバケットを作り、**そのバケットだけ**に書ける API トークンを作る。
 2. （任意）バケットのライフサイクルルールで、オブジェクトを 8 日で自動削除にしておく。アプリは 7 日で消すが、失敗したときの取りこぼしの保険になる。
+アップロードは「R2 への PUT → 照合 → DB に確定」の順で、PUT は DB のトランザクションの外で行う。DB の処理が失敗したら、PUT 済みのオブジェクトをその場で消す。それでも消せなかったものや、途中で落ちて行が無いまま残ったオブジェクトは、`PdfSplitter::CleanupJob` が `pdf/` 以下を調べ、作成から 24 時間以上たち、DB に行が無いものを削除する（猶予は `retention.orphan_min_age_hours`、1 回に消す件数の上限は環境変数 `PDF_ORPHAN_SWEEP_LIMIT`＝既定 100。人間の作業は不要）。
+
 3. Render に上の環境変数を登録して再デプロイする（`PDF_STORAGE` はまだ `db` のままでよい。migration はコンテナ起動時に自動で流れる）。
 4. Render の Shell で既存データを移す: `bin/rails pdf_blobs:migrate_to_r2`。1 件ずつ処理し、R2 のサイズとチェックサムを照合する。1 件でも一致しなければそこで止まる。止まっても、同じコマンドをもう一度実行すれば続きから進む（`LIMIT=5` で件数を絞って試せる）。DB のコピーは消えない。
 5. `PDF_STORAGE=r2` に切り替えて再デプロイし、アップロード・分割・ダウンロード・印刷が動くか確認する。
@@ -126,7 +128,7 @@ Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が
 
 - **本番では `R2_*` の設定が必須**（`PDF_STORAGE` が `db` のままでも、画像だけは R2 を使う）。`R2_BUCKET` が無いと、本番では取り込み時にエラーになる（Render Free のディスクは消えるため、ローカルには置かない）。開発・テストは `storage/marking`（`MARKING_DISK_PATH` で変更可）。
 - 画像のデコードはブラウザで行う。サーバーは大きな画像をデコードしない。
-- 設定値は環境変数（すべて任意。未設定なら既定値）。しきい値: `MARKING_MIN_AREA_RATIO`（0.005）、`MARKING_MAX_AREA_RATIO`（0.9）、`MARKING_MAX_ASPECT_RATIO`（20）、`MARKING_MAX_FILL_RATIO`（0.95）、`MARKING_IOU_THRESHOLD`（0.5）、`MARKING_TILT_THRESHOLD`（0.5）、`MARKING_MERGE_GAP`（12）、`MARKING_MIN_SATURATION`（70）、`MARKING_MIN_VALUE`（50）、`MARKING_HUE_LOW`（10）、`MARKING_HUE_HIGH`（170）、`MARKING_CLOSE_KERNEL` / `_ITERATIONS`（5 / 2）、`MARKING_OPEN_KERNEL` / `_ITERATIONS`（3 / 1）。縮小・上限: `MARKING_MAX_LONG_SIDE`（1600）、`MARKING_MAX_BYTES`（5242880）、`MARKING_MAX_REGIONS`（100）、`MARKING_CROP_PADDING`（8）、`MARKING_JPEG_QUALITY`（0.85）。
+- 設定値は環境変数（すべて任意。未設定なら既定値）。しきい値: `MARKING_MIN_AREA_RATIO`（0.005）、`MARKING_MAX_AREA_RATIO`（0.9）、`MARKING_MAX_ASPECT_RATIO`（20）、`MARKING_MAX_FILL_RATIO`（0.95）、`MARKING_IOU_THRESHOLD`（0.5）、`MARKING_TILT_THRESHOLD`（0.5）、`MARKING_MERGE_GAP`（12）、`MARKING_MIN_SATURATION`（70）、`MARKING_MIN_VALUE`（50）、`MARKING_HUE_LOW`（10）、`MARKING_HUE_HIGH`（170）、`MARKING_CLOSE_KERNEL` / `_ITERATIONS`（5 / 2）、`MARKING_OPEN_KERNEL` / `_ITERATIONS`（3 / 1）。縮小・上限: `MARKING_MAX_LONG_SIDE`（1600）、`MARKING_MAX_BYTES`（5242880）、`MARKING_MAX_REGIONS`（100）、`MARKING_CROP_PADDING`（4）、`MARKING_JPEG_QUALITY`（0.85）。
 - 同じ画像（sha256 が同じ）は取り込み直さず、既存の upload を返す。
 
 ### Gemini による構造化（マーキング検出 M-2）

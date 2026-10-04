@@ -28,22 +28,48 @@ class PdfBlob < ApplicationRecord
   # r2 モードでは R2 に置いて照合し、DB には data を入れない。db モードでは従来どおり data に入れる。
   def self.store!(kind:, pdf_split_job:, expires_at:, pdf_split_output: nil, data: nil, path: nil)
     raise ArgumentError, "data か path のどちらかを渡してください" if data.nil? == path.nil?
-    attrs = { kind:, pdf_split_job:, pdf_split_output:, expires_at: }
 
     if PdfStorage.r2?
-      key = "pdf/job-#{pdf_split_job.id}/#{kind}-#{SecureRandom.hex(12)}.pdf"
-      result = path ? PdfStorage.r2.put_file(key, path) : PdfStorage.r2.put_string(key, data)
+      staged = stage!(kind:, prefix: "pdf/job-#{pdf_split_job.id}", data:, path:)
       begin
-        PdfStorage.r2.verify!(key, size: result.size, checksum: result.checksum)
-        create!(**attrs, r2_key: key, checksum: result.checksum, byte_size: result.size, r2_migrated_at: Time.current)
+        attach_staged!(staged, kind:, pdf_split_job:, pdf_split_output:, expires_at:)
       rescue Exception # rubocop:disable Lint/RescueException -- 孤児オブジェクトを残さないため、何が起きても消してから投げ直す
-        PdfStorage.r2.delete(key) rescue nil
+        discard_staged(staged)
         raise
       end
     else
       data ||= File.binread(path)
-      create!(**attrs, data:, byte_size: data.bytesize)
+      create!(kind:, pdf_split_job:, pdf_split_output:, expires_at:, data:, byte_size: data.bytesize)
     end
+  end
+
+  Staged = Struct.new(:key, :size, :checksum, keyword_init: true)
+
+  # R2 へのアップロードだけを先に済ませる（DB のトランザクションの外で呼ぶ）。送って照合し、失敗したら消してから投げ直す。
+  # 呼び出し側は、続けて attach_staged! で行を作る。DB の処理が失敗したら discard_staged で R2 のオブジェクトを消すこと。
+  def self.stage!(kind:, data: nil, path: nil, prefix: "pdf/staged")
+    raise ArgumentError, "data か path のどちらかを渡してください" if data.nil? == path.nil?
+
+    key = "#{prefix}/#{kind}-#{SecureRandom.hex(12)}.pdf"
+    begin
+      result = path ? PdfStorage.r2.put_file(key, path) : PdfStorage.r2.put_string(key, data)
+      PdfStorage.r2.verify!(key, size: result.size, checksum: result.checksum)
+      Staged.new(key:, size: result.size, checksum: result.checksum)
+    rescue Exception # rubocop:disable Lint/RescueException -- 孤児オブジェクトを残さない
+      discard_staged(Staged.new(key:))
+      raise
+    end
+  end
+
+  def self.attach_staged!(staged, kind:, pdf_split_job:, expires_at:, pdf_split_output: nil)
+    create!(kind:, pdf_split_job:, pdf_split_output:, expires_at:, r2_key: staged.key, checksum: staged.checksum,
+            byte_size: staged.size, r2_migrated_at: Time.current)
+  end
+
+  def self.discard_staged(staged)
+    PdfStorage.r2.delete(staged.key)
+  rescue StandardError => e
+    Rails.logger.warn("PdfBlob: R2 のオブジェクトを消せませんでした（#{staged.key}: #{e.message}）。次回の掃除で消えます")
   end
 
   # 行と、R2 上のオブジェクトをまとめて消す。R2 を先に消す（失敗したら行を残して次回やり直せる）。

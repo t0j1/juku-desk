@@ -7,7 +7,9 @@ class MarkingTestsController < ApplicationController
   end
 
   def new
-    @builder = Marking::TestBuilder.new
+    # 問題のレビューから来たときは、絞り込み中の科目を初期値にする
+    subject = params[:subject] if Question::SUBJECTS.include?(params[:subject])
+    @builder = Marking::TestBuilder.new(subject: subject)
     @approved_count = Question.approved.count
   end
 

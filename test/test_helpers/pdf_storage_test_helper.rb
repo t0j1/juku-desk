@@ -9,6 +9,7 @@ class FakeR2
     @objects = {}
     @puts = []
     @deletes = []
+    @modified = {}
     @corrupt_puts = false
   end
 
@@ -41,6 +42,14 @@ class FakeR2
   end
 
   def read(key) = @objects.fetch(key)
+
+  # テスト用：オブジェクトの作成時刻を変える（既定は今）
+  def age!(key, time) = (@modified[key] = time)
+
+  def each_object(prefix:)
+    return enum_for(:each_object, prefix:) unless block_given?
+    @objects.keys.sort.select { |k| k.start_with?(prefix) }.each { |k| yield PdfStorage::R2::Entry.new(key: k, last_modified: @modified[k] || Time.current) }
+  end
 
   def delete(keys)
     Array(keys).each { |k| @objects.delete(k); @deletes << k }

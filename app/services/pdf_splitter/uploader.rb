@@ -32,12 +32,7 @@ module PdfSplitter
         return fail!("ページ数が多すぎます（上限 #{@limits[:max_pages]}ページ）。") if pages > @limits[:max_pages].to_i
         return fail!("ページがありません。") if pages < 1
 
-        PdfSplitJob.transaction do
-          j = @user.pdf_split_jobs.create!(original_filename: File.basename(file.original_filename.to_s).presence || "upload.pdf",
-                                           page_count: pages)
-          PdfBlob.store!(kind: "original", pdf_split_job: j, path:, expires_at: @retention[:days].to_i.days.from_now)
-          j
-        end
+        save_job(file, path, pages)
       end
       Result.new(job:)
     rescue InvalidPdf
@@ -45,6 +40,28 @@ module PdfSplitter
     end
 
     private
+      # R2 へのアップロードを先に済ませ、成功してから DB に確定する（トランザクションの中で外部への PUT をしない）。
+      # DB の処理が失敗したら、R2 のオブジェクトを消す。
+      def save_job(file, path, pages)
+        expires_at = @retention[:days].to_i.days.from_now
+        staged = PdfBlob.stage!(kind: "original", path:) if PdfStorage.r2?
+        begin
+          PdfSplitJob.transaction do
+            j = @user.pdf_split_jobs.create!(original_filename: File.basename(file.original_filename.to_s).presence || "upload.pdf",
+                                             page_count: pages)
+            if staged
+              PdfBlob.attach_staged!(staged, kind: "original", pdf_split_job: j, expires_at:)
+            else
+              PdfBlob.store!(kind: "original", pdf_split_job: j, path:, expires_at:)
+            end
+            j
+          end
+        rescue Exception # rubocop:disable Lint/RescueException -- 孤児オブジェクトを残さないため、何が起きても消してから投げ直す
+          PdfBlob.discard_staged(staged) if staged
+          raise
+        end
+      end
+
       def max_mb = [ @limits[:max_file_mb].to_i, @retention[:max_original_mb].to_i ].min
       def fail!(message) = Result.new(error: message)
   end

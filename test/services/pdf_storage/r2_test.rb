@@ -19,6 +19,19 @@ class PdfStorage::R2Test < ActiveSupport::TestCase
     assert_equal [ Digest::SHA256.digest(PDF_BYTES) ].pack("m0"), req[:params][:checksum_sha256]
   end
 
+  test "each_object lists keys under a prefix across pages" do
+    client = Aws::S3::Client.new(stub_responses: true, region: "auto")
+    t = Time.utc(2026, 10, 1)
+    client.stub_responses(:list_objects_v2, [
+      { contents: [ { key: "pdf/a.pdf", last_modified: t } ], is_truncated: true, next_continuation_token: "t" },
+      { contents: [ { key: "pdf/b.pdf", last_modified: t + 1 } ], is_truncated: false }
+    ])
+    entries = r2(client).each_object(prefix: "pdf/").to_a
+    assert_equal %w[pdf/a.pdf pdf/b.pdf], entries.map(&:key)
+    assert_equal t, entries.first.last_modified
+    assert_equal "pdf/", client.api_requests.first[:params][:prefix]
+  end
+
   test "verify! passes when size and checksum match and fails otherwise" do
     sha = Digest::SHA256.hexdigest(PDF_BYTES)
     client = Aws::S3::Client.new(stub_responses: true, region: "auto")

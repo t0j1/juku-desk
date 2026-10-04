@@ -4,6 +4,7 @@
   <style>
     @page { size: A4 portrait; margin: 15mm; @bottom-center { content: counter(page) " / " counter(pages); font-family: var(--marking-font); font-size: 9pt; } }
   </style>
+  <%= stylesheet_link_tag "katex/katex" %>
 <% end %>
 <div data-controller="page-print" class="marking-print">
   <div class="flex flex-wrap items-center gap-3 mb-6 print:hidden">
@@ -12,7 +13,7 @@
     <%= link_to "戻る", marking_test_path(@test), class: "btn-secondary" %>
     <span class="text-sm text-ink-sub">印刷ダイアログで「PDF として保存」もできます。</span>
   </div>
-  <article class="mt-sheet">
+  <article class="mt-sheet" data-controller="math">
     <header class="mt-head">
       <div class="mt-title"><%= @test.title %><span class="mt-kind"><%= @kind == :answer ? "【解答】" : "" %></span></div>
       <div class="mt-meta">

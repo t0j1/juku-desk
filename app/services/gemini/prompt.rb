@@ -31,6 +31,7 @@ module Gemini
       - explanation: 解説。無ければ空文字
       - tags: 単元や分野のタグ（1 件以上）。読み取れなければ ["要確認"]
       - confidence: 読み取りと構造化への自信（0〜1）
+      数式は、question_text・options・answer_text・explanation のすべてで、LaTeX を $...$（文章の中）か $$...$$（独立した行）で囲んで書いてください（例：$\\sin x = -\\frac{1}{2}$、$\\sqrt{3}/2$ は $\\frac{\\sqrt{3}}{2}$）。日本語の文章は LaTeX にせず、数式の部分だけを囲みます。数式でない $ は使わないでください。
       画像に書かれていない問題の内容を作り足さないでください。
     PROMPT
 
