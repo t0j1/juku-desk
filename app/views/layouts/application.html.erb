@@ -24,7 +24,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-screen bg-gradient-to-b from-console-bg-from to-console-bg-to text-ink font-sans text-[15px]">
+  <body class="min-h-screen bg-bg print:bg-white text-text font-sans text-lg">
     <% if authenticated? %>
       <% if impersonating? %>
         <%= render "shared/impersonation_banner" %>
@@ -34,14 +34,14 @@
         <%# 768px 未満：ヘッダーの ☰ でサイドバーを開閉する %>
         <header class="md:hidden flex items-center gap-3 print:hidden">
           <button type="button" id="sidebar-toggle" data-sidebar-target="button" data-action="sidebar#toggle" aria-controls="app-sidebar" aria-expanded="false"
-                  class="inline-flex items-center justify-center size-12 rounded-xl bg-white border border-line text-ink cursor-pointer" aria-label="メニューを開く">
+                  class="inline-flex items-center justify-center size-12 rounded-button bg-bg shadow-raise-sm text-text cursor-pointer" aria-label="メニューを開く">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
-          <span class="font-bold text-ink">塾日報ステーション</span>
+          <span class="font-bold text-text">塾日報ステーション</span>
         </header>
         <div data-sidebar-target="scrim" data-action="click->sidebar#close" class="hidden fixed inset-0 z-30 bg-black/40 md:hidden print:hidden" aria-hidden="true"></div>
         <%= render "shared/sidebar" %>
-        <main class="flex-1 min-w-0 bg-white rounded-[20px] shadow-card <%= content_for?(:embed) ? "flex flex-col min-h-0 overflow-hidden" : "p-4 md:p-6 lg:p-8" %> print:p-0 print:shadow-none print:rounded-none">
+        <main class="flex-1 min-w-0 flex flex-col <%= content_for?(:embed) ? "min-h-0 overflow-hidden rounded-card shadow-raise" : "gap-7" %> print:block print:p-0 print:shadow-none print:rounded-none">
           <%= render "shared/gemini_quota_banner" %>
           <%= render "shared/announcements" %>
           <%= render "shared/flash" %>
@@ -49,7 +49,7 @@
         </main>
       </div>
     <% else %>
-      <main class="mx-auto max-w-xl mt-16 bg-white rounded-[20px] shadow-card p-8">
+      <main class="card mx-auto max-w-xl mt-16">
         <%= render "shared/flash" %>
         <%= yield %>
       </main>

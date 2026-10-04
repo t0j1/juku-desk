@@ -9,7 +9,10 @@ export default class extends Controller {
   update() {
     const file = this.inputTarget.files[0]
     this.labelTarget.textContent = file ? file.name : this.labelTarget.dataset.empty
-    if (this.hasSubmitTarget) this.submitTarget.disabled = !file
+    if (this.hasSubmitTarget) {
+      this.submitTarget.disabled = !file
+      this.submitTarget.setAttribute("aria-disabled", String(!file))
+    }
   }
 
   dragover(e) { e.preventDefault(); this.element.dataset.dragging = "true" }

@@ -1,35 +1,37 @@
 <% content_for :title, "単語帳の登録" %>
-<div class="flex flex-wrap items-center gap-3 mb-6">
-  <h1 class="font-bold text-[22px] mr-auto">単語帳の登録</h1>
+<div class="flex flex-wrap items-center gap-3">
+  <h1 class="page-title mr-auto">単語帳の登録</h1>
   <%= link_to "マーキング問題から出題", new_marking_test_path, class: "btn-secondary" %>
 </div>
 <% if @errors.present? %>
-  <div class="mb-6 rounded-xl bg-ng-bg border border-ng p-4 text-sm text-ng" role="alert">
+  <div class="alert-err" role="alert">
     <ul class="space-y-1"><% @errors.each do |e| %><li class="font-bold">✕ <%= e %></li><% end %></ul>
   </div>
 <% end %>
-<%= form_with url: wordbooks_path, multipart: true, class: "mb-10 space-y-4 max-w-[480px]" do |f| %>
+<%= form_with url: wordbooks_path, multipart: true, class: "card space-y-5 max-w-[640px]" do |f| %>
   <div>
-    <%= label_tag :name, "単語帳の名前", class: "block text-sm text-ink-sub mb-1" %>
-    <%= text_field_tag :name, params[:name], required: true, class: "input !h-12 !text-base" %>
+    <%= label_tag :name, "単語帳の名前", class: "label" %>
+    <%= text_field_tag :name, params[:name], required: true, class: "input" %>
   </div>
   <div>
-    <%= label_tag :file, "CSV ファイル（ヘッダー No,単語,意味 / UTF-8）", class: "block text-sm text-ink-sub mb-1" %>
-    <%= file_field_tag :file, accept: ".csv,text/csv", required: true, class: "block text-sm" %>
+    <%= label_tag :file, "CSV ファイル（ヘッダー No,単語,意味 / UTF-8）", class: "label" %>
+    <%= file_field_tag :file, accept: ".csv,text/csv", required: true, class: "block text-lg text-text" %>
   </div>
-  <label class="flex items-center gap-2 text-sm">
-    <%= check_box_tag :overwrite, "1", params[:overwrite] == "1", class: "size-5" %>
+  <label class="flex items-center gap-2 min-h-11 text-lg">
+    <%= check_box_tag :overwrite, "1", params[:overwrite] == "1", class: "size-5 accent-primary" %>
     同じ番号を上書きする
   </label>
-  <%= f.button type: "submit", class: "btn-primary !h-12" do %><%= console_icon(:upload) %>取り込む<% end %>
+  <%= f.button type: "submit", class: "btn-primary" do %><%= console_icon(:upload) %>取り込む<% end %>
 <% end %>
-<h2 class="font-bold mb-3">登録済みの単語帳</h2>
-<table id="wordbooks" class="table-console max-w-[640px]">
+<div class="card max-w-[640px]">
+<h2 class="section-title mb-3">登録済みの単語帳</h2>
+<table id="wordbooks" class="table-console">
   <thead><tr><th>名前</th><th>収録</th><th>語数</th></tr></thead>
   <tbody>
     <% @wordbooks.each do |wb| %>
       <tr><td class="font-bold"><%= wb.name %></td><td class="tnum">No.<%= wb.min_number %>–<%= wb.max_number %></td><td class="tnum"><%= wb.words_count %></td></tr>
     <% end %>
-    <% if @wordbooks.empty? %><tr><td colspan="3" class="text-center text-ink-sub">まだ登録されていません</td></tr><% end %>
+    <% if @wordbooks.empty? %><tr><td colspan="3" class="text-center text-text-sub">まだ登録されていません</td></tr><% end %>
   </tbody>
 </table>
+</div>

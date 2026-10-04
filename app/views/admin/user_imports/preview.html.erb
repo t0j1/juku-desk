@@ -1,7 +1,7 @@
 <% content_for :title, "一括登録のプレビュー" %>
 <% valid = @rows.count(&:valid?) %>
-<h1 class="font-bold text-[22px] mb-4">一括登録のプレビュー</h1>
-<p id="import-summary" class="mb-4 text-sm"><%= @rows.size %>行中、取り込めるのは <b><%= valid %></b>行、エラーは <b><%= @rows.size - valid %></b>行です。エラーの行は取り込みません。</p>
+<h1 class="page-title mb-4">一括登録のプレビュー</h1>
+<p id="import-summary" class="mb-4 text-lg"><%= @rows.size %>行中、取り込めるのは <b><%= valid %></b>行、エラーは <b><%= @rows.size - valid %></b>行です。エラーの行は取り込みません。</p>
 <%= render "admin/user_imports/rows", rows: @rows %>
 <% if valid.positive? %>
   <%= form_with url: confirm_admin_user_import_path, class: "inline" do |f| %>
@@ -9,4 +9,4 @@
     <%= f.submit "#{valid}人を招待する", class: "btn-primary cursor-pointer" %>
   <% end %>
 <% end %>
-<%= link_to "やり直す", new_admin_user_import_path, class: "ml-4 text-sm underline" %>
+<%= link_to "やり直す", new_admin_user_import_path, class: "ml-4 text-lg underline" %>

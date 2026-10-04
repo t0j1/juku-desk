@@ -1,13 +1,14 @@
 <% content_for :title, "ユーザー管理" %>
 <div class="flex flex-wrap items-center gap-3 mb-6">
-  <h1 class="font-bold text-[22px] mr-auto">ユーザー管理</h1>
+  <h1 class="page-title mr-auto">ユーザー管理</h1>
   <%= link_to "ユーザーを招待", new_admin_user_path, class: "btn-primary" %>
   <%= link_to "CSVで一括登録", new_admin_user_import_path, class: "btn-secondary" %>
   <%= link_to "CSVで一括停止", new_admin_user_suspension_path, class: "btn-secondary" %>
   <%= link_to "CSV出力", admin_users_path(format: :csv), class: "btn-secondary" %>
 </div>
-<% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
-<% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
+<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
+<% if alert %><p id="alert" class="mb-4 text-lg font-bold text-err-fg"><%= alert %></p><% end %>
+<div class="overflow-x-auto">
 <table id="users" class="table-console">
   <thead>
     <tr><th>氏名</th><th>メールアドレス</th><th>権限</th><th>状態</th><th>2段階認証</th><th>操作</th></tr>
@@ -15,7 +16,7 @@
   <tbody>
     <% @users.each do |user| %>
       <tr id="user_<%= user.id %>">
-        <td class="font-bold"><%= user.name %></td>
+        <td class="font-bold whitespace-nowrap"><%= user.name %></td>
         <td><%= user.email_address %></td>
         <td>
           <% if user == current_user %>
@@ -39,7 +40,7 @@
           <% end %>
         </td>
         <td><%= user.otp_enabled? ? status_pill("有効", :ok) : (user.two_factor_required? ? status_pill("未設定（必須）", :ng) : status_pill("未設定", :neutral)) %></td>
-        <td class="flex items-center gap-2">
+        <td class="min-w-[22rem]"><div class="flex flex-wrap items-center gap-2">
           <% if user.invited? %>
             <%= button_to "招待を再送", resend_invitation_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
           <% end %>
@@ -57,8 +58,9 @@
           <% if (user.otp_enabled? || user.otp_setup_required?) && user != current_user %>
             <%= button_to "2FAをリセット", reset_two_factor_admin_user_path(user), method: :post, class: "btn-danger", data: { turbo_confirm: "#{user.name} の 2 段階認証をリセットします。この人は次のログインで再設定が必要になります。よろしいですか？" } %>
           <% end %>
-        </td>
+        </div></td>
       </tr>
     <% end %>
   </tbody>
 </table>
+</div>

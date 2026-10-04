@@ -21,8 +21,8 @@ module ConsoleHelper
   end
 
   def nav_item(label, path, icon, active:)
-    classes = "flex items-center gap-3 h-12 px-4 rounded-xl text-[15px] " +
-      (active ? "bg-white font-bold text-ink shadow-card" : "text-ink-sub hover:bg-white/60")
+    classes = "flex items-center gap-3 h-16 px-4 rounded-button text-lg " +
+      (active ? "bg-bg font-bold text-text shadow-inset" : "text-text-sub hover:text-text")
     link_to path, class: classes, aria: { current: (active ? "page" : nil) } do
       safe_join([ console_icon(icon), tag.span(label) ])
     end
@@ -43,6 +43,8 @@ module ConsoleHelper
     car: '<path d="M5 17h14M6 17l1.5-6.5A2 2 0 0 1 9.4 9h5.2a2 2 0 0 1 1.9 1.5L18 17"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>',
     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
+    devices: '<rect x="2" y="4" width="14" height="11" rx="2"/><path d="M8 19h2M18 9h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'
   }.freeze
 

@@ -1,22 +1,22 @@
 <% content_for :title, @student.name %>
-<h1 class="font-bold text-2xl mb-4"><%= @student.name %></h1>
-<dl class="grid grid-cols-[8rem_1fr] gap-2 bg-white border border-stone-200 p-4 max-w-xl text-sm">
-  <dt class="text-stone-500">学年</dt><dd><%= @student.grade %></dd>
-  <dt class="text-stone-500">入塾日</dt><dd><%= @student.enrolled_on && l(@student.enrolled_on) %></dd>
-  <dt class="text-stone-500">退塾日</dt><dd><%= @student.left_on && l(@student.left_on) %></dd>
-  <dt class="text-stone-500">通い曜日</dt>
-  <dd id="weekdays">
+<h1 class="page-title"><%= @student.name %></h1>
+<dl class="card grid grid-cols-[8rem_1fr] gap-x-4 gap-y-3 max-w-xl text-lg">
+  <dt class="text-text-sub font-bold">学年</dt><dd><%= @student.grade %></dd>
+  <dt class="text-text-sub font-bold">入塾日</dt><dd class="tnum"><%= @student.enrolled_on && l(@student.enrolled_on) %></dd>
+  <dt class="text-text-sub font-bold">退塾日</dt><dd class="tnum"><%= @student.left_on && l(@student.left_on) %></dd>
+  <dt class="text-text-sub font-bold">通い曜日</dt>
+  <dd id="weekdays" class="flex flex-wrap gap-3">
     <% @student.student_weekdays.each do |w| %>
-      <span class="inline-flex items-center gap-1 mr-2"><%= w.label %>
-        <%= button_to "×", student_student_weekday_path(@student, w), method: :delete, form_class: "inline", class: "text-stone-400", title: "#{w.label}曜日を外す" %></span>
+      <span class="inline-flex items-center gap-1"><%= w.label %>
+        <%= button_to "×", student_student_weekday_path(@student, w), method: :delete, form_class: "inline", class: "inline-flex items-center justify-center size-8 rounded-full bg-bg shadow-raise-sm text-text-sub cursor-pointer", title: "#{w.label}曜日を外す" %></span>
     <% end %>
   </dd>
-  <dt class="text-stone-500">メモ</dt><dd class="whitespace-pre-wrap"><%= @student.note %></dd>
+  <dt class="text-text-sub font-bold">メモ</dt><dd class="whitespace-pre-wrap"><%= @student.note %></dd>
 </dl>
-<div class="mt-4 flex gap-4 text-sm">
-  <%= link_to "編集", edit_student_path(@student), class: "underline" if current_user.can_write? %>
-  <%= link_to "一覧に戻る", students_path, class: "underline" %>
+<div class="flex flex-wrap items-center gap-4">
+  <%= link_to "編集", edit_student_path(@student), class: "btn-secondary" if current_user.can_write? %>
+  <%= link_to "一覧に戻る", students_path, class: "link" %>
   <% if current_user.system_admin? %>
-    <%= button_to "削除", @student, method: :delete, class: "text-red-700 underline", data: { turbo_confirm: "本当に削除しますか？退塾の場合は退塾日を設定してください。" } %>
+    <%= button_to "削除", @student, method: :delete, class: "btn-danger", data: { turbo_confirm: "本当に削除しますか？退塾の場合は退塾日を設定してください。" } %>
   <% end %>
 </div>

@@ -1,20 +1,22 @@
 <% content_for :title, "印刷" %>
-<div class="flex flex-wrap items-start gap-4 mb-1">
-  <h1 class="font-bold text-[22px]">印刷</h1>
+<div class="flex flex-wrap items-start gap-4">
+  <div>
+    <h1 class="page-title">印刷</h1>
+    <p class="caption mt-1">分割済みのファイルを新しい順に表示しています。</p>
+  </div>
   <% if current_user.system_admin? %>
-    <div id="print-link" class="ml-auto max-w-[480px] rounded-xl border border-line p-4 text-sm">
+    <div id="print-link" class="card ml-auto max-w-[480px] !p-5 text-lg">
       <p class="font-bold mb-1">共用iPad用の印刷リンク</p>
       <% if @print_link %>
-        <p class="text-ink-sub text-xs mb-2">ログインなしで、この一覧（塾全体）と印刷画面だけを開けます。</p>
-        <input type="text" readonly value="<%= kiosk_print_url(token: @print_link.token) %>" aria-label="印刷リンク" class="input h-9 text-xs mb-2" onclick="this.select()">
+        <p class="text-text-sub text-base mb-2">ログインなしで、この一覧（塾全体）と印刷画面だけを開けます。</p>
+        <input type="text" readonly value="<%= kiosk_print_url(token: @print_link.token) %>" aria-label="印刷リンク" class="input !h-10 text-base mb-3" onclick="this.select()">
       <% else %>
-        <p class="text-ink-sub text-xs mb-2">まだ発行されていません。</p>
+        <p class="text-text-sub text-base mb-3">まだ発行されていません。</p>
       <% end %>
-      <%= button_to (@print_link ? "印刷リンクを再発行" : "印刷リンクを発行"), reissue_print_link_path, class: "btn-secondary",
+      <%= button_to (@print_link ? "印刷リンクを再発行" : "印刷リンクを発行"), reissue_print_link_path, class: "btn-secondary btn-sm",
             data: (@print_link ? { turbo_confirm: "再発行すると、今の印刷リンクは使えなくなります。共用iPadでは新しいリンクを開き直してください。" } : {}) %>
     </div>
   <% end %>
 </div>
-<p class="text-ink-sub mb-6 text-[13px]">分割済みのファイルを新しい順に表示しています。</p>
 <%= render "shared/print_list", jobs: @jobs, query: @query, search_path: print_library_path,
            job_path: ->(job) { print_tools_pdf_splitter_job_path(job) } %>
