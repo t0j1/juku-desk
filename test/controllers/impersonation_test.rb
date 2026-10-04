@@ -77,17 +77,17 @@ class ImpersonationTest < ActionDispatch::IntegrationTest
     start_as_admin
     travel 31.minutes do
       get students_path
-      assert_response :success
+      assert_redirected_to admin_users_path
+      get admin_users_path
+      assert_response :success # 管理者に戻っている
       assert_select "#impersonation-banner", count: 0
       end_log = AuditLog.where(action: "impersonation_end").last
       assert_equal "expired", end_log.metadata["via"]
-      get admin_users_path
-      assert_response :success # 管理者に戻っている
     end
   end
 
   test "期限切れのあとのリクエストは実行されず、管理者に戻って管理画面へリダイレクトされる" do
-    student = students(:one) rescue Student.first
+    student = students(:taro)
     start_as_admin
     travel 31.minutes do
       assert_no_changes -> { student.reload.name } do
@@ -170,7 +170,8 @@ class ImpersonationTest < ActionDispatch::IntegrationTest
   test "代理ログイン中に管理者が停止されたら無効になる" do
     start_as_admin
     @admin.update_columns(status: User.statuses[:suspended])
-    get root_path
+    get students_path
+    follow_redirect!
     assert_redirected_to new_session_path
   end
 
