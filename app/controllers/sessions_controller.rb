@@ -35,6 +35,10 @@ class SessionsController < ApplicationController
   end
 
   def destroy
+    if impersonating?
+      # 代理ログイン中のログアウト：代理ログインを終わらせてから、管理者本人の Session も閉じる
+      end_impersonation!(Current.session, via: "logout")
+    end
     AuditLog.record!(:logout, Current.user)
     terminate_session
     redirect_to new_session_path, status: :see_other

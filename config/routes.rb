@@ -3,6 +3,7 @@ Rails.application.routes.draw do
   resources :invitations, param: :token, only: %i[ edit update ]
   resources :passwords, param: :token, only: %i[ new create edit update ]
 
+  resource :impersonation, only: :destroy
   resource :two_factor, only: %i[ show new create destroy ]
   resource :two_factor_challenge, only: %i[ new create ]
 
@@ -17,6 +18,7 @@ Rails.application.routes.draw do
       post :activate, on: :member
       post :resend_invitation, on: :member
       post :reset_two_factor, on: :member
+      resource :impersonation, only: %i[ new create ]
     end
     resources :login_events, only: :index
     resource :user_import, only: %i[ new create ] do

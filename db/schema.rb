@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -23,8 +23,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_120000) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "impersonator_id"
     t.index ["auditable_type", "auditable_id"], name: "index_audit_logs_on_auditable_type_and_auditable_id"
     t.index ["created_at"], name: "index_audit_logs_on_created_at"
+    t.index ["impersonator_id"], name: "index_audit_logs_on_impersonator_id"
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
   end
 
@@ -139,6 +141,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_120000) do
     t.string "user_agent"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "impersonator_id"
+    t.text "impersonation_reason"
+    t.datetime "impersonation_expires_at"
+    t.bigint "origin_session_id"
+    t.index ["impersonator_id"], name: "index_sessions_on_impersonator_id"
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
@@ -200,6 +207,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_120000) do
   end
 
   add_foreign_key "audit_logs", "users"
+  add_foreign_key "audit_logs", "users", column: "impersonator_id"
   add_foreign_key "login_events", "users", on_delete: :nullify
   add_foreign_key "password_histories", "users"
   add_foreign_key "pdf_blobs", "pdf_split_jobs", on_delete: :cascade
@@ -210,6 +218,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_120000) do
   add_foreign_key "print_links", "users", column: "created_by_id"
   add_foreign_key "recovery_codes", "users"
   add_foreign_key "sessions", "users"
+  add_foreign_key "sessions", "users", column: "impersonator_id", on_delete: :cascade
   add_foreign_key "student_weekdays", "students"
   add_foreign_key "words", "wordbooks"
 end
