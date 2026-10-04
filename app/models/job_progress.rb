@@ -21,6 +21,15 @@ class JobProgress < ApplicationRecord
     progress
   end
 
+  # ワーカーごと落ちると run の rescue が走らず running のまま残る。進捗は数秒おきに updated_at が進むので、
+  # しばらく止まったものは failed に倒す（モーダルが「処理中」のまま永久に残らないように）
+  STALE_AFTER = 3.minutes
+
+  def fail_if_stale!
+    return unless running? && updated_at < STALE_AFTER.ago
+    update!(status: :failed, finished_at: Time.current, message: "処理が途中で止まりました。もう一度お試しください。")
+  end
+
   def finished? = succeeded? || failed? || cancelled?
 
   def cancel_requested? = cancel_requested_at.present?
