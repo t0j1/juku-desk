@@ -12,7 +12,7 @@ module PdfSplitter
     def self.png_from_path(input, page, width: 160)
       Dir.mktmpdir do |dir|
         base = File.join(dir, "thumb")
-        _out, err, st = Open3.capture3("pdftoppm", "-png", "-singlefile", "-f", Integer(page).to_s, "-l", Integer(page).to_s,
+        _out, err, st = Open3.capture3(*PdfSplitter::NICE, "pdftoppm", "-png", "-singlefile", "-f", Integer(page).to_s, "-l", Integer(page).to_s,
                                        "-scale-to", Integer(width).to_s, input.to_s, base)
         raise Error, err.presence || "thumbnail failed" unless st.success? && File.exist?("#{base}.png")
         File.binread("#{base}.png")

@@ -17,15 +17,25 @@ module PdfSplitter
     end
 
     def self.pages_from_path(path, page_count)
+      texts = []
+      each_chunk(path, page_count) { |chunk, _first| texts.concat(chunk) }
+      texts
+    end
+
+    # CHUNK ページずつ (texts, 先頭ページ番号) を渡す。呼び出し側は受け取ったら捨ててよい（全ページを持たない）
+    def self.each_chunk(path, page_count)
       if page_count > PROBE_PAGES
         probe = extract(path, 1, PROBE_PAGES)
-        return probe + Array.new(page_count - PROBE_PAGES, "") if probe.all? { |t| t.strip.empty? }
+        if probe.all? { |t| t.strip.empty? }
+          (1..page_count).each_slice(CHUNK) { |c| yield Array.new(c.size, ""), c.first }
+          return
+        end
       end
-      (1..page_count).each_slice(CHUNK).flat_map { |chunk| extract(path, chunk.first, chunk.last) }
+      (1..page_count).each_slice(CHUNK) { |c| yield extract(path, c.first, c.last), c.first }
     end
 
     def self.extract(path, from, to)
-      out, _err, st = Open3.capture3("pdftotext", "-layout", "-enc", "UTF-8", "-f", from.to_s, "-l", to.to_s, path.to_s, "-")
+      out, _err, st = Open3.capture3(*PdfSplitter::NICE, "pdftotext", "-layout", "-enc", "UTF-8", "-f", from.to_s, "-l", to.to_s, path.to_s, "-")
       texts = st.success? ? out.force_encoding(Encoding::UTF_8).scrub("").split("\f", -1) : []
       Array.new(to - from + 1) { |i| texts[i].to_s }
     end

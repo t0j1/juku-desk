@@ -11,7 +11,7 @@ class PdfSplitJobOriginalFileTest < ActiveSupport::TestCase
     job.with_original_file { |path| assert_equal original, File.binread(path) }
   ensure
     PdfBlob.send(:remove_const, :CHUNK_BYTES)
-    PdfBlob.const_set(:CHUNK_BYTES, 8.megabytes)
+    PdfBlob.const_set(:CHUNK_BYTES, 1.megabyte)
   end
 
   test "SplitJob reads the original once for all outputs" do

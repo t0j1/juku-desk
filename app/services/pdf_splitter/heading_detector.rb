@@ -1,5 +1,6 @@
 module PdfSplitter
   class HeadingDetector
+    HEAD_CHARS = 2000
     def initialize(config = PdfSplitter.config[:headings])
       @round   = Regexp.union(config[:round_patterns].map { |p| Regexp.new(p) })
       @answer  = Regexp.union(config[:answer_patterns].map { |p| Regexp.new(p) })
@@ -8,7 +9,9 @@ module PdfSplitter
 
     # => { round: "第1回", kind: "problem"|"answer"|nil, score: Float } / nil
     def detect(page_text)
-      head = normalize(page_text)[0, 200] # 見出しはページ上部に集中する
+      # 見出しはページ上部に集中する。ページ全体を NFKC にかけると、CPU が混んでいるとき
+      # Regexp.timeout（実時間）に引っかかって解析ごと失敗するので、先頭だけを正規化する
+      head = normalize(page_text.to_s[0, HEAD_CHARS])[0, 200]
       round = head[@round]
       return nil unless round
       {
