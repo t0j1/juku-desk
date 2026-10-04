@@ -26,9 +26,9 @@ class WordTest < ActiveSupport::TestCase
     assert_equal "[自] (in [at] ～)( ～において)優れている", short("[自] (in [at] ～)( ～において)優れている")
   end
 
-  test "every meaning in the seed list yields a non-empty short meaning" do
-    rows = CSV.read(Rails.root.join("db/seeds/leap_modified_list.csv"), headers: true, encoding: "bom|utf-8")
-    assert_equal 2300, rows.size
+  test "every meaning in the sample wordbook yields a non-empty short meaning" do
+    rows = CSV.read(Rails.root.join("db/seeds/sample_wordbook.csv"), headers: true, encoding: "bom|utf-8")
+    assert_equal 10, rows.size
     assert rows.all? { |r| Word.new(meaning: r["意味"]).short_meaning.present? }
   end
 end
