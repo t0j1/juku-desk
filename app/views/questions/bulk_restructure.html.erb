@@ -6,7 +6,11 @@
 <div id="bulk-restructure-confirm" class="card max-w-3xl text-lg">
   <p><strong><%= @region_count %> 件の画像</strong>（問題 <%= @question_count %> 問）を、今の形式（問題形式・数式の LaTeX）で構造化し直します。</p>
   <p class="mt-2">作り直すと、その画像の問題はすべて置き換わります。手で直した内容も消えます。Gemini には 1 件ずつ順番に送るので、終わるまで時間がかかります。1 日の上限に達したときは、残りは保留になり、翌日に自動で再開します。</p>
-  <p class="mt-2 text-text-sub">小テストで使っている問題がある画像は、対象に入っていません。</p>
+  <% if @excluded_count.positive? %>
+    <p id="excluded-for-exam" class="mt-2 font-bold"><%= @excluded_count %> 件は小テストで使用中のため除外しました（小テストで使っている問題がある画像は、対象に入りません）。</p>
+  <% else %>
+    <p class="mt-2 text-text-sub">小テストで使っている問題がある画像は、対象に入っていません。</p>
+  <% end %>
   <% if @approved_count.positive? %>
     <div id="approved-warning" role="alert" class="mt-4 rounded-xl border-2 border-err-fg bg-err-bg p-3 text-err-fg">
       <p class="font-bold">承認済みの問題が <%= @approved_count %> 問あります。再構造化すると承認が外れ、もう一度確認して承認するまで小テストに出題されません。</p>
