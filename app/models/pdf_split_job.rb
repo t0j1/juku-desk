@@ -5,7 +5,9 @@ class PdfSplitJob < ApplicationRecord
   belongs_to :user
   has_many :outputs, -> { order(:position, :page_from) }, class_name: "PdfSplitOutput", dependent: :delete_all
   has_many :page_analyses, -> { order(:page) }, class_name: "PdfSplitPageAnalysis", dependent: :delete_all
+  # R2 のオブジェクトも消すため、行を消す前（outputs より先）に PdfBlob.purge を通す
   has_many :pdf_blobs, dependent: :delete_all
+  before_destroy(prepend: true) { PdfBlob.purge(pdf_blobs) }
 
   enum :status, { uploaded: 0, analyzing: 1, analyzed: 2, splitting: 3, done: 4, failed: 5 }
 
@@ -30,14 +32,12 @@ class PdfSplitJob < ApplicationRecord
   end
 
   def original_blob
-    pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).first
+    pdf_blobs.without_data.where(kind: "original").where("expires_at > ?", Time.current).first
   end
 
-  CHUNK_BYTES = 8.megabytes
-
-  # 原本を Ruby の大きな文字列にせず、DB から CHUNK_BYTES ずつディスクに書き出してパスを渡す
+  # 原本を Ruby の大きな文字列にせず、DB / R2 からディスクへストリーミングで書き出してパスを渡す
   # （512MB 環境で 27MB の原本を何度も読み込むとメモリ不足で落ちるため）。
-  # 書き出したファイルは tmp/pdf_cache に残して、サムネイルや分割で使い回す（DB から毎回読むと1件10秒以上かかる）
+  # 書き出したファイルは tmp/pdf_cache に残して、サムネイルや分割で使い回す（毎回読むと1件10秒以上かかる）
   CACHE_DIR = Rails.root.join("tmp", "pdf_cache")
   CACHE_LOCK = Mutex.new
 
@@ -46,24 +46,15 @@ class PdfSplitJob < ApplicationRecord
   end
 
   def original_cache_path
-    blob_id, size, created = pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).pick(:id, :byte_size, :created_at)
-    raise PdfSplitter::Error, "元PDFの保存期限が切れています。もう一度アップロードしてください。" unless blob_id
+    blob = original_blob
+    raise PdfSplitter::Error, "元PDFの保存期限が切れています。もう一度アップロードしてください。" unless blob
 
-    path = CACHE_DIR.join("#{id}-#{blob_id}-#{created.to_f.to_s.delete('.')}.pdf")
+    path = CACHE_DIR.join("#{id}-#{blob.id}-#{blob.created_at.to_f.to_s.delete('.')}.pdf")
     CACHE_LOCK.synchronize do
-      return path.to_s if path.exist? && path.size == size
+      return path.to_s if path.exist? && path.size == blob.byte_size
       FileUtils.mkdir_p(CACHE_DIR)
       tmp = "#{path}.#{Process.pid}.part"
-      File.open(tmp, "wb") do |f|
-        offset = 0
-        loop do
-          chunk = PdfBlob.where(id: blob_id).pick(Arel.sql("substring(data from #{offset + 1} for #{CHUNK_BYTES})"))
-          break if chunk.blank?
-          f.write(chunk)
-          offset += chunk.bytesize
-          break if size && offset >= size
-        end
-      end
+      blob.download_to(tmp)
       File.rename(tmp, path)
     end
     path.to_s
@@ -73,11 +64,6 @@ class PdfSplitJob < ApplicationRecord
     Dir.glob(CACHE_DIR.join("*")).each { |p| File.delete(p) if File.mtime(p) < older_than rescue nil }
   end
 
-  def original_blob_data
-    original_blob&.data or raise PdfSplitter::Error, "元PDFの保存期限が切れています。もう一度アップロードしてください。"
-  end
-
-  # data 列（数十MB）を読み込まないように期限だけ取る
   def expires_at
     pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).pick(:expires_at)
   end

@@ -17,19 +17,27 @@ module PdfSplitter
         return fail!("本日のアップロード上限（#{@limits[:max_jobs_per_day]}件）に達しました。")
       end
 
-      data = file.read.b
-      return fail!("PDFファイルではありません。") unless data.start_with?("%PDF-")
+      # アップロードは一時ファイルに書いてパスで扱う（全体を String にしない）。R2 ならそのままストリーミングで送る
+      job = Dir.mktmpdir do |dir|
+        path = File.join(dir, "upload.pdf")
+        File.open(path, "wb") { |f| IO.copy_stream(file, f) }
+        return fail!("PDFファイルではありません。") unless File.binread(path, 5) == "%PDF-"
 
-      data = Splitter.decrypt_to_string(data, password:) if password.present?
-      pages = Splitter.page_count_of(data)
-      return fail!("ページ数が多すぎます（上限 #{@limits[:max_pages]}ページ）。") if pages > @limits[:max_pages].to_i
-      return fail!("ページがありません。") if pages < 1
+        if password.present?
+          decrypted = File.join(dir, "decrypted.pdf")
+          Splitter.decrypt(path, decrypted, password:)
+          path = decrypted
+        end
+        pages = Splitter.page_count(path)
+        return fail!("ページ数が多すぎます（上限 #{@limits[:max_pages]}ページ）。") if pages > @limits[:max_pages].to_i
+        return fail!("ページがありません。") if pages < 1
 
-      job = PdfSplitJob.transaction do
-        j = @user.pdf_split_jobs.create!(original_filename: File.basename(file.original_filename.to_s).presence || "upload.pdf",
-                                         page_count: pages)
-        j.pdf_blobs.create!(kind: "original", data:, byte_size: data.bytesize, expires_at: @retention[:days].to_i.days.from_now)
-        j
+        PdfSplitJob.transaction do
+          j = @user.pdf_split_jobs.create!(original_filename: File.basename(file.original_filename.to_s).presence || "upload.pdf",
+                                           page_count: pages)
+          PdfBlob.store!(kind: "original", pdf_split_job: j, path:, expires_at: @retention[:days].to_i.days.from_now)
+          j
+        end
       end
       Result.new(job:)
     rescue InvalidPdf

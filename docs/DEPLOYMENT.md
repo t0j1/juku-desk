@@ -33,6 +33,30 @@ RAILS_MAX_THREADS   = 3
 ```
 Settings → Deploy Hook の URL を控える。
 
+### PDF の置き場所（Neon の bytea ⇄ Cloudflare R2）
+PDF 本体は既定で Neon の `pdf_blobs.data`（bytea）に入る。Neon の無料ストレージは小さく、読み出しのたびに全体がメモリに乗るので、Cloudflare R2（無料枠 10GB・転送料なし）へ移せるようにしてある。環境変数 `PDF_STORAGE=db|r2` で切り替える（**既定は `db`＝従来どおり**）。
+
+R2 を使うときの環境変数（すべて Render に登録。リポジトリには入れない）:
+```
+PDF_STORAGE          = r2
+R2_ACCOUNT_ID        = Cloudflare のアカウント ID（R2_ENDPOINT で上書きも可）
+R2_ACCESS_KEY_ID     = R2 の API トークンのアクセスキー
+R2_SECRET_ACCESS_KEY = 同シークレット
+R2_BUCKET            = バケット名
+```
+
+**切り替えの手順（人間）**
+1. R2 でバケットを作り、**そのバケットだけ**に書ける API トークンを作る。
+2. （任意）バケットのライフサイクルルールで、オブジェクトを 8 日で自動削除にしておく。アプリは 7 日で消すが、失敗したときの取りこぼしの保険になる。
+3. Render に上の環境変数を登録して再デプロイする（`PDF_STORAGE` はまだ `db` のままでよい。migration はコンテナ起動時に自動で流れる）。
+4. Render の Shell で既存データを移す: `bin/rails pdf_blobs:migrate_to_r2`。1 件ずつ処理し、R2 のサイズとチェックサムを照合する。1 件でも一致しなければそこで止まる。止まっても、同じコマンドをもう一度実行すれば続きから進む（`LIMIT=5` で件数を絞って試せる）。DB のコピーは消えない。
+5. `PDF_STORAGE=r2` に切り替えて再デプロイし、アップロード・分割・ダウンロード・印刷が動くか確認する。
+6. 問題がなければ、DB のコピーを消す: `CONFIRM=yes bin/rails pdf_blobs:purge_db_copies`。R2 側を照合し直して、一致したものだけ消す。**これを実行すると `db` には戻せない**。容量を実際に空けるには、そのあと Neon で `VACUUM FULL pdf_blobs;` が必要（ロックがかかるので、使っていない時間に）。
+
+**ロールバック**: `PDF_STORAGE=db` に戻す。purge する前なら、移行済みのデータも DB に残っているのでそのまま読める。`PDF_STORAGE=r2` の間に新しくアップロードした PDF は R2 にしか無い（`R2_*` を消さないこと。期限は 7 日なので、待てば消える）。
+
+実装の要点: Active Storage ではなく薄いアダプタ（`app/services/pdf_storage/r2.rb`、`aws-sdk-s3`）。PDF は独自の期限・容量上限・一括削除を持ち、Active Storage の添付テーブルに載せ替えると二重管理になるため。読み書きはファイルへのストリーミングで、PDF 全体を 1 つの String にするのは db モードの保存と、出力 PDF（小さい）のレスポンスだけ。メモリの比較は `bin/rails runner script/pdf_memory_probe.rb 25`（`PROBE_R2=1` と `R2_*` を付けると R2 も測る）。
+
 ## 3. GitHub
 Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を登録する。
 `main` への push で CI が成功すると `Deploy` ワークフローが Ruby バージョン整合（Dockerfile / .ruby-version / mise.toml）を確認し、Deploy Hook を叩く。CI が失敗したらデプロイしない。

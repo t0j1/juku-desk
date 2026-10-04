@@ -1,6 +1,7 @@
 class PdfSplitOutput < ApplicationRecord
   belongs_to :pdf_split_job
   has_many :pdf_blobs, dependent: :delete_all
+  before_destroy(prepend: true) { PdfBlob.purge(pdf_blobs) }
 
   validates :display_name, presence: true
   validates :page_from, :page_to, numericality: { only_integer: true, greater_than: 0 }

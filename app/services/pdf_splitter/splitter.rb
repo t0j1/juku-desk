@@ -22,6 +22,13 @@ module PdfSplitter
       out.to_i
     end
 
+    # パスワード付きPDFを復号した平文PDFをファイルに書き出す（パスワードは保存しない）
+    def self.decrypt(input, output, password:)
+      _o, err, st = Open3.capture3("qpdf", "--password=#{password}", "--decrypt", input.to_s, output.to_s)
+      raise InvalidPdf, err.presence || "decrypt failed" unless st.success? || st.exitstatus == 3
+      output
+    end
+
     # パスワード付きPDFを復号した平文PDFに変換する（パスワードは保存しない）
     def self.decrypt_to_string(data, password:)
       with_tempfile(data) do |input|

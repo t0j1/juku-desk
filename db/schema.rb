@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -32,15 +32,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
     t.bigint "pdf_split_job_id", null: false
     t.bigint "pdf_split_output_id"
     t.string "kind", null: false
-    t.binary "data", null: false
+    t.binary "data"
     t.integer "byte_size", null: false
     t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "r2_key"
+    t.string "checksum"
+    t.datetime "r2_migrated_at"
     t.index ["expires_at"], name: "index_pdf_blobs_on_expires_at"
     t.index ["pdf_split_job_id", "kind"], name: "index_pdf_blobs_on_pdf_split_job_id_and_kind"
     t.index ["pdf_split_job_id"], name: "index_pdf_blobs_on_pdf_split_job_id"
     t.index ["pdf_split_output_id"], name: "index_pdf_blobs_on_pdf_split_output_id"
+    t.index ["r2_key"], name: "index_pdf_blobs_on_r2_key", unique: true
   end
 
   create_table "pdf_split_jobs", force: :cascade do |t|
