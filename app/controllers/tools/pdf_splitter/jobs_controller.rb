@@ -103,7 +103,7 @@ module Tools
         queue = ::PdfSplitter::PrintQueue.new(@job, params[:items], pad_even: params[:pad_even] == "1")
         return redirect_to(print_tools_pdf_splitter_job_path(@job), alert: queue.errors.join(" ")) unless queue.valid?
         AuditLog.record!(:print, @job, metadata: { job_id: @job.id, queue: params[:items], pad_even: params[:pad_even] == "1" })
-        send_pdf queue.to_pdf, filename: queue.filename, disposition: "inline"
+        queue.with_pdf { |path| send_pdf_file(path, filename: queue.filename, disposition: "inline") }
       end
 
       # 同じ回の問題＋解答を1つにまとめて印刷（inline）
@@ -111,15 +111,16 @@ module Tools
         outputs = @job.outputs.where(round_label: params[:round]).to_a
         return redirect_to(print_tools_pdf_splitter_job_path(@job), alert: "対象のファイルがありません。") if outputs.empty?
         AuditLog.record!(:print, @job, metadata: { job_id: @job.id, bundle: params[:round], outputs: outputs.map(&:display_name) })
-        send_pdf ::PdfSplitter::PrintOptimizer.bundle(outputs), filename: "#{params[:round]}_まとめ.pdf", disposition: "inline"
+        ::PdfSplitter::PrintOptimizer.with_bundle(outputs) { |path| send_pdf_file(path, filename: "#{params[:round]}_まとめ.pdf", disposition: "inline") }
       end
 
       def download_zip
         outputs = @job.outputs.to_a
         return redirect_to(tools_pdf_splitter_job_path(@job), alert: "分割済みのファイルがありません。") if outputs.empty?
         AuditLog.record!(:export, @job, metadata: { job_id: @job.id, format: "zip", count: outputs.size })
-        send_data ::PdfSplitter::Zipper.zip(outputs), filename: "#{File.basename(@job.original_filename, '.*')}.zip",
-                                                     type: "application/zip", disposition: "attachment"
+        ::PdfSplitter::Zipper.with_zip(outputs) do |path|
+          send_pdf_file(path, filename: "#{File.basename(@job.original_filename, '.*')}.zip", type: "application/zip", disposition: "attachment")
+        end
       end
 
       # 境界確認用のサムネイル（保存しない）
