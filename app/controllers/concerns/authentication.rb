@@ -22,6 +22,8 @@ module Authentication
     end
 
     def resume_session
+      return if @impersonation_ended
+
       Current.session ||= find_session_by_cookie
     end
 
@@ -32,9 +34,13 @@ module Authentication
       return session unless session&.impersonating?
       return session if session.impersonation_valid?
 
-      # 代理ログインの期限切れ（30分）、または管理者が無効になった：自動で終了し、元の管理者のセッションに戻す
+      # 代理ログインの期限切れ（30分）、または管理者が無効になった：自動で終了し、Cookie を元の管理者に戻す。
+      # このリクエスト自体は実行しない（対象ユーザーとして入力された内容を、管理者の権限で実行してしまわないため）。
       flash[:notice] = "代理ログインを終了しました（時間切れ）。"
       end_impersonation!(session, via: "expired")
+      Current.session = nil
+      @impersonation_ended = true
+      nil
     end
 
     def impersonating?
@@ -42,6 +48,8 @@ module Authentication
     end
 
     def request_authentication
+      return redirect_to(admin_users_path, status: :see_other) if @impersonation_ended # 元の管理者に戻った（戻れなければ次のリクエストでログイン画面）
+
       session[:return_to_after_authenticating] = request.url
       redirect_to new_session_path
     end

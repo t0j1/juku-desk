@@ -86,6 +86,39 @@ class ImpersonationTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "期限切れのあとのリクエストは実行されず、管理者に戻って管理画面へリダイレクトされる" do
+    student = students(:one) rescue Student.first
+    start_as_admin
+    travel 31.minutes do
+      assert_no_changes -> { student.reload.name } do
+        patch student_path(student), params: { student: { name: "書き換え" } }
+      end
+      assert_redirected_to admin_users_path
+      assert_equal 0, AuditLog.where(action: "update", user: @admin).count
+      follow_redirect!
+      assert_response :success # Cookie は管理者に戻っている
+    end
+  end
+
+  test "拒否された操作も監査ログに残る" do
+    start_as_admin
+    assert_difference -> { AuditLog.where(action: "impersonated_request", impersonator_id: @admin.id).count }, 1 do
+      delete two_factor_path, params: { password: "password", code: "000000" }
+    end
+    log = AuditLog.where(action: "impersonated_request").last
+    assert_equal "/two_factor", log.metadata["path"]
+    assert_equal 302, log.metadata["status"]
+  end
+
+  test "viewer として拒否された書き込みも監査ログに残る" do
+    sign_in_as @admin
+    post admin_user_impersonation_path(users(:viewer)), params: { reason: "確認" }
+    assert_difference -> { AuditLog.where(action: "impersonated_request").count }, 1 do
+      post students_path, params: { student: { name: "x" } }
+    end
+    assert_equal 403, AuditLog.where(action: "impersonated_request").last.metadata["status"]
+  end
+
   test "代理ログイン中の操作は管理者の ID つきで監査ログに残る" do
     start_as_admin
     assert_difference -> { AuditLog.where(action: "impersonated_request", impersonator_id: @admin.id).count }, 1 do

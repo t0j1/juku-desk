@@ -8,7 +8,7 @@ module Authorization
     before_action { Current.ip_address = request.remote_ip }
     before_action :require_two_factor_setup
     before_action :forbid_viewer_writes
-    after_action :record_impersonated_request
+    prepend_around_action :record_impersonated_request # 拒否された操作も記録する（before_action で止まっても ensure で残る）
     rescue_from NotAuthorized, with: :render_forbidden
     helper_method :current_user
   end
@@ -66,9 +66,15 @@ module Authorization
 
     # 代理ログイン中の操作は、すべて管理者の ID つきで監査ログに残す
     def record_impersonated_request
-      return unless Current.session&.impersonating?
-
-      AuditLog.record!(:impersonated_request, nil, metadata: { method: request.request_method, path: request.path, status: response.status, action: "#{controller_path}##{action_name}" })
+      status = nil
+      yield
+    rescue NotAuthorized
+      status = 403
+      raise
+    ensure
+      if Current.session&.impersonating?
+        AuditLog.record!(:impersonated_request, nil, metadata: { method: request.request_method, path: request.path, status: status || response.status, action: "#{controller_path}##{action_name}" })
+      end
     end
 
     def render_forbidden
