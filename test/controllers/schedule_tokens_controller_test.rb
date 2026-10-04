@@ -47,7 +47,7 @@ class ScheduleTokensControllerTest < ActionDispatch::IntegrationTest
 
   test "401 once the user is deactivated" do
     sign_in_as users(:staff)
-    users(:staff).update!(active: false)
+    users(:staff).update!(status: :suspended)
     post schedule_token_path
     assert_response :unauthorized
   end

@@ -1,5 +1,11 @@
 <% content_for :title, "ユーザー管理" %>
-<h1 class="font-bold text-[22px] mb-6">ユーザー管理</h1>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="font-bold text-[22px] mr-auto">ユーザー管理</h1>
+  <%= link_to "ユーザーを招待", new_admin_user_path, class: "btn-primary" %>
+  <%= link_to "CSVで一括登録", new_admin_user_import_path, class: "btn-secondary" %>
+  <%= link_to "CSVで一括停止", new_admin_user_suspension_path, class: "btn-secondary" %>
+  <%= link_to "CSV出力", admin_users_path(format: :csv), class: "btn-secondary" %>
+</div>
 <% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
 <% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
 <table id="users" class="table-console">
@@ -24,13 +30,23 @@
         <td>
           <% if user.locked? %>
             <%= status_pill("ロック中（#{l user.locked_until, format: :short}まで）", :ng) %>
-          <% elsif !user.active? %>
-            <%= status_pill("無効", :neutral) %>
+          <% elsif user.suspended? %>
+            <%= status_pill("停止中", :neutral) %>
+          <% elsif user.invited? %>
+            <%= status_pill("招待中", :busy) %>
           <% else %>
             <%= status_pill("通常", :ok) %>
           <% end %>
         </td>
         <td>
+          <% if user.invited? %>
+            <%= button_to "招待を再送", resend_invitation_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
+          <% end %>
+          <% if user.suspended? %>
+            <%= button_to "停止を解除", activate_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
+          <% elsif user != current_user %>
+            <%= button_to "停止", suspend_admin_user_path(user), method: :post, class: "btn-danger", data: { turbo_confirm: "#{user.name} を停止します。ログイン中のセッションも切断されます。よろしいですか？" } %>
+          <% end %>
           <% if user.locked? || user.failed_attempts.positive? %>
             <%= button_to "ロック解除", unlock_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
           <% end %>

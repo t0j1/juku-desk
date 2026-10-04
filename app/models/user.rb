@@ -21,12 +21,25 @@ class User < ApplicationRecord
 
   after_save :remember_password, if: :saved_change_to_password_digest?
 
-  # 無効化したら既存セッションを破棄して即時締め出す
-  after_update_commit -> { sessions.destroy_all }, if: -> { saved_change_to_active?(to: false) }
+  # active: 通常 / suspended: 停止（ログイン不可） / invited: 招待済みでパスワード未設定
+  enum :status, { active: 0, suspended: 1, invited: 2 }, validate: true
+
+  # 招待メールのリンク（7 日有効）。パスワードを設定するとトークンは無効になる
+  generates_token_for :invitation, expires_in: 7.days do
+    password_salt&.last(10)
+  end
+
+  # 停止したら既存セッションを全部破棄して即時締め出す
+  after_update_commit -> { sessions.destroy_all }, if: -> { saved_change_to_status?(to: "suspended") }
 
   # 作成・更新・削除ができるか（viewer は閲覧のみ）
   def can_write?
     !viewer?
+  end
+
+  # 招待中ユーザーの仮パスワード。誰も知らない値で、方針（12文字以上・英字と数字）も満たす
+  def self.unusable_password
+    "#{SecureRandom.alphanumeric(30)}a1"
   end
 
   def locked?
