@@ -10,7 +10,7 @@
 <% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
 <table id="users" class="table-console">
   <thead>
-    <tr><th>氏名</th><th>メールアドレス</th><th>権限</th><th>状態</th><th>操作</th></tr>
+    <tr><th>氏名</th><th>メールアドレス</th><th>権限</th><th>状態</th><th>2段階認証</th><th>操作</th></tr>
   </thead>
   <tbody>
     <% @users.each do |user| %>
@@ -38,7 +38,8 @@
             <%= status_pill("通常", :ok) %>
           <% end %>
         </td>
-        <td>
+        <td><%= user.otp_enabled? ? status_pill("有効", :ok) : (user.two_factor_required? ? status_pill("未設定（必須）", :ng) : status_pill("未設定", :neutral)) %></td>
+        <td class="flex items-center gap-2">
           <% if user.invited? %>
             <%= button_to "招待を再送", resend_invitation_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
           <% end %>
@@ -49,6 +50,9 @@
           <% end %>
           <% if user.locked? || user.failed_attempts.positive? %>
             <%= button_to "ロック解除", unlock_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
+          <% end %>
+          <% if (user.otp_enabled? || user.otp_setup_required?) && user != current_user %>
+            <%= button_to "2FAをリセット", reset_two_factor_admin_user_path(user), method: :post, class: "btn-danger", data: { turbo_confirm: "#{user.name} の 2 段階認証をリセットします。この人は次のログインで再設定が必要になります。よろしいですか？" } %>
           <% end %>
         </td>
       </tr>

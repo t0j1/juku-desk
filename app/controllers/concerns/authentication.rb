@@ -45,6 +45,14 @@ module Authentication
       end
     end
 
+    # パスワード（と 2FA）を通ったあとの共通の仕上げ
+    def complete_login!(user)
+      user.register_successful_login!
+      start_new_session_for user
+      LoginEvent.record!(email_address: user.email_address, user: user, success: true, request: request)
+      AuditLog.record!(:login, user, user: user)
+    end
+
     def terminate_session
       Current.session.destroy
       cookies.delete(:session_id)
