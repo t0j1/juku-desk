@@ -97,6 +97,21 @@ class AdminUserOpsTest < ActionDispatch::IntegrationTest
     assert AuditLog.exists?(action: "user_activate", auditable: victim)
   end
 
+  test "a session on another device is sent back to login on its next request after suspension" do
+    victim = users(:staff)
+    other_device = open_session
+    jar = ActionDispatch::TestRequest.create.cookie_jar
+    jar.signed[:session_id] = victim.sessions.create!.id
+    other_device.cookies["session_id"] = jar[:session_id]
+    other_device.get root_path
+    assert_not_equal new_session_url, other_device.response.location
+
+    post suspend_admin_user_path(victim)
+
+    other_device.get root_path
+    assert_equal new_session_url, other_device.response.location
+  end
+
   test "an admin cannot suspend themselves; staff cannot use these screens" do
     post suspend_admin_user_path(users(:system_admin))
     assert users(:system_admin).reload.active?
@@ -134,10 +149,20 @@ class AdminUserOpsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "#import-summary", /7行中、取り込めるのは 2行、エラーは 5行/
     assert_select "tr.bg-err-bg", 5
+    # 行番号と理由が出る。エラーが1行でもあれば確定ボタンは出ない
+    assert_select "tr.bg-err-bg td:first-child", text: "4"
+    assert_select "tr.bg-err-bg", text: /メールアドレスの形式が正しくありません/
+    assert_select "form[action=?]", confirm_admin_user_import_path, count: 0
   end
 
-  test "import confirm creates only the valid rows as invited users and mails them" do
-    csv = "email_address,name,role\nok1@example.com,山田,staff\nbroken,壊れ,staff\nok2@example.com,佐藤,\n"
+  test "import preview shows the confirm button only when every row is valid" do
+    post admin_user_import_path, params: { file: csv_file("email_address,name\nok1@example.com,山田\nok2@example.com,佐藤\n") }
+    assert_select "form[action=?]", confirm_admin_user_import_path, count: 1
+    assert_select "input[type=submit][value=?]", "2人を招待する"
+  end
+
+  test "import confirm creates every row as an invited user and mails them" do
+    csv = "email_address,name,role\nok1@example.com,山田,staff\nok2@example.com,佐藤,\n"
     assert_difference "User.count", 2 do
       assert_enqueued_emails 2 do
         post confirm_admin_user_import_path, params: { csv: csv }
@@ -145,8 +170,19 @@ class AdminUserOpsTest < ActionDispatch::IntegrationTest
     end
     assert User.find_by!(email_address: "ok1@example.com").invited?
     assert User.find_by!(email_address: "ok2@example.com").staff?
-    assert_nil User.find_by(email_address: "broken")
     assert AuditLog.exists?(action: "user_import")
+  end
+
+  test "import confirm refuses everything when any row has an error, even if posted directly" do
+    csv = "email_address,name,role\nok1@example.com,山田,staff\nbroken,壊れ,staff\n"
+    assert_no_difference "User.count" do
+      assert_no_enqueued_emails do
+        post confirm_admin_user_import_path, params: { csv: csv }
+      end
+    end
+    assert_redirected_to new_admin_user_import_path
+    assert_match(/エラーが1行/, flash[:alert])
+    assert_not AuditLog.exists?(action: "user_import")
   end
 
   test "import accepts Japanese headers and a BOM, rejects bad files" do
