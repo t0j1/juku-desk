@@ -75,3 +75,19 @@ test("ナビの JS は innerHTML を使わず、外部リンクに target を付
   assert.doesNotMatch(js, /innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
   assert.doesNotMatch(js, /target/);
 });
+
+test("juku-desk の iframe の中（window.self !== window.top）ではナビを出さない。直接開いたときは出す", () => {
+  const run = embedded => {
+    let removed = false, appended = false;
+    const mount = { remove: () => { removed = true; }, append: () => { appended = true; } };
+    const node = () => ({ setAttribute() {}, append() {}, classList: { add() {} } });
+    const self = {};
+    vm.runInNewContext(read("js/nav-config.js") + "\n" + read("js/unified-nav.js"), {
+      window: { self, top: embedded ? {} : self }, location: { pathname: "/admin" },
+      document: { getElementById: () => mount, createElement: node },
+    });
+    return { removed, appended };
+  };
+  assert.deepEqual(run(true), { removed: true, appended: false });
+  assert.deepEqual(run(false), { removed: false, appended: true });
+});

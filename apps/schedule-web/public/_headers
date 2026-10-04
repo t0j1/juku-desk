@@ -1,12 +1,18 @@
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: frame-ancestors 'self' https://juku-desk.onrender.com
 
 /admin.html
-  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow
+
+/admin
   X-Robots-Tag: noindex, nofollow
 
 /pickup.html
+  X-Robots-Tag: noindex, nofollow
+
+/pickup
   X-Robots-Tag: noindex, nofollow
 
 /pickup-respond.html

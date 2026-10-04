@@ -64,8 +64,8 @@ class LayoutTest < ApplicationSystemTestCase
     with_schedule_web_url("https://sekigaku.example.pages.dev") do
       visit students_path
       link = find("nav[aria-label='メインメニュー'] a", text: "管理画面")
-      assert_equal "https://sekigaku.example.pages.dev/admin.html", link[:href]
-      assert link[:target].blank?, "外部リンクは同じタブで開く"
+      assert_match %r{/schedule/admin\z}, link[:href]
+      assert link[:target].blank?, "同じタブで開く"
       assert_selector "nav[aria-label='メインメニュー'] a", text: "年間スケジュール"
       assert_selector "nav[aria-label='メインメニュー'] a", text: "生徒ページ"
       shot "rails_1024_students"

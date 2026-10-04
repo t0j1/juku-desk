@@ -13,6 +13,9 @@
   const mount = document.getElementById("unified-nav");
   if (!mount) return;
 
+  // juku-desk の iframe の中（埋め込み）では、juku-desk 側のサイドバーがあるので出さない。直接開いたときだけ出す
+  if (window.self !== window.top) { mount.remove(); return; }
+
   const groups = navGroups(JUKU_DESK_URL, location.pathname);
   const nav = el("nav", { class: "unav-nav", "aria-label": "アプリの切り替え" });
   groups.forEach(g => {
