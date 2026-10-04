@@ -71,6 +71,10 @@ Rails.application.routes.draw do
   end
   resources :quizzes, only: %i[ new create ]
 
+  resources :progresses, path: "progress", only: %i[ index show ] do
+    post :cancel, on: :member
+  end
+
   namespace :tools do
     namespace :pdf_splitter do
       resources :jobs, only: %i[ index show create destroy ] do

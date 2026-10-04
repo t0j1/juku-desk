@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -88,6 +88,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_140000) do
     t.datetime "resume_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "job_progresses", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.string "title", null: false
+    t.string "subject_type"
+    t.bigint "subject_id"
+    t.integer "status", default: 0, null: false
+    t.integer "total"
+    t.integer "done", default: 0, null: false
+    t.string "message"
+    t.string "active_job_id"
+    t.datetime "cancel_requested_at"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subject_type", "subject_id"], name: "index_job_progresses_on_subject_type_and_subject_id"
+    t.index ["user_id", "status"], name: "index_job_progresses_on_user_id_and_status"
+    t.index ["user_id"], name: "index_job_progresses_on_user_id"
   end
 
   create_table "login_events", force: :cascade do |t|
@@ -374,6 +395,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_140000) do
   add_foreign_key "audit_logs", "users"
   add_foreign_key "audit_logs", "users", column: "impersonator_id"
   add_foreign_key "crop_regions", "uploads", on_delete: :cascade
+  add_foreign_key "job_progresses", "users", on_delete: :nullify
   add_foreign_key "login_events", "users", on_delete: :nullify
   add_foreign_key "mail_templates", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "password_histories", "users"
