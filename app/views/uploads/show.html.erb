@@ -9,7 +9,10 @@
 <div class="mb-4 flex flex-wrap items-center gap-3">
   <p id="extraction-status" class="text-lg font-bold">構造化：<%= Upload::EXTRACTION_LABELS.fetch(@upload.extraction_status) %></p>
   <% if current_user.can_write? && @regions.any? { |r| CropRegion::RETRYABLE_STATUSES.include?(r.status) } %>
-    <%= button_to "構造化を開始・やり直す", extract_upload_path(@upload), method: :post, class: "btn-secondary cursor-pointer" %>
+    <%= form_with url: extract_upload_path(@upload), method: :post, class: "flex flex-wrap items-center gap-3" do |f| %>
+      <label class="flex items-center gap-1 text-lg"><%= f.hidden_field :generate_answers, value: "0", id: nil %><%= f.check_box :generate_answers, { checked: true, id: "generate_answers" }, "1", nil %>教材に解答が無いときは AI で解答を作る</label>
+      <%= f.submit "構造化を開始・やり直す", class: "btn-secondary cursor-pointer" %>
+    <% end %>
   <% end %>
 </div>
 <div class="flex flex-col gap-6 lg:flex-row">
@@ -30,7 +33,7 @@
         <img src="<%= image_crop_region_path(region) %>" alt="領域 <%= i + 1 %> の切り出し" loading="lazy" class="max-w-full h-auto rounded">
         <% if region.error_message.present? %><p class="mt-1 text-base text-err-fg"><%= region.error_message %></p><% end %>
         <% if %w[extracted needs_review].include?(region.status) %>
-          <% region.questions.each do |q| %><p class="mt-1 text-lg" data-question="<%= q.id %>"><%= q.source_label %> <%= link_to truncate(q.question_text, length: 40), edit_question_path(q), class: "underline" %></p><% end %>
+          <% region.questions.each do |q| %><p class="mt-1 text-lg" data-question="<%= q.id %>"><%= q.source_label %> <% if q.type_label %><span class="text-base text-text-sub">[<%= q.type_label %>]</span> <% end %><% if q.ai_answer? %><span class="text-base font-bold text-err-fg">AI作成</span> <% end %><%= link_to truncate(q.question_text, length: 40), edit_question_path(q), class: "underline" %></p><% end %>
         <% end %>
       </li>
     <% end %>

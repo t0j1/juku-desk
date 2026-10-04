@@ -5,7 +5,7 @@ import { detectMarkings, paddedBox } from "lib/marking_detector"
 // ブラウザ側で ①長辺を縮小 ②赤枠を検出 ③プレビューで削除・調整・手動追加 ④縮小済みの元画像と切り出しだけをサーバーへ送る。
 // 検出が外れても、領域を手動で追加すればそのまま進める（R6）。しきい値はサーバーから配る設定値（config）を使う。
 export default class extends Controller {
-  static targets = ["input", "drop", "items", "itemTemplate", "rowTemplate", "confirm", "status"]
+  static targets = ["input", "drop", "items", "itemTemplate", "rowTemplate", "confirm", "status", "generateAnswers"]
   static values = { config: Object, url: String }
 
   connect() {
@@ -253,6 +253,7 @@ export default class extends Controller {
     form.append("image", item.blob, "image.jpg")
     form.append("width", item.width)
     form.append("height", item.height)
+    form.append("generate_answers", this.hasGenerateAnswersTarget && !this.generateAnswersTarget.checked ? "0" : "1")
     for (const [index, region] of item.regions.entries()) {
       const crop = await this.crop(item, region)
       form.append(`regions[${index}][bbox]`, JSON.stringify({ x: region.x, y: region.y, w: region.w, h: region.h, angle: region.angle, manual: region.manual }))

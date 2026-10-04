@@ -52,7 +52,7 @@ class Gemini::ClientTest < ActiveSupport::TestCase
     assert_equal "application/json", config["response_mime_type"]
     item = config["response_schema"]["properties"]["questions"]["items"]
     assert_equal "ARRAY", config["response_schema"]["properties"]["questions"]["type"]
-    assert_equal %w[answer_text confidence explanation options question_text source_label subject tags], item["properties"].keys.sort
+    assert_equal %w[answer_in_material answer_text confidence explanation options payload question_text question_type source_label subject tags], item["properties"].keys.sort
     assert_equal Question::SUBJECTS, item["properties"]["subject"]["enum"]
     part = body.dig("contents", 0, "parts", 1, "inline_data")
     assert_equal "image/jpeg", part["mime_type"]

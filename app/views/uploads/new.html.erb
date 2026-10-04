@@ -17,6 +17,7 @@
   <div data-marking-target="items" class="mt-8 space-y-8"></div>
 
   <div class="mt-8 flex flex-wrap items-center gap-4">
+    <label class="flex items-center gap-1 text-lg"><input type="checkbox" id="generate_answers" checked data-marking-target="generateAnswers">教材に解答が無いときは AI で解答を作る</label>
     <button type="button" class="btn-primary !h-12" data-marking-target="confirm" data-action="marking#confirmAll" disabled>確定して保存</button>
     <p role="status" data-marking-target="status" class="text-lg font-bold text-text-sub"></p>
   </div>

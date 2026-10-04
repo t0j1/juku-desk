@@ -244,4 +244,34 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
       assert_match(/すでに構造化の順番待ち/, flash[:alert])
     end
   end
+
+  test "edit shows the type and payload, saves them, and marks AI-written answers" do
+    q = make_question(question_type: "reorder", payload: { "ja" => "日本語", "words" => %w[a b] }, answer_source: "ai")
+    get questions_path
+    assert_select "#question_#{q.id}", /並べ替え/
+    assert_select "#question_#{q.id} [data-ai-answer]", "AI作成"
+    get edit_question_path(q)
+    assert_select "#ai-answer", /AI作成/
+    assert_select "textarea[name='question[payload_text]']", /"words"/
+
+    patch question_path(q), params: { question: { question_type: "compose_ja_en", payload_text: { ja: "私は行く", template: "I ___.", blank_count: "1", words: [ "x" ] }.to_json } }
+    assert_redirected_to questions_path
+    assert_equal [ "compose_ja_en", { "ja" => "私は行く", "template" => "I ___.", "blank_count" => 1 } ], [ q.reload.question_type, q.payload ]
+
+    patch question_path(q), params: { question: { payload_text: "{broken" } }
+    assert_response :unprocessable_entity
+    assert_equal "compose_ja_en", q.reload.question_type
+  end
+
+  test "構造化を開始 has the answer-generation checkbox, on by default, and passes the choice on" do
+    ENV["GEMINI_API_KEY"] = "test-key"
+    region = make_regions(1, status: :confirmed).first
+    get upload_path(region.upload)
+    assert_select "input[type=checkbox][name=generate_answers][checked]"
+    post extract_upload_path(region.upload), params: { generate_answers: "0" }
+    refute region.reload.generate_answers
+    region.update!(status: :failed)
+    post extract_upload_path(region.upload)
+    assert region.reload.generate_answers
+  end
 end

@@ -30,7 +30,7 @@ module Marking
       raw = request_with_retries(image)
       return unless raw # 日次上限で止まった
 
-      save(Validator.call(raw), raw)
+      save(Validator.call(raw, generate_answers: @region.generate_answers), raw)
     rescue Gemini::ModelUnavailable
       @region.update!(status: :model_unavailable, error_message: CropRegion::MODEL_UNAVAILABLE_MESSAGE)
     rescue StandardError => e
@@ -54,7 +54,7 @@ module Marking
         attempts = 0
         begin
           wait_for_slot
-          self.class.client.generate(image, mime_type: "image/jpeg")
+          self.class.client.generate(image, mime_type: "image/jpeg", prompt: Gemini::Prompt.for(generate_answers: @region.generate_answers))
         rescue GeminiQuota::DailyLimit, Gemini::DailyQuotaExceeded
           hold_for_daily_quota
           nil
