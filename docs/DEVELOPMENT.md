@@ -11,6 +11,12 @@ make test       # bin/rails test + schedule-web の node --test
 ```
 片方だけ: `make dev-rails` / `make dev-web`、`make test-rails` / `make test-web`。ポートは `make dev SCHEDULE_PORT=8001`。
 
+## 2 つのアプリを行き来するナビ
+- juku-desk のサイドバーの項目は `config/navigation.yml` の 1 か所（ルート名・現在地の判定・アイコン）。schedule-web のグループは `SCHEDULE_WEB_URL`（例 `https://<project>.pages.dev`）が設定されているときだけ出る。外部リンクも同じタブで開く。ログイン画面と共用 iPad の印刷画面（`/print/<token>`）には出さない。768px 未満は ☰ で開閉する（`sidebar_controller.js`）。
+- schedule-web 側は `apps/schedule-web/public/js/nav-config.js`（定義。juku-desk の URL は `JUKU_DESK_URL` の 1 か所）と `unified-nav.js`（描画）。index / admin / pickup に置いてある。juku-desk の URL を入れるまでは、juku-desk のグループは出ない。
+- 並びや名前を変えるときは、`config/navigation.yml` と `nav-config.js` の両方を直す。
+- 画面確認用の画像: `SCREENSHOTS=1 bin/rails test test/system/layout_test.rb`（`tmp/nav_shots/`）。
+
 ## Rails（ルート）
 - 詳細はルートの [README.md](../README.md)。`bin/rails test`、`bin/rails test:system`、`bin/rubocop`、`bin/brakeman --no-pager`。
 - 512MB 制限のため、PDF 全体を Ruby に載せない（ページ／チャンクごとに qpdf + 一時ファイル）。

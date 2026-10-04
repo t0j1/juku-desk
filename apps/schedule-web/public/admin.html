@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="css/style.css?v=6">
 <link rel="stylesheet" href="css/admin.css?v=9">
 <link rel="stylesheet" href="css/admin-theme.css?v=3">
+<link rel="stylesheet" href="css/unified-nav.css">
 </head>
 <body class="admin-ui">
 <div class="wrap">
@@ -35,6 +36,7 @@
         <span class="brand-mark" aria-hidden="true">碩</span>
         <span class="brand-text"><strong>碩学館</strong><small>Admin Console</small></span>
       </div>
+      <div id="unified-nav" data-variant="embedded"></div><!-- アプリの切り替え（js/unified-nav.js）。管理画面の動作には関係しない -->
       <nav class="tabs" id="tabs">
         <button type="button" data-tab="events" class="active"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="3"/></svg><span class="nav-label">予定</span></button>
         <button type="button" data-tab="pickups"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14M6 17l1.5-6.5A2 2 0 0 1 9.4 9h5.2a2 2 0 0 1 1.9 1.5L18 17"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/><path d="M4 13h16"/></svg><span class="nav-label">送迎予約</span> <span class="tab-badge" id="pk-badge" hidden></span></button>
@@ -519,6 +521,8 @@
 <script src="js/config.js?v=6"></script>
 <script src="js/common.js?v=6"></script>
 <script src="js/pickup-common.js?v=2"></script>
+<script src="js/nav-config.js"></script>
+<script src="js/unified-nav.js"></script>
 <script src="js/admin.js?v=8"></script>
 <script src="js/admin-pickup.js?v=2"></script>
 <script src="js/admin-reservations.js?v=8"></script>
