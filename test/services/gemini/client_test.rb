@@ -50,8 +50,10 @@ class Gemini::ClientTest < ActiveSupport::TestCase
     body = JSON.parse(request[:body])
     config = body["generationConfig"]
     assert_equal "application/json", config["response_mime_type"]
-    assert_equal %w[answer_text confidence explanation options question_text subject tags], config["response_schema"]["properties"].keys.sort
-    assert_equal Question::SUBJECTS, config["response_schema"]["properties"]["subject"]["enum"]
+    item = config["response_schema"]["properties"]["questions"]["items"]
+    assert_equal "ARRAY", config["response_schema"]["properties"]["questions"]["type"]
+    assert_equal %w[answer_text confidence explanation options question_text source_label subject tags], item["properties"].keys.sort
+    assert_equal Question::SUBJECTS, item["properties"]["subject"]["enum"]
     part = body.dig("contents", 0, "parts", 1, "inline_data")
     assert_equal "image/jpeg", part["mime_type"]
     assert_equal "\xFF\xD8\xFFimage".b, Base64.strict_decode64(part["data"])
@@ -77,6 +79,18 @@ class Gemini::ClientTest < ActiveSupport::TestCase
     assert_no_match(/#{ENV['GEMINI_API_KEY']}/, error.message)
     assert_not_kind_of Gemini::Retryable, error
     @thread.join
+  end
+
+  test "a 404 (retired model) raises ModelUnavailable, not a plain or retryable error" do
+    serve 404, { error: { code: 404, message: "This model models/gemini-2.5-flash is no longer available to new users.", status: "NOT_FOUND" } }.to_json
+    error = assert_raises(Gemini::ModelUnavailable) { generate }
+    assert_not_kind_of Gemini::Retryable, error
+    assert_match(/no longer available/, error.message)
+    @thread.join
+  end
+
+  test "the default model is gemini-3.8-flash" do
+    assert_equal "gemini-3.8-flash", GeminiConfig.model
   end
 
   test "a timeout is retryable" do

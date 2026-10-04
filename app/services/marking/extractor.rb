@@ -5,6 +5,8 @@ module Marking
   # - RPM はトークンバケット（GeminiQuota.acquire）で守る。429（分あたり）・5xx・タイムアウトは、指数バックオフ + ジッターで最大 GEMINI_MAX_RETRIES 回までやり直す
   # - 日次上限（自前の RPD カウンタ、または Gemini の RESOURCE_EXHAUSTED/PerDay）は failed にせず quota_exceeded。残りは queued のまま保留し、
   #   太平洋時間の 0 時のあとに自動で再開する
+  # - モデルの廃止（404）は failed と分けて model_unavailable（GEMINI_MODEL を更新してから「構造化を開始・やり直す」）
+  # - 1 つの領域から複数の問題（〔1〕〔2〕…）を作る。やり直したときは、その領域の問題を作り直す
   # - 1 件が失敗しても例外は外に出さない（ほかの領域の処理は止めない）
   class Extractor
     class << self
@@ -29,6 +31,8 @@ module Marking
       return unless raw # 日次上限で止まった
 
       save(Validator.call(raw), raw)
+    rescue Gemini::ModelUnavailable
+      @region.update!(status: :model_unavailable, error_message: CropRegion::MODEL_UNAVAILABLE_MESSAGE)
     rescue StandardError => e
       fail_region(safe_message(e))
     end
@@ -84,15 +88,23 @@ module Marking
           return store_raw_only(raw, result)
         end
 
-        question = @region.question || @region.build_question
-        question.update!(result.attributes)
-        @region.update!(status: result.status, error_message: nil, extracted_at: Time.current)
+        @region.transaction do
+          replace_questions(result.attributes.map { |attrs| attrs.merge(region_id: @region.id) })
+          @region.update!(status: result.status, error_message: nil, extracted_at: Time.current)
+        end
       end
 
       # スキーマ違反でも、生のレスポンスは残す（原因調査用）
       def store_raw_only(raw, result)
-        question = @region.question || @region.build_question
-        question.update!(raw_ai: { "response" => result.raw.is_a?(Hash) ? result.raw : { "text" => raw.to_s.truncate(5000) }, "model" => GeminiConfig.model, "error" => result.error })
+        response = result.raw.is_a?(Hash) ? result.raw : { "text" => raw.to_s.truncate(5000) }
+        replace_questions([ { region_id: @region.id, raw_ai: { "response" => response, "model" => GeminiConfig.model, "error" => result.error } } ])
+      end
+
+      # やり直しのときは前回の問題を消して作り直す。テストに使われている問題（test_items が参照）は消せないので残す
+      def replace_questions(rows)
+        @region.questions.where.not(id: ExamItem.select(:question_id)).delete_all
+        rows.each { |row| Question.create!(row) }
+        @region.questions.reset
       end
 
       def hold_for_daily_quota

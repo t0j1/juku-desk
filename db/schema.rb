@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -207,7 +207,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_180000) do
     t.bigint "reviewed_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["region_id"], name: "index_questions_on_region_id", unique: true
+    t.string "source_label"
+    t.index ["region_id"], name: "index_questions_on_region_id"
     t.index ["reviewed_at"], name: "index_questions_on_reviewed_at"
     t.index ["reviewed_by_id"], name: "index_questions_on_reviewed_by_id"
     t.index ["subject"], name: "index_questions_on_subject"

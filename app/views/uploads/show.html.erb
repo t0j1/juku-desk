@@ -8,7 +8,7 @@
 <% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
 <div class="mb-4 flex flex-wrap items-center gap-3">
   <p id="extraction-status" class="text-sm font-bold">構造化：<%= Upload::EXTRACTION_LABELS.fetch(@upload.extraction_status) %></p>
-  <% if current_user.can_write? && @regions.any? { |r| %w[confirmed failed].include?(r.status) } %>
+  <% if current_user.can_write? && @regions.any? { |r| CropRegion::RETRYABLE_STATUSES.include?(r.status) } %>
     <%= button_to "構造化を開始・やり直す", extract_upload_path(@upload), method: :post, class: "btn-secondary cursor-pointer" %>
   <% end %>
 </div>
@@ -29,7 +29,9 @@
         <p class="font-bold mb-2">領域 <%= i + 1 %> <span class="text-xs font-normal text-ink-sub"><%= t("crop_region_status.#{region.status}", default: region.status) %><%= region.confidence ? "・自動 #{(region.confidence * 100).round}%" : "・手動" %></span></p>
         <img src="<%= image_crop_region_path(region) %>" alt="領域 <%= i + 1 %> の切り出し" loading="lazy" class="max-w-full h-auto rounded">
         <% if region.error_message.present? %><p class="mt-1 text-xs text-ng"><%= region.error_message %></p><% end %>
-        <% if region.question && %w[extracted needs_review].include?(region.status) %><p class="mt-1 text-sm"><%= link_to truncate(region.question.question_text, length: 40), edit_question_path(region.question), class: "underline" %></p><% end %>
+        <% if %w[extracted needs_review].include?(region.status) %>
+          <% region.questions.each do |q| %><p class="mt-1 text-sm" data-question="<%= q.id %>"><%= q.source_label %> <%= link_to truncate(q.question_text, length: 40), edit_question_path(q), class: "underline" %></p><% end %>
+        <% end %>
       </li>
     <% end %>
   </ul>

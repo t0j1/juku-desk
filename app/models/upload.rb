@@ -15,6 +15,7 @@ class Upload < ApplicationRecord
   def extraction_status
     statuses = crop_regions.map(&:status)
     return :none if statuses.empty? || statuses.all? { |s| %w[confirmed pending].include?(s) }
+    return :model_unavailable if statuses.include?("model_unavailable")
     return :quota_exceeded if statuses.include?("quota_exceeded")
     return :processing if (statuses & %w[queued processing]).any?
     return :completed if statuses.all?("extracted")
@@ -22,7 +23,7 @@ class Upload < ApplicationRecord
     :partial
   end
 
-  EXTRACTION_LABELS = { none: "構造化前", processing: "処理中", completed: "完了", partial: "一部のみ（失敗・要確認あり）", quota_exceeded: "上限で保留（自動で再開）" }.freeze
+  EXTRACTION_LABELS = { none: "構造化前", processing: "処理中", completed: "完了", partial: "一部のみ（失敗・要確認あり）", quota_exceeded: "上限で保留（自動で再開）", model_unavailable: "モデルが利用できません（GEMINI_MODEL を更新）" }.freeze
 
   # サーバーでは画像をデコードしない。先頭のバイト列（マジックナンバー）だけで種類を判定する
   def self.sniff_content_type(path)

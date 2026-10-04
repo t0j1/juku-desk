@@ -19,7 +19,7 @@ class MarkingQuizPrintTest < ApplicationSystemTestCase
 
   def seed_questions(count, **attrs)
     make_regions(count, status: :extracted).each_with_index do |region, i|
-      region.create_question!({ subject: "国語", question_text: "次の漢字の読みを答えなさい。「憂鬱」（問#{i + 1}）", answer_text: "ゆううつ", explanation: "「鬱」は書き取りでも頻出です。",
+      region.questions.create!({ subject: "国語", question_text: "次の漢字の読みを答えなさい。「憂鬱」（問#{i + 1}）", answer_text: "ゆううつ", explanation: "「鬱」は書き取りでも頻出です。",
                                 tags: %w[漢字], difficulty: 3, reviewed_at: Time.current }.merge(attrs))
     end
   end

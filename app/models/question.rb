@@ -3,7 +3,7 @@ class Question < ApplicationRecord
   SUBJECTS = %w[英語 数学 国語 理科 社会].freeze
   NEEDS_CONFIRMATION_TAG = "要確認".freeze
 
-  belongs_to :region, class_name: "CropRegion", inverse_of: :question
+  belongs_to :region, class_name: "CropRegion", inverse_of: :questions
   belongs_to :reviewed_by, class_name: "User", optional: true
 
   validates :subject, inclusion: { in: SUBJECTS }, allow_nil: true

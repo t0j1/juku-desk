@@ -135,9 +135,11 @@ Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が
 
 **人間の作業**: `GEMINI_API_KEY` を Render に登録する（無料枠を使う。未設定の間は、取り込んだ領域は構造化されずに「確定」のまま残り、画像の画面の「構造化を開始・やり直す」で後から始められる）。
 
-環境変数（`GEMINI_API_KEY` 以外は任意）: `GEMINI_MODEL`（gemini-2.5-flash）、`GEMINI_RPM`（10）、`GEMINI_RPD`（250）、`GEMINI_BURST`（1。トークンバケットの容量）、`GEMINI_MAX_CONCURRENCY`（1）、`GEMINI_TIMEOUT_SECONDS`（60）、`GEMINI_MAX_RETRIES`（5）、`GEMINI_RETRY_BASE_SECONDS`（2）、`GEMINI_ENDPOINT`（テスト用に差し替える場合）。RPM / RPD は契約中の無料枠の値に合わせて設定する。
+環境変数（`GEMINI_API_KEY` 以外は任意）: `GEMINI_MODEL`（gemini-3.8-flash）、`GEMINI_RPM`（10）、`GEMINI_RPD`（250）、`GEMINI_BURST`（1。トークンバケットの容量）、`GEMINI_MAX_CONCURRENCY`（1）、`GEMINI_TIMEOUT_SECONDS`（60）、`GEMINI_MAX_RETRIES`（5）、`GEMINI_RETRY_BASE_SECONDS`（2）、`GEMINI_ENDPOINT`（テスト用に差し替える場合）。RPM / RPD は契約中の無料枠の値に合わせて設定する。
 
 - RPM はトークンバケット、RPD は太平洋時間 0 時にリセットする日次カウンタ（`gemini_quotas` の 1 行を全プロセスで共有）。429（分あたり）・5xx・タイムアウトは、指数バックオフ + ジッターで最大 5 回までやり直し、だめなら **その領域だけ** `failed`（ほかは続行）。
+- **モデルの廃止・利用不可**（Gemini が 404 を返す）は通常のエラーと分けて `model_unavailable` にし、「モデルが利用できません：GEMINI_MODELを更新してください」と表示する。`GEMINI_MODEL` を更新して再デプロイしたあと、画像ごとの「構造化を開始・やり直す」で再投入する。
+- **1 つの領域に複数の問題**（〔1〕〔2〕など）があるときは、1 領域から複数の questions を作る。問題番号は `questions.source_label` に入れ、`question_text` には含めない。
 - **日次上限**（自前の RPD に到達、または Gemini の RESOURCE_EXHAUSTED が日次のもの）は `failed` ではなく `quota_exceeded`。残りは `queued` のまま保留し、太平洋時間 0 時の 1 分後に `Marking::ResumeJob` が自動で再開する。画面上部に専用のバナー（残り件数と再開時刻（JST））を出し、監査ログに `gemini_daily_quota_exceeded` を記録する。
 - 科目が null か 5 科目以外のときは `needs_review`（問題は保存して、レビューで科目を決める）。`question_text` / `answer_text` が空なら `failed`。生の応答は `questions.raw_ai` に残る。
 - メモリ計測: `RAILS_ENV=test bin/rails runner script/marking_extract_memory_probe.rb [件数] [1 枚の KB]`。

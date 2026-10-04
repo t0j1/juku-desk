@@ -14,7 +14,7 @@ class MarkingTestsControllerTest < ActionDispatch::IntegrationTest
 
   def make_q(**attrs)
     region = make_regions(1, status: :extracted).first
-    region.create_question!({ subject: "英語", question_text: "次の文を訳しなさい。", answer_text: "答え", reviewed_at: Time.current, tags: %w[文法] }.merge(attrs))
+    region.questions.create!({ subject: "英語", question_text: "次の文を訳しなさい。", answer_text: "答え", reviewed_at: Time.current, tags: %w[文法] }.merge(attrs))
   end
 
   def create_test(**o)

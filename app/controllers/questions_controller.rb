@@ -11,6 +11,7 @@ class QuestionsController < ApplicationController
     @questions = scope.limit(200)
     @needs_confirmation_count = Question.reviewable.where(subject: nil).count
     @failed_regions = CropRegion.where(status: "failed").includes(:upload).order(id: :desc).limit(20)
+    @model_unavailable_count = CropRegion.where(status: "model_unavailable").count
     @waiting_count = CropRegion.waiting.count
   end
 

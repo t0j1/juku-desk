@@ -18,7 +18,7 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
 
   def make_question(subject: "英語", status: :extracted, **attrs)
     region = make_regions(1, status: status).first
-    region.create_question!({ subject: subject, question_text: "問題文", answer_text: "答え", tags: [ "文法" ], raw_ai: { "response" => { "confidence" => 0.8 } } }.merge(attrs))
+    region.questions.create!({ subject: subject, question_text: "問題文", answer_text: "答え", tags: [ "文法" ], raw_ai: { "response" => { "confidence" => 0.8 } } }.merge(attrs))
   end
 
   test "requires login" do
@@ -32,13 +32,13 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     unknown = make_question(subject: nil, status: :needs_review)
     failed = make_regions(1, status: :failed).first
     failed.update!(error_message: "answer_text が空です")
-    failed.create_question!(question_text: "", answer_text: "") # スキーマ違反で失敗したもの（レビュー対象外）
+    failed.questions.create!(question_text: "", answer_text: "") # スキーマ違反で失敗したもの（レビュー対象外）
 
     get questions_path
     assert_response :success
     assert_select "#questions tbody tr:first-child[id=?]", "question_#{unknown.id}"
     assert_select "#question_#{ok.id}"
-    assert_select "#question_#{failed.question.id}", 0
+    assert_select "#question_#{failed.questions.first.id}", 0
     assert_select "#needs-confirmation-count", /1/
     assert_select "#failed-regions", /answer_text が空です/
   end

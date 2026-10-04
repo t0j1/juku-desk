@@ -3,7 +3,7 @@ require "test_helper"
 class Marking::QuestionPickerTest < ActiveSupport::TestCase
   def make_q(approved: true, **attrs)
     region = make_regions(1, status: :extracted).first
-    region.create_question!({ subject: "英語", question_text: "問", answer_text: "答", reviewed_at: (Time.current if approved) }.merge(attrs))
+    region.questions.create!({ subject: "英語", question_text: "問", answer_text: "答", reviewed_at: (Time.current if approved) }.merge(attrs))
   end
 
   def params(**o)

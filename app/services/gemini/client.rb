@@ -17,6 +17,7 @@ module Gemini
       case status
       when 200 then extract_text(body)
       when 429 then raise daily_quota?(body) ? DailyQuotaExceeded.new("Gemini の 1 日の上限に達しました") : Retryable.new("Gemini が 429（分あたりの上限）を返しました")
+      when 404 then raise ModelUnavailable, "Gemini のモデル #{GeminiConfig.model} が利用できません（#{error_message(body)}）"
       when 500..599 then raise Retryable, "Gemini が #{status} を返しました"
       else raise Error, "Gemini が #{status} を返しました（#{error_message(body)}）"
       end
@@ -30,7 +31,7 @@ module Gemini
           contents: [ { parts: [ { text: prompt }, { inline_data: { mime_type: mime_type, data: Base64.strict_encode64(image_bytes) } } ] } ],
           generationConfig: {
             response_mime_type: "application/json",
-            response_schema: Gemini::Schema::QUESTION,
+            response_schema: Gemini::Schema::RESPONSE,
             temperature: 0
           }
         }

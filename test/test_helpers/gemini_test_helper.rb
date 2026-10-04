@@ -27,6 +27,11 @@ module GeminiTestHelper
     VALID.merge(overrides).to_json
   end
 
+  # 1 つの領域に複数の問題があるときの応答（{ "questions": [...] }）
+  def gemini_questions_json(*items)
+    { "questions" => items.map { |o| VALID.merge(o) } }.to_json
+  end
+
   def with_gemini(*responses, rpm: 600, rpd: 1000)
     ENV["GEMINI_API_KEY"] = "test-key-#{SecureRandom.hex(4)}"
     ENV["GEMINI_RPM"] = rpm.to_s
