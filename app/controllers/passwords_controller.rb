@@ -20,9 +20,10 @@ class PasswordsController < ApplicationController
   def update
     if @user.update(params.permit(:password, :password_confirmation))
       @user.sessions.destroy_all
+      AuditLog.record!(:password_change, @user, user: @user, ip: request.remote_ip, metadata: { via: "reset" })
       redirect_to new_session_path, notice: "パスワードを再設定しました。"
     else
-      redirect_to edit_password_path(params[:token]), alert: "パスワードが一致しません。"
+      redirect_to edit_password_path(params[:token]), alert: @user.errors.full_messages.to_sentence
     end
   end
 

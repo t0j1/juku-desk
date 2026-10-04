@@ -61,7 +61,7 @@ module PdfStorageTestHelper
     PdfStorage.r2 = nil
   end
 
-  def new_job(user: users(:instructor))
+  def new_job(user: users(:staff))
     user.pdf_split_jobs.create!(original_filename: "sample.pdf", page_count: 1)
   end
 

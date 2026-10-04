@@ -18,11 +18,19 @@
         <% end %>
       </div>
     <% end %>
+    <% if current_user.system_admin? %>
+      <div role="group" aria-label="システム管理" class="space-y-1">
+        <p class="px-4 pb-1 text-xs font-bold text-ink-sub">システム管理</p>
+        <%= nav_item "ユーザー管理", admin_users_path, :users, active: controller_path == "admin/users" %>
+        <%= nav_item "ログイン履歴", admin_login_events_path, :search, active: controller_path == "admin/login_events" %>
+      </div>
+    <% end %>
   </nav>
   <div class="mt-auto pt-6">
     <div class="rounded-xl bg-white/70 border border-line p-4">
       <p class="font-bold text-sm text-ink"><%= current_user.name %></p>
       <p class="text-xs text-ink-sub mb-3"><%= t("roles.#{current_user.role}") %></p>
+      <%= link_to "ログイン中の端末", user_sessions_path, class: "block mb-2 text-sm text-ink-sub hover:text-ink underline" %>
       <%= button_to session_path, method: :delete, class: "inline-flex items-center gap-2 text-sm text-ink-sub hover:text-ink cursor-pointer" do %>
         <%= console_icon(:logout, size: 16) %>ログアウト
       <% end %>

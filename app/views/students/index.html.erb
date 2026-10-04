@@ -1,7 +1,7 @@
 <% content_for :title, "生徒データベース" %>
 <div class="flex items-center mb-6">
   <h1 class="font-bold text-[22px]">生徒データベース</h1>
-  <%= link_to new_student_path, class: "btn-primary ml-auto" do %><%= console_icon(:plus) %>生徒を登録<% end %>
+  <% if current_user.can_write? %><%= link_to new_student_path, class: "btn-primary ml-auto" do %><%= console_icon(:plus) %>生徒を登録<% end %><% end %>
 </div>
 <div class="mb-6 flex flex-wrap gap-2 text-sm" role="group" aria-label="通い曜日で絞り込み">
   <% seg = ->(on) { "inline-flex items-center h-9 px-4 rounded-full border #{on ? 'bg-primary border-primary text-white font-bold' : 'bg-white border-line-strong text-ink hover:border-primary'}" } %>

@@ -3,7 +3,7 @@ require "application_system_test_case"
 class LayoutTest < ApplicationSystemTestCase
   def log_in
     visit new_session_path
-    fill_in "メールアドレス", with: users(:instructor).email_address
+    fill_in "メールアドレス", with: users(:staff).email_address
     fill_in "パスワード", with: "password"
     click_on "ログイン"
     assert_selector "#students"
@@ -34,7 +34,7 @@ class LayoutTest < ApplicationSystemTestCase
   test "the kiosk print screen has no sidebar" do
     job = create_pdf_job
     job.update!(status: :done)
-    link = PrintLink.reissue!(by: users(:instructor))
+    link = PrintLink.reissue!(by: users(:staff))
     visit kiosk_print_path(token: link.token)
     assert_text "教材を印刷"
     assert_no_selector "#app-sidebar", visible: :all

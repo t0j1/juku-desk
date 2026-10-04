@@ -17,7 +17,7 @@ class ScheduleControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "embeds SCHEDULE_WEB_URL plus the page path (trailing slash ignored)" do
-    sign_in_as users(:instructor)
+    sign_in_as users(:staff)
     with_schedule_web_url("https://sekigaku.example.pages.dev/") do
       { "/schedule" => "/", "/schedule/admin" => "/admin", "/schedule/pickup" => "/pickup" }.each do |path, remote|
         get path
@@ -28,7 +28,7 @@ class ScheduleControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "shows the not-set message when SCHEDULE_WEB_URL is blank or not http(s)" do
-    sign_in_as users(:instructor)
+    sign_in_as users(:staff)
     [ nil, "", "javascript:alert(1)", "not a url" ].each do |value|
       with_schedule_web_url(value) do
         get "/schedule"

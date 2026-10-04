@@ -1,7 +1,7 @@
 require "test_helper"
 
 class StudentsControllerTest < ActionDispatch::IntegrationTest
-  setup { sign_in_as users(:instructor) }
+  setup { sign_in_as users(:staff) }
 
   test "requires login" do
     sign_out
@@ -22,7 +22,7 @@ class StudentsControllerTest < ActionDispatch::IntegrationTest
     get student_path(students(:taro))
     assert_response :success
     assert_equal students(:taro), AuditLog.last.auditable
-    assert_equal users(:instructor), AuditLog.last.user
+    assert_equal users(:staff), AuditLog.last.user
   end
 
   test "instructor registers a student with weekdays and it is audited" do
@@ -69,15 +69,21 @@ class StudentsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, AuditLog.where(auditable: s, action: "update").count
   end
 
-  test "instructor cannot delete" do
+  test "viewer cannot create, update or delete (403)" do
+    sign_in_as users(:viewer)
     assert_no_difference "Student.count" do
+      post students_path, params: { student: { name: "新規", grade: "中1" } }
+      assert_response :forbidden
+      patch student_path(students(:taro)), params: { student: { name: "変更" } }
+      assert_response :forbidden
       delete student_path(students(:taro))
+      assert_response :forbidden
     end
-    assert_redirected_to root_path
+    get students_path
+    assert_response :success
   end
 
-  test "manager can delete and it is audited" do
-    sign_in_as users(:manager)
+  test "staff can delete and it is audited" do
     assert_difference "Student.count", -1 do
       delete student_path(students(:mika))
     end
@@ -87,7 +93,7 @@ class StudentsControllerTest < ActionDispatch::IntegrationTest
   test "deactivated user is locked out on next request" do
     get students_path
     assert_response :success
-    users(:instructor).update!(active: false)
+    users(:staff).update!(active: false)
     get students_path
     assert_redirected_to new_session_path
   end

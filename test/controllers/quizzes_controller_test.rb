@@ -1,7 +1,7 @@
 require "test_helper"
 
 class QuizzesControllerTest < ActionDispatch::IntegrationTest
-  setup { sign_in_as users(:instructor) }
+  setup { sign_in_as users(:staff) }
 
   def create_quiz(**overrides)
     post quizzes_path, params: { quiz: { wordbook_id: wordbooks(:leap).id, start_no: 1, end_no: 50, count: 50 }.merge(overrides) }

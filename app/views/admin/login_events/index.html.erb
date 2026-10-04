@@ -1,0 +1,35 @@
+<% content_for :title, "ログイン履歴" %>
+<div class="flex items-center mb-6">
+  <h1 class="font-bold text-[22px]">ログイン履歴</h1>
+  <%= link_to "CSV出力", admin_login_events_path(request.query_parameters.merge(format: :csv, page: nil)), class: "btn-secondary ml-auto" %>
+</div>
+<%= form_with url: admin_login_events_path, method: :get, class: "mb-6 flex flex-wrap items-end gap-3 text-sm" do |f| %>
+  <div><%= f.label :q, "メールアドレス・IP", class: "block mb-1" %><%= f.text_field :q, value: params[:q], class: "input !w-56" %></div>
+  <div><%= f.label :result, "結果", class: "block mb-1" %>
+    <%= f.select :result, [ [ "すべて", "" ], [ "成功", "success" ], [ "失敗", "failure" ] ], { selected: params[:result] }, class: "input !w-auto" %></div>
+  <div><%= f.label :from, "開始日", class: "block mb-1" %><%= f.date_field :from, value: params[:from], class: "input !w-auto" %></div>
+  <div><%= f.label :to, "終了日", class: "block mb-1" %><%= f.date_field :to, value: params[:to], class: "input !w-auto" %></div>
+  <%= f.submit "検索", name: nil, class: "btn-primary cursor-pointer" %>
+<% end %>
+<p class="mb-3 text-sm text-ink-sub"><%= @total %>件</p>
+<table id="login_events" class="table-console">
+  <thead>
+    <tr><th>日時</th><th>メールアドレス</th><th>結果</th><th>IP</th><th>端末（UA）</th></tr>
+  </thead>
+  <tbody>
+    <% @events.each do |e| %>
+      <tr>
+        <td class="whitespace-nowrap"><%= l e.created_at.in_time_zone, format: :long %></td>
+        <td><%= e.email_address %></td>
+        <td><%= e.success ? status_pill("成功", :ok) : status_pill(e.reason == "locked" ? "失敗（ロック中）" : "失敗", :ng) %></td>
+        <td><%= e.ip_address %></td>
+        <td class="max-w-[320px] truncate" title="<%= e.user_agent %>"><%= e.user_agent %></td>
+      </tr>
+    <% end %>
+    <% if @events.empty? %><tr><td colspan="5" class="text-center text-ink-sub">該当する履歴はありません</td></tr><% end %>
+  </tbody>
+</table>
+<div class="mt-4 flex gap-4 text-sm">
+  <%= link_to "前へ", admin_login_events_path(request.query_parameters.merge(page: @page - 1)), class: "underline" if @page > 1 %>
+  <%= link_to "次へ", admin_login_events_path(request.query_parameters.merge(page: @page + 1)), class: "underline" if @page * @per_page < @total %>
+</div>
