@@ -66,6 +66,7 @@ Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を�
 
 ## 4. 確認
 - `https://<app>.onrender.com/up` が 200 を返す。
+- **デプロイ成功の確認（Render の権限が無くてもできる）**: `curl https://juku-desk.onrender.com/up/version` の `sha` が `main` の最新コミット（`git rev-parse origin/main`）と一致すれば、新しいコードで起動できている。古い SHA のままなら、デプロイ中か失敗（Render → Events で確認）。`unknown` は `RENDER_GIT_COMMIT` が無い環境（ローカルなど）。返すのは `sha` と `booted_at` だけで、認証は不要。
 - Render → Events に各デプロイが並ぶ。**Rollback** はここから（直近のデプロイに戻せる）。
 
 ## 5. スリープ防止（cron-job.org）
