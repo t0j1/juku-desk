@@ -74,7 +74,8 @@ class MarkingMathTest < ApplicationSystemTestCase
     preview = -> { find("#question_question_text").sibling("[data-math-preview-target=preview]", visible: :all) }
     assert preview.call.has_selector?(".katex .mfrac"), "保存済みの問題文の数式が表示される"
     fill_in "問題文", with: '新しい $\frac{3}{4}$'
-    assert preview.call.has_text?("3\n4")
+    assert preview.call.has_text?("新しい"), "入力に合わせてプレビューが更新される"
+    assert preview.call.has_selector?(".katex .mfrac", count: 1)
     fill_in "問題文", with: "数式なし"
     assert_no_selector "#question_question_text + [data-math-preview-target=preview]", visible: :visible
   end
