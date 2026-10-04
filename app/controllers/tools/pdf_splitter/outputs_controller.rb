@@ -5,16 +5,14 @@ module Tools
 
       # 印刷は inline（ブラウザで開く → 共有 → プリント）
       def print
-        pdf = ::PdfSplitter::Builder.build(@output)
         AuditLog.record!(:print, @output, metadata: { job_id: @job.id, display_name: @output.display_name, pages: "#{@output.page_from}-#{@output.page_to}" })
-        send_pdf pdf, filename: @output.filename, disposition: "inline"
+        send_output_pdf @output, disposition: "inline"
       end
 
       # 保存は attachment
       def download
-        pdf = ::PdfSplitter::Builder.build(@output)
         AuditLog.record!(:export, @output, metadata: { job_id: @job.id, display_name: @output.display_name })
-        send_pdf pdf, filename: @output.filename, disposition: "attachment"
+        send_output_pdf @output, disposition: "attachment"
       end
 
       private

@@ -8,7 +8,7 @@ class PdfSplitter::SplitJob < ApplicationJob
     job = PdfSplitJob.find(job_id)
     # 原本は1回だけ tempfile に書き出し、全出力で使い回す
     job.with_original_file do |path|
-      job.outputs.each { |o| PdfSplitter::Builder.build(o, source_path: path) }
+      job.outputs.each { |o| PdfSplitter::Builder.ensure_stored(o, source_path: path) }
     end
     job.done!
   rescue ActiveRecord::RecordNotFound

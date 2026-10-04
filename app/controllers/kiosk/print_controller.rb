@@ -1,6 +1,7 @@
 # 印刷専用リンク（/print/<token>）。ログイン不要で、分割済みファイルの一覧と印刷画面だけを開ける
 module Kiosk
   class PrintController < ApplicationController
+    include PdfStreaming
     allow_unauthenticated_access
     before_action :require_print_link
     before_action :set_job, except: :index
@@ -24,26 +25,26 @@ module Kiosk
       queue = ::PdfSplitter::PrintQueue.new(@job, params[:items], pad_even: params[:pad_even] == "1")
       return redirect_to(kiosk_job_path(token: params[:token], id: @job), alert: queue.errors.join(" ")) unless queue.valid?
       audit(@job, queue: params[:items], pad_even: params[:pad_even] == "1")
-      send_pdf queue.to_pdf, filename: queue.filename, disposition: "inline"
+      queue.with_pdf { |path| send_pdf_file(path, filename: queue.filename, disposition: "inline") }
     end
 
     def print_bundle
       outputs = @job.outputs.where(round_label: params[:round]).to_a
       return redirect_to(kiosk_job_path(token: params[:token], id: @job), alert: "対象のファイルがありません。") if outputs.empty?
       audit(@job, bundle: params[:round], outputs: outputs.map(&:display_name))
-      send_pdf ::PdfSplitter::PrintOptimizer.bundle(outputs), filename: "#{params[:round]}_まとめ.pdf", disposition: "inline"
+      ::PdfSplitter::PrintOptimizer.with_bundle(outputs) { |path| send_pdf_file(path, filename: "#{params[:round]}_まとめ.pdf", disposition: "inline") }
     end
 
     def output_print
       output = @job.outputs.find(params[:id])
       audit(output, display_name: output.display_name, pages: "#{output.page_from}-#{output.page_to}")
-      send_pdf ::PdfSplitter::Builder.build(output), filename: output.filename, disposition: "inline"
+      send_output_pdf output, disposition: "inline"
     end
 
     def output_download
       output = @job.outputs.find(params[:id])
       AuditLog.record!(:export, output, user: nil, metadata: { job_id: @job.id, display_name: output.display_name, via: "print_link" })
-      send_pdf ::PdfSplitter::Builder.build(output), filename: output.filename, disposition: "attachment"
+      send_output_pdf output, disposition: "attachment"
     end
 
     private
@@ -58,10 +59,6 @@ module Kiosk
 
       def audit(record, **metadata)
         AuditLog.record!(:print, record, user: nil, metadata: metadata.merge(job_id: @job.id, via: "print_link"))
-      end
-
-      def send_pdf(data, filename:, disposition:)
-        send_data data, filename:, type: "application/pdf", disposition:
       end
   end
 end
