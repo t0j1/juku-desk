@@ -43,6 +43,7 @@
         <%= render "shared/sidebar" %>
         <main class="flex-1 min-w-0 bg-white rounded-[20px] shadow-card <%= content_for?(:embed) ? "flex flex-col min-h-0 overflow-hidden" : "p-4 md:p-6 lg:p-8" %> print:p-0 print:shadow-none print:rounded-none">
           <%= render "shared/gemini_quota_banner" %>
+          <%= render "shared/announcements" %>
           <%= render "shared/flash" %>
           <%= yield %>
         </main>

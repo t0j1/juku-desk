@@ -1,0 +1,24 @@
+<% content_for :title, "お知らせ" %>
+<div class="flex items-center mb-6">
+  <h1 class="font-bold text-[22px]">お知らせ</h1>
+  <%= link_to "お知らせを作成", new_admin_announcement_path, class: "btn-primary ml-auto" %>
+</div>
+<% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
+<table id="announcements" class="table-console">
+  <thead><tr><th>タイトル</th><th>表示期間</th><th>状態</th><th>既読</th><th></th></tr></thead>
+  <tbody>
+    <% @announcements.each do |a| %>
+      <tr id="announcement_<%= a.id %>">
+        <td class="font-bold"><%= a.title %></td>
+        <td class="whitespace-nowrap"><%= l a.starts_at.in_time_zone, format: :short %> 〜 <%= l a.ends_at.in_time_zone, format: :short %></td>
+        <td><%= a.active? ? status_pill("表示中", :ok) : (a.starts_at > Time.current ? status_pill("開始前", :busy) : status_pill("終了", :neutral)) %></td>
+        <td><%= a.reads.count %>人</td>
+        <td class="flex items-center gap-2">
+          <%= link_to "編集", edit_admin_announcement_path(a), class: "btn-secondary" %>
+          <%= button_to "削除", admin_announcement_path(a), method: :delete, class: "btn-danger", data: { turbo_confirm: "このお知らせを削除します。よろしいですか？" } %>
+        </td>
+      </tr>
+    <% end %>
+    <% if @announcements.empty? %><tr><td colspan="5" class="text-center text-ink-sub">お知らせはありません</td></tr><% end %>
+  </tbody>
+</table>
