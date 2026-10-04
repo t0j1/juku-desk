@@ -10,9 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "answer_events", force: :cascade do |t|
+    t.bigint "question_id", null: false
+    t.bigint "student_id"
+    t.boolean "correct"
+    t.datetime "answered_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["question_id"], name: "index_answer_events_on_question_id"
+    t.index ["student_id"], name: "index_answer_events_on_student_id"
+  end
 
   create_table "audit_logs", force: :cascade do |t|
     t.bigint "user_id"
@@ -38,8 +49,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_160000) do
     t.string "status", default: "pending", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "error_message"
+    t.datetime "extracted_at"
     t.index ["status"], name: "index_crop_regions_on_status"
     t.index ["upload_id"], name: "index_crop_regions_on_upload_id"
+  end
+
+  create_table "gemini_quotas", force: :cascade do |t|
+    t.float "tokens", default: 1.0, null: false
+    t.datetime "refilled_at"
+    t.date "day"
+    t.integer "day_count", default: 0, null: false
+    t.datetime "exceeded_at"
+    t.datetime "resume_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "login_events", force: :cascade do |t|
@@ -148,6 +172,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_160000) do
     t.index ["token"], name: "index_print_links_on_token", unique: true
   end
 
+  create_table "questions", force: :cascade do |t|
+    t.bigint "region_id", null: false
+    t.string "subject"
+    t.text "question_text", default: "", null: false
+    t.jsonb "options", default: [], null: false
+    t.text "answer_text", default: "", null: false
+    t.text "explanation", default: "", null: false
+    t.text "tags", default: [], null: false, array: true
+    t.integer "difficulty"
+    t.jsonb "raw_ai", default: {}, null: false
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["region_id"], name: "index_questions_on_region_id", unique: true
+    t.index ["reviewed_at"], name: "index_questions_on_reviewed_at"
+    t.index ["reviewed_by_id"], name: "index_questions_on_reviewed_by_id"
+    t.index ["subject"], name: "index_questions_on_subject"
+    t.index ["tags"], name: "index_questions_on_tags", using: :gin
+    t.check_constraint "difficulty IS NULL OR difficulty >= 1 AND difficulty <= 5", name: "questions_difficulty_range"
+  end
+
   create_table "recovery_codes", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "code_digest", null: false
@@ -243,6 +289,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_160000) do
     t.index ["wordbook_id"], name: "index_words_on_wordbook_id"
   end
 
+  add_foreign_key "answer_events", "questions", on_delete: :cascade
+  add_foreign_key "answer_events", "students", on_delete: :nullify
   add_foreign_key "audit_logs", "users"
   add_foreign_key "audit_logs", "users", column: "impersonator_id"
   add_foreign_key "crop_regions", "uploads", on_delete: :cascade
@@ -255,6 +303,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_160000) do
   add_foreign_key "pdf_split_outputs", "pdf_split_jobs", on_delete: :cascade
   add_foreign_key "pdf_split_page_analyses", "pdf_split_jobs", on_delete: :cascade
   add_foreign_key "print_links", "users", column: "created_by_id"
+  add_foreign_key "questions", "crop_regions", column: "region_id", on_delete: :cascade
+  add_foreign_key "questions", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "recovery_codes", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "sessions", "users", column: "impersonator_id", on_delete: :cascade

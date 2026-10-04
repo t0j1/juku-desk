@@ -1,20 +1,22 @@
 <% content_for :title, "マーキング検出" %>
 <div class="flex flex-wrap items-center gap-3 mb-6">
   <h1 class="font-bold text-[22px] mr-auto">マーキング検出</h1>
+  <%= link_to "問題のレビュー", questions_path, class: "btn-secondary" %>
   <%= link_to new_upload_path, class: "btn-primary" do %><%= console_icon(:upload) %>画像を取り込む<% end if current_user.can_write? %>
 </div>
 <table id="uploads" class="table-console">
-  <thead><tr><th>画像</th><th>サイズ</th><th>領域</th><th>取り込んだ人</th><th>日時</th></tr></thead>
+  <thead><tr><th>画像</th><th>サイズ</th><th>領域</th><th>構造化</th><th>取り込んだ人</th><th>日時</th></tr></thead>
   <tbody>
     <% @uploads.each do |upload| %>
       <tr id="upload_<%= upload.id %>">
         <td><%= link_to image_upload_path(upload), class: "block w-24" do %><img src="<%= image_upload_path(upload) %>" alt="取り込んだ画像 #<%= upload.id %>" loading="lazy" class="w-24 h-16 object-cover rounded"><% end %></td>
         <td class="tnum"><%= upload.width %>×<%= upload.height %></td>
-        <td class="tnum"><%= link_to "#{upload.regions_count} 件", upload_path(upload), class: "underline" %></td>
+        <td class="tnum"><%= link_to "#{upload.crop_regions.size} 件", upload_path(upload), class: "underline" %></td>
+        <td class="text-sm"><%= Upload::EXTRACTION_LABELS.fetch(upload.extraction_status) %></td>
         <td><%= upload.user&.name %></td>
         <td class="tnum"><%= l upload.created_at, format: :short %></td>
       </tr>
     <% end %>
-    <% if @uploads.empty? %><tr><td colspan="5" class="text-center text-ink-sub">まだ取り込まれていません</td></tr><% end %>
+    <% if @uploads.empty? %><tr><td colspan="6" class="text-center text-ink-sub">まだ取り込まれていません</td></tr><% end %>
   </tbody>
 </table>

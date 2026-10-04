@@ -5,6 +5,7 @@ require_relative "test_helpers/session_test_helper"
 require_relative "test_helpers/totp_test_helper"
 require_relative "test_helpers/pdf_test_helper"
 require_relative "test_helpers/marking_image_helper"
+require_relative "test_helpers/gemini_test_helper"
 require_relative "test_helpers/pdf_storage_test_helper"
 
 module ActiveSupport
@@ -16,6 +17,7 @@ module ActiveSupport
     fixtures :all
 
     include MarkingImageHelper
+    include GeminiTestHelper
 
     # Add more helper methods to be used by all tests here...
     include TotpTestHelper

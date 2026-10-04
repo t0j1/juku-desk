@@ -128,3 +128,16 @@ Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が
 - 画像のデコードはブラウザで行う。サーバーは大きな画像をデコードしない。
 - 設定値は環境変数（すべて任意。未設定なら既定値）。しきい値: `MARKING_MIN_AREA_RATIO`（0.005）、`MARKING_MAX_AREA_RATIO`（0.9）、`MARKING_MAX_ASPECT_RATIO`（20）、`MARKING_MAX_FILL_RATIO`（0.95）、`MARKING_IOU_THRESHOLD`（0.5）、`MARKING_TILT_THRESHOLD`（0.5）、`MARKING_MERGE_GAP`（12）、`MARKING_MIN_SATURATION`（70）、`MARKING_MIN_VALUE`（50）、`MARKING_HUE_LOW`（10）、`MARKING_HUE_HIGH`（170）、`MARKING_CLOSE_KERNEL` / `_ITERATIONS`（5 / 2）、`MARKING_OPEN_KERNEL` / `_ITERATIONS`（3 / 1）。縮小・上限: `MARKING_MAX_LONG_SIDE`（1600）、`MARKING_MAX_BYTES`（5242880）、`MARKING_MAX_REGIONS`（100）、`MARKING_CROP_PADDING`（8）、`MARKING_JPEG_QUALITY`（0.85）。
 - 同じ画像（sha256 が同じ）は取り込み直さず、既存の upload を返す。
+
+### Gemini による構造化（マーキング検出 M-2）
+
+確定した領域は Solid Queue のジョブ（`Marking::ExtractJob`）で 1 件ずつ Gemini に送り、問題・選択肢・解答・解説・タグに構造化して `questions` に保存する。結果は `/marking/questions` で確認・編集・承認する（承認済みだけが出題対象）。
+
+**人間の作業**: `GEMINI_API_KEY` を Render に登録する（無料枠を使う。未設定の間は、取り込んだ領域は構造化されずに「確定」のまま残り、画像の画面の「構造化を開始・やり直す」で後から始められる）。
+
+環境変数（`GEMINI_API_KEY` 以外は任意）: `GEMINI_MODEL`（gemini-2.5-flash）、`GEMINI_RPM`（10）、`GEMINI_RPD`（250）、`GEMINI_BURST`（1。トークンバケットの容量）、`GEMINI_MAX_CONCURRENCY`（1）、`GEMINI_TIMEOUT_SECONDS`（60）、`GEMINI_MAX_RETRIES`（5）、`GEMINI_RETRY_BASE_SECONDS`（2）、`GEMINI_ENDPOINT`（テスト用に差し替える場合）。RPM / RPD は契約中の無料枠の値に合わせて設定する。
+
+- RPM はトークンバケット、RPD は太平洋時間 0 時にリセットする日次カウンタ（`gemini_quotas` の 1 行を全プロセスで共有）。429（分あたり）・5xx・タイムアウトは、指数バックオフ + ジッターで最大 5 回までやり直し、だめなら **その領域だけ** `failed`（ほかは続行）。
+- **日次上限**（自前の RPD に到達、または Gemini の RESOURCE_EXHAUSTED が日次のもの）は `failed` ではなく `quota_exceeded`。残りは `queued` のまま保留し、太平洋時間 0 時の 1 分後に `Marking::ResumeJob` が自動で再開する。画面上部に専用のバナー（残り件数と再開時刻（JST））を出し、監査ログに `gemini_daily_quota_exceeded` を記録する。
+- 科目が null か 5 科目以外のときは `needs_review`（問題は保存して、レビューで科目を決める）。`question_text` / `answer_text` が空なら `failed`。生の応答は `questions.raw_ai` に残る。
+- メモリ計測: `RAILS_ENV=test bin/rails runner script/marking_extract_memory_probe.rb [件数] [1 枚の KB]`。
