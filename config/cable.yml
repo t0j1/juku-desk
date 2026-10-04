@@ -2,23 +2,14 @@
 # and seeing results in the browser, you must do so from the web console (running inside the dev process),
 # not a terminal started via bin/rails console! Add "console" to any action or any ERB template view
 # to make the web console appear.
+# Action Cable はこのアプリでは使っていない（turbo_stream_from / broadcast_* なし）。
+# solid_cable は 0.1 秒ごとに DB をポーリングして Neon を起こし続けるため、同一プロセス内で完結する async にしている。
+# 複数プロセスにまたがる配信が必要になったら solid_cable（database.yml の cable）に戻す。
 development:
-  adapter: solid_cable
-  connects_to:
-    database:
-      writing: cable
-  polling_interval: 0.1.seconds
-  message_retention: 1.day
+  adapter: async
 
 test:
   adapter: test
 
 production:
-  adapter: solid_cable
-  connects_to:
-    database:
-      writing: cable
-  polling_interval: 0.1.seconds
-  message_retention: 1.day
-  writer_batch_size: 4
-  writer_batch_delay: 0.001.seconds
+  adapter: async

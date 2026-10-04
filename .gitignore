@@ -42,3 +42,6 @@
 
 # Stray tool output
 /-.png
+
+# エージェントの作業メモ（コミットしない）
+/notes/
