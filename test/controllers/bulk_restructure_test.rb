@@ -113,7 +113,26 @@ class BulkRestructureTest < ActionDispatch::IntegrationTest
       post bulk_restructure_questions_path, params: { question_ids: [ used.id ], confirmed: "1" }
     end
     assert_redirected_to questions_path
-    assert_match(/再構造化できる問題がありません/, flash[:alert])
+    assert_match(/再構造化できる問題がありません（1 件は小テストで使用中のため除外しました。/, flash[:alert])
+  end
+
+  test "the confirmation shows how many selected questions are left out for an exam, and the list count excludes them" do
+    olds = 3.times.map { old_question }
+    Exam.create!(title: "小テスト", mode: "random", filter: {}).items.create!(question: olds.last, position: 1)
+    with_gemini(reorder_response("〔1〕"))
+    get questions_path
+    assert_select "#bulk-restructure-outdated[value=?]", "未対応の問題をすべて再構造化（2 問）"
+    post bulk_restructure_questions_path, params: { question_ids: olds.map(&:id) }
+    assert_select "#excluded-for-exam", /1 件は小テストで使用中のため除外/
+    assert_select "#bulk-restructure-confirm", /2 件の画像（問題 2 問）/
+  end
+
+  test "regions deleted later are not counted as done" do
+    olds = 2.times.map { old_question }
+    with_gemini(reorder_response("〔1〕"))
+    post bulk_restructure_questions_path, params: { target: "outdated", confirmed: "1" }
+    olds.first.region.destroy!
+    assert_equal({ total: 1, done: 0, waiting: 1, held: 0 }, RestructureBatch.last.progress)
   end
 
   test "when the daily limit is hit, the rest are held and shown as held" do
