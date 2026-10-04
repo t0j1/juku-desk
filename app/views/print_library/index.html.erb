@@ -1,7 +1,7 @@
 <% content_for :title, "印刷" %>
 <div class="flex flex-wrap items-start gap-4 mb-1">
   <h1 class="font-bold text-[22px]">印刷</h1>
-  <% if current_user.admin? %>
+  <% if current_user.system_admin? %>
     <div id="print-link" class="ml-auto max-w-[480px] rounded-xl border border-line p-4 text-sm">
       <p class="font-bold mb-1">共用iPad用の印刷リンク</p>
       <% if @print_link %>

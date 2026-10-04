@@ -1,7 +1,7 @@
 require "test_helper"
 
 class PasswordsControllerTest < ActionDispatch::IntegrationTest
-  setup { @user = users(:instructor) }
+  setup { @user = users(:staff) }
 
   test "new" do
     get new_password_path
@@ -41,7 +41,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
 
   test "update" do
     assert_changes -> { @user.reload.password_digest } do
-      put password_path(@user.password_reset_token), params: { password: "new", password_confirmation: "new" }
+      put password_path(@user.password_reset_token), params: { password: "Blue Moon Rises 7", password_confirmation: "Blue Moon Rises 7" }
       assert_redirected_to new_session_path
     end
 
@@ -49,15 +49,32 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     assert_notice "パスワードを再設定しました"
   end
 
+  test "update rejects a weak password and a reused one" do
+    token = @user.password_reset_token
+    put password_path(token), params: { password: "short1", password_confirmation: "short1" }
+    assert_redirected_to edit_password_path(token)
+    follow_redirect!
+    assert_select "#alert", /12文字以上/
+
+    put password_path(token), params: { password: "password", password_confirmation: "password" }
+    assert_redirected_to edit_password_path(token)
+  end
+
+  test "update is audited" do
+    assert_difference -> { AuditLog.where(action: "password_change").count }, 1 do
+      put password_path(@user.password_reset_token), params: { password: "Blue Moon Rises 7", password_confirmation: "Blue Moon Rises 7" }
+    end
+  end
+
   test "update with non matching passwords" do
     token = @user.password_reset_token
     assert_no_changes -> { @user.reload.password_digest } do
-      put password_path(token), params: { password: "no", password_confirmation: "match" }
+      put password_path(token), params: { password: "Aa1 first pass x", password_confirmation: "Aa1 other pass y" }
       assert_redirected_to edit_password_path(token)
     end
 
     follow_redirect!
-    assert_select "#alert", /パスワードが一致しません/
+    assert_select "#alert", /入力が一致しません/
   end
 
   private

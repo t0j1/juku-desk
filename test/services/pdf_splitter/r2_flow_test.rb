@@ -11,7 +11,7 @@ class PdfSplitter::R2FlowTest < ActiveSupport::TestCase
 
   test "upload stores the original only in R2 and later reads stream from it" do
     with_pdf_storage("r2") do |r2|
-      result = upload_fixture(users(:instructor))
+      result = upload_fixture(users(:staff))
       assert_nil result.error
       blob = result.job.pdf_blobs.find_by!(kind: "original")
       assert blob.in_r2?
@@ -27,7 +27,7 @@ class PdfSplitter::R2FlowTest < ActiveSupport::TestCase
 
   test "outputs are stored in R2 and regenerated from R2 after expiry" do
     with_pdf_storage("r2") do |r2|
-      job = upload_fixture(users(:instructor)).job
+      job = upload_fixture(users(:staff)).job
       PdfSplitter::Analyzer.call(job)
       output = job.outputs.create!(display_name: "part", page_from: 1, page_to: 2, position: 1)
       pdf = PdfSplitter::Builder.build(output)
@@ -41,7 +41,7 @@ class PdfSplitter::R2FlowTest < ActiveSupport::TestCase
 
   test "destroying the job removes every R2 object" do
     with_pdf_storage("r2") do |r2|
-      job = upload_fixture(users(:instructor)).job
+      job = upload_fixture(users(:staff)).job
       assert_equal 1, r2.objects.size
       job.destroy!
       assert_empty r2.objects

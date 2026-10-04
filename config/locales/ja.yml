@@ -1,8 +1,8 @@
 ja:
   roles:
-    instructor: 講師
-    manager: 上長
-    admin: 管理者
+    staff: スタッフ
+    system_admin: システム管理者
+    viewer: 閲覧のみ
   activerecord:
     models:
       user: ユーザー
@@ -13,6 +13,7 @@ ja:
         name: 氏名
         email_address: メールアドレス
         password: パスワード
+        password_confirmation: パスワード（確認）
         role: 権限
       student:
         name: 氏名

@@ -2,6 +2,17 @@ Rails.application.routes.draw do
   resource :session, only: %i[ new create destroy ]
   resources :passwords, param: :token, only: %i[ new create edit update ]
 
+  resources :user_sessions, path: "account/sessions", only: %i[ index destroy ] do
+    delete :destroy_others, on: :collection
+  end
+
+  namespace :admin do
+    resources :users, only: %i[ index update ] do
+      post :unlock, on: :member
+    end
+    resources :login_events, only: :index
+  end
+
   resources :students do
     resources :student_weekdays, only: %i[ create destroy ]
   end

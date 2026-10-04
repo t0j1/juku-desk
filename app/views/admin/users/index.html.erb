@@ -1,0 +1,41 @@
+<% content_for :title, "ユーザー管理" %>
+<h1 class="font-bold text-[22px] mb-6">ユーザー管理</h1>
+<% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
+<% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
+<table id="users" class="table-console">
+  <thead>
+    <tr><th>氏名</th><th>メールアドレス</th><th>権限</th><th>状態</th><th>操作</th></tr>
+  </thead>
+  <tbody>
+    <% @users.each do |user| %>
+      <tr id="user_<%= user.id %>">
+        <td class="font-bold"><%= user.name %></td>
+        <td><%= user.email_address %></td>
+        <td>
+          <% if user == current_user %>
+            <%= t("roles.#{user.role}") %>（自分）
+          <% else %>
+            <%= form_with model: user, url: admin_user_path(user), method: :patch, class: "flex items-center gap-2" do |f| %>
+              <%= f.select :role, User.roles.keys.map { |r| [ t("roles.#{r}"), r ] }, {}, class: "input !h-9 !w-auto", "aria-label": "#{user.name} の権限" %>
+              <%= f.submit "変更", class: "btn-secondary cursor-pointer" %>
+            <% end %>
+          <% end %>
+        </td>
+        <td>
+          <% if user.locked? %>
+            <%= status_pill("ロック中（#{l user.locked_until, format: :short}まで）", :ng) %>
+          <% elsif !user.active? %>
+            <%= status_pill("無効", :neutral) %>
+          <% else %>
+            <%= status_pill("通常", :ok) %>
+          <% end %>
+        </td>
+        <td>
+          <% if user.locked? || user.failed_attempts.positive? %>
+            <%= button_to "ロック解除", unlock_admin_user_path(user), method: :post, class: "btn-secondary cursor-pointer" %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

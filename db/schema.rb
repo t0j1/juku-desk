@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -26,6 +26,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_020000) do
     t.index ["auditable_type", "auditable_id"], name: "index_audit_logs_on_auditable_type_and_auditable_id"
     t.index ["created_at"], name: "index_audit_logs_on_created_at"
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
+  end
+
+  create_table "login_events", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "email_address", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.boolean "success", default: false, null: false
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_login_events_on_created_at"
+    t.index ["email_address"], name: "index_login_events_on_email_address"
+    t.index ["user_id"], name: "index_login_events_on_user_id"
+  end
+
+  create_table "password_histories", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "password_digest", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_password_histories_on_user_id"
   end
 
   create_table "pdf_blobs", force: :cascade do |t|
@@ -136,10 +157,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_020000) do
     t.string "email_address", null: false
     t.string "password_digest", null: false
     t.string "name", null: false
-    t.integer "role", default: 0, null: false
+    t.integer "role", default: 1, null: false
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "failed_attempts", default: 0, null: false
+    t.datetime "locked_until"
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
 
@@ -163,6 +186,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_020000) do
   end
 
   add_foreign_key "audit_logs", "users"
+  add_foreign_key "login_events", "users", on_delete: :nullify
+  add_foreign_key "password_histories", "users"
   add_foreign_key "pdf_blobs", "pdf_split_jobs", on_delete: :cascade
   add_foreign_key "pdf_blobs", "pdf_split_outputs", on_delete: :cascade
   add_foreign_key "pdf_split_jobs", "users"

@@ -1,6 +1,6 @@
 # 単語帳の登録（管理者のみ）。CSV をアップロードして取り込む
 class WordbooksController < ApplicationController
-  before_action :require_admin!
+  before_action :require_system_admin!
 
   def index
     @wordbooks = Wordbook.order(:name)

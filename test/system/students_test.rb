@@ -3,7 +3,7 @@ require "application_system_test_case"
 class StudentsTest < ApplicationSystemTestCase
   test "instructor logs in and registers a student with weekdays" do
     visit new_session_path
-    fill_in "メールアドレス", with: users(:instructor).email_address
+    fill_in "メールアドレス", with: users(:staff).email_address
     fill_in "パスワード", with: "password"
     click_on "ログイン"
     assert_selector "#students"

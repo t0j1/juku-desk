@@ -1,7 +1,7 @@
 require "test_helper"
 
 class SessionsControllerTest < ActionDispatch::IntegrationTest
-  setup { @user = users(:instructor) }
+  setup { @user = users(:staff) }
 
   test "new" do
     get new_session_path
@@ -23,7 +23,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "destroy" do
-    sign_in_as(users(:instructor))
+    sign_in_as(users(:staff))
 
     delete session_path
 
@@ -35,7 +35,7 @@ end
 class SessionsAuditAndInactiveTest < ActionDispatch::IntegrationTest
   test "login is audited" do
     assert_difference -> { AuditLog.where(action: "login").count }, 1 do
-      post session_path, params: { email_address: users(:instructor).email_address, password: "password" }
+      post session_path, params: { email_address: users(:staff).email_address, password: "password" }
     end
   end
 
