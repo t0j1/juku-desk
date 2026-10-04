@@ -93,7 +93,7 @@ class StudentsControllerTest < ActionDispatch::IntegrationTest
   test "deactivated user is locked out on next request" do
     get students_path
     assert_response :success
-    users(:staff).update!(active: false)
+    users(:staff).update!(status: :suspended)
     get students_path
     assert_redirected_to new_session_path
   end
