@@ -139,6 +139,22 @@
 .mt-options li { display: flex; gap: 2mm; }
 .mt-opt-no { flex: none; width: 6mm; text-align: center; border: .3mm solid #000; border-radius: 50%; font-size: 9.5pt; line-height: 5mm; height: 5mm; margin-top: 1mm; }
 .mt-ruled { margin-top: 3mm; height: 16mm; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 7.5mm, #000 7.5mm, #000 8mm); }
+/* 形式別のレイアウト（英語）：並べ替え・長文・英作文・和訳（AI 作成の印は印刷に出さない。#62 の決定） */
+.mt-ja { margin-bottom: .5mm; }
+.mt-reorder, .mt-compose, .mt-source { overflow-wrap: anywhere; }
+.mt-extra { margin-left: 2mm; white-space: nowrap; }
+.mt-blank { display: inline-block; white-space: nowrap; }
+.mt-blank-gap { display: inline-block; width: 28mm; }
+.mt-passage { white-space: pre-wrap; overflow-wrap: anywhere; text-indent: 1em; margin-bottom: 2mm; }
+.mt-underline { text-decoration: underline; text-decoration-thickness: .3mm; text-underline-offset: 1mm; }
+.mt-mark { font-weight: 700; margin: 0 .5mm; }
+.mt-subs { list-style: none; margin: 0; padding: 0; }
+.mt-sub { display: flex; gap: 2mm; margin-top: 2mm; break-inside: avoid; page-break-inside: avoid; }
+.mt-sub-no { flex: none; width: 8mm; text-align: right; }
+.mt-sub-main { flex: 1; min-width: 0; }
+.mt-ruled-1 { height: 8mm; margin-top: 1mm; }
+.mt-ruled-translate { height: 24mm; }
+.mt-item-passage { break-inside: auto; page-break-inside: auto; }
 @media print {
   .mt-sheet { padding: 0; box-shadow: none; border: 0; max-width: none; }
   .marking-print, .mt-sheet { print-color-adjust: exact; -webkit-print-color-adjust: exact; }

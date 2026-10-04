@@ -1,16 +1,54 @@
 <% q = item.question %>
-<li class="mt-item" id="print_item_<%= item.position %>">
+<% layout = print_layout_for(q) %>
+<% p = q.payload || {} %>
+<li class="mt-item<%= " mt-item-#{layout}" if layout %>" id="print_item_<%= item.position %>">
   <span class="mt-no"><%= item.number_label %></span>
   <div class="mt-main">
     <% if @kind == :question %>
-      <div class="mt-text"><%= q.question_text %></div>
-      <% if q.options.any? %>
-        <ol class="mt-options"><% q.options.each.with_index(1) do |o, i| %><li><span class="mt-opt-no"><%= i %></span><%= o %></li><% end %></ol>
+      <% case layout %>
+      <% when "reorder" %>
+        <% if p["ja"].present? %><div class="mt-ja"><%= p["ja"] %></div><% end %>
+        <div class="mt-reorder"><%= print_reorder_words(p) %><% if p["extra_count"].to_i.positive? %><span class="mt-extra">〔<%= p["extra_count"] %>語不要〕</span><% end %></div>
+      <% when "passage" %>
+        <% if q.question_text.present? && ![ p["body"], @instructions&.dig("passage") ].include?(q.question_text) %><div class="mt-text"><%= q.question_text %></div><% end %>
+        <div class="mt-passage"><%= print_passage_body(p["body"]) %></div>
+        <% if Array(p["sub_questions"]).grep(Hash).any? %>
+          <ol class="mt-subs">
+            <% Array(p["sub_questions"]).grep(Hash).each.with_index(1) do |sq, i| %>
+              <li class="mt-sub"><span class="mt-sub-no">(<%= i %>)</span><div class="mt-sub-main"><div class="mt-text"><%= print_passage_body(sq["prompt"]) %></div><div class="mt-ruled mt-ruled-1" aria-label="解答欄"></div></div></li>
+            <% end %>
+          </ol>
+        <% else %>
+          <div class="mt-ruled" aria-label="解答欄"></div>
+        <% end %>
+      <% when "compose_ja_en" %>
+        <% if p["ja"].present? %><div class="mt-ja"><%= p["ja"] %></div><% end %>
+        <% if p["template"].present? %>
+          <div class="mt-compose"><%= print_blanks(p["template"]) %></div>
+        <% else %>
+          <div class="mt-ruled" aria-label="解答欄"></div>
+        <% end %>
+      <% when "translate_en_ja" %>
+        <div class="mt-source"><%= p["source"] %></div>
+        <div class="mt-ruled mt-ruled-translate" aria-label="解答欄"></div>
       <% else %>
-        <div class="mt-ruled" aria-label="解答欄"></div>
+        <div class="mt-text"><%= q.question_text %></div>
+        <% if q.options.any? %>
+          <ol class="mt-options"><% q.options.each.with_index(1) do |o, i| %><li><span class="mt-opt-no"><%= i %></span><%= o %></li><% end %></ol>
+        <% else %>
+          <div class="mt-ruled" aria-label="解答欄"></div>
+        <% end %>
       <% end %>
     <% else %>
-      <div class="mt-answer"><%= q.answer_text %></div>
+      <% if layout == "passage" && Array(p["sub_questions"]).grep(Hash).any? { |sq| sq["answer"].present? } %>
+        <ol class="mt-subs">
+          <% Array(p["sub_questions"]).grep(Hash).each.with_index(1) do |sq, i| %>
+            <li class="mt-sub"><span class="mt-sub-no">(<%= i %>)</span><div class="mt-answer"><%= sq["answer"] %></div></li>
+          <% end %>
+        </ol>
+      <% else %>
+        <div class="mt-answer"><%= q.answer_text %></div>
+      <% end %>
       <% if q.explanation.present? %><div class="mt-expl"><%= q.explanation %></div><% end %>
     <% end %>
   </div>
