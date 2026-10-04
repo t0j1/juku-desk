@@ -14,30 +14,5 @@
 .unav-nav .unav-link { color: #6B7080; }
 .unav-nav .unav-link.is-current { color: #1F2433; }
 
-/* 管理画面のサイドバーの中に置く（#unified-nav） */
+/* 管理画面のサイドバーの中に置く（#unified-nav）。狭い画面の開閉は管理画面の既存の ☰ が担う */
 #unified-nav { margin: 4px 0 14px; padding-bottom: 14px; border-bottom: 1px solid #E6E4F0; }
-
-/* 単独のページ（閲覧・生徒ページ）：左端に固定。768px 以上は常に表示、未満は ☰ で開閉 */
-.unav {
-  position: fixed; z-index: 60; top: 0; bottom: 0; left: 0; width: 220px; padding: 20px 12px; overflow-y: auto;
-  background: #F3F1FE; border-right: 1px solid #E6E4F0;
-}
-.unav-brand { margin: 0 0 18px; padding: 0 14px; font-weight: 800; font-size: 1.1rem; color: #1F2433; }
-.unav-close, .unav-toggle { font: inherit; cursor: pointer; }
-.unav-close { display: none; min-height: 48px; margin: 0 0 8px auto; padding: 0 14px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, .7); color: #6B7080; font-weight: 700; }
-.unav-toggle {
-  display: none; position: fixed; z-index: 55; top: 10px; left: 10px; width: 48px; height: 48px;
-  border: 1px solid #E6E4F0; border-radius: 12px; background: #fff; color: #1F2433; font-size: 1.3rem;
-}
-.unav-scrim { position: fixed; z-index: 58; inset: 0; background: rgba(0, 0, 0, .4); }
-body.has-unav { padding-left: 220px; }
-
-@media (max-width: 767.98px) {
-  body.has-unav { padding-left: 0; }
-  body.has-unav .wrap { padding-top: 68px; }   /* ☰ ボタンと重ならないように */
-  .unav-toggle { display: block; }
-  .unav-close { display: block; }
-  .unav { width: min(280px, 86vw); transform: translateX(-100%); transition: transform .2s; box-shadow: none; }
-  .unav.is-open { transform: none; box-shadow: 0 8px 32px rgba(0, 0, 0, .25); }
-}
-@media print { .unav, .unav-toggle, .unav-scrim { display: none !important; } body.has-unav { padding-left: 0; } }

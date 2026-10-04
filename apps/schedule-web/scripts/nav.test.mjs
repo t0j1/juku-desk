@@ -46,7 +46,7 @@ test("今のページの項目だけ current になる", () => {
 test("juku-desk の URL がどこにもハードコードされていない（nav-config.js の JUKU_DESK_URL だけ）", () => {
   const { JUKU_DESK_URL } = load();
   assert.equal(JUKU_DESK_URL, "", "コミットする値は空のまま（本番の URL は人間が入れる）か、公開してよい URL にする");
-  for (const f of ["index.html", "admin.html", "pickup.html", "js/unified-nav.js", "js/nav-config.js"]) {
+  for (const f of ["admin.html", "js/unified-nav.js", "js/nav-config.js"]) {
     assert.doesNotMatch(read(f).replace(/\/\/.*$/gm, ""), /onrender\.com|juku-desk\.[a-z]+/i, f);
   }
 });
@@ -56,14 +56,14 @@ test("schedule-web のリンク先のファイルが実在する", () => {
   for (const it of sched.items) assert.ok(existsSync(new URL(`../public/${it.path}`, import.meta.url)), it.path);
 });
 
-test("index / admin / pickup がナビの CSS と JS を読み込み、pickup-respond は読み込まない", () => {
-  for (const f of ["index.html", "admin.html", "pickup.html"]) {
-    const html = read(f);
-    assert.match(html, /css\/unified-nav\.css/, f);
-    const a = html.indexOf('<script src="js/nav-config.js"></script>'), b = html.indexOf('<script src="js/unified-nav.js"></script>');
-    assert.ok(a !== -1 && b > a, `${f}: nav-config.js → unified-nav.js の順`);
+test("ナビは管理画面（講師・事務向け）だけに置く。保護者・生徒向けの index / pickup / pickup-respond には出さない", () => {
+  const admin = read("admin.html");
+  assert.match(admin, /css\/unified-nav\.css/);
+  const a = admin.indexOf('<script src="js/nav-config.js"></script>'), b = admin.indexOf('<script src="js/unified-nav.js"></script>');
+  assert.ok(a !== -1 && b > a, "admin.html: nav-config.js → unified-nav.js の順");
+  for (const f of ["index.html", "pickup.html", "pickup-respond.html"]) {
+    assert.doesNotMatch(read(f), /unified-nav|nav-config|id="unified-nav"/, `${f} にナビが入っている`);
   }
-  assert.doesNotMatch(read("pickup-respond.html"), /unified-nav/);
 });
 
 test("管理画面は既存のサイドバーの中に置き場（#unified-nav）がある", () => {
