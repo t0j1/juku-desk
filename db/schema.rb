@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -26,6 +26,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_140000) do
     t.index ["auditable_type", "auditable_id"], name: "index_audit_logs_on_auditable_type_and_auditable_id"
     t.index ["created_at"], name: "index_audit_logs_on_created_at"
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
+  end
+
+  create_table "crop_regions", force: :cascade do |t|
+    t.bigint "upload_id", null: false
+    t.jsonb "bbox", default: {}, null: false
+    t.string "r2_key", null: false
+    t.float "confidence"
+    t.string "status", default: "pending", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status"], name: "index_crop_regions_on_status"
+    t.index ["upload_id"], name: "index_crop_regions_on_upload_id"
   end
 
   create_table "login_events", force: :cascade do |t|
@@ -174,6 +186,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_140000) do
     t.index ["name"], name: "index_students_on_name"
   end
 
+  create_table "uploads", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "sha256", null: false
+    t.string "r2_key", null: false
+    t.string "content_type", null: false
+    t.integer "width", null: false
+    t.integer "height", null: false
+    t.integer "byte_size", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sha256"], name: "index_uploads_on_sha256", unique: true
+    t.index ["user_id"], name: "index_uploads_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email_address", null: false
     t.string "password_digest", null: false
@@ -211,6 +237,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_140000) do
   end
 
   add_foreign_key "audit_logs", "users"
+  add_foreign_key "crop_regions", "uploads", on_delete: :cascade
   add_foreign_key "login_events", "users", on_delete: :nullify
   add_foreign_key "mail_templates", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "password_histories", "users"
@@ -223,5 +250,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_140000) do
   add_foreign_key "recovery_codes", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "student_weekdays", "students"
+  add_foreign_key "uploads", "users", on_delete: :nullify
   add_foreign_key "words", "wordbooks"
 end

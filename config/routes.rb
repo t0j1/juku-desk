@@ -32,6 +32,14 @@ Rails.application.routes.draw do
   end
 
   resources :wordbooks, only: %i[ index create ]
+
+  # マーキング検出：赤枠で囲んだ教材画像の取り込み
+  resources :uploads, path: "marking", only: %i[ index new create show ] do
+    get :image, on: :member
+  end
+  resources :crop_regions, path: "marking/regions", only: [] do
+    get :image, on: :member
+  end
   resources :quizzes, only: %i[ new create ]
 
   namespace :tools do
