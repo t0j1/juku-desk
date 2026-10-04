@@ -18,7 +18,7 @@ class PdfSplitJob < ApplicationRecord
   STALE_AFTER = 10.minutes
 
   # プロセスごと落ちると AnalyzeJob/SplitJob の rescue が走らず analyzing/splitting のまま残るので、
-  # 一定時間進まないものは failed に倒して再アップロードを促す
+  # 一定時間進まないものは failed に倒して「再試行」を出す（解析は25ページごとに updated_at を進める）
   # 印刷ページの一覧用：分割済みのみ・新しい順・ファイル名で絞り込み
   def self.printable(query = nil)
     scope = done.order(created_at: :desc)
@@ -28,7 +28,14 @@ class PdfSplitJob < ApplicationRecord
 
   def fail_if_stale!
     return unless (analyzing? || splitting?) && updated_at < STALE_AFTER.ago
-    update!(status: :failed, error_message: "処理中にサーバーが停止しました。ページ数の少ないPDFで再度お試しください。")
+    update!(status: :failed, error_message: STALE_MESSAGE)
+  end
+
+  STALE_MESSAGE = "処理中にサーバーが停止しました（メモリ不足の可能性）。「再試行」でやり直せます。".freeze
+
+  # 一覧を開いたときにも、止まったままのものを failed に倒す
+  def self.fail_stale!
+    where(status: %i[analyzing splitting]).where(updated_at: ...STALE_AFTER.ago).find_each(&:fail_if_stale!)
   end
 
   def original_blob

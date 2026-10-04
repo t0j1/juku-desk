@@ -5,7 +5,8 @@
 # どちらでも、置き場所が片方にしか無ければそちらから読む（切り替えても既存データは読める）。
 class PdfBlob < ApplicationRecord
   KINDS = %w[original output].freeze
-  CHUNK_BYTES = 8.megabytes
+  # DB から原本を書き出す単位。8MB だと 1 回ごとに文字列のコピーが重なって +120MB になったので 1MB にする
+  CHUNK_BYTES = 1.megabyte
 
   belongs_to :pdf_split_job
   belongs_to :pdf_split_output, optional: true

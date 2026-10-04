@@ -7,6 +7,7 @@ module Tools
       before_action :set_job, except: %i[ index create ]
 
       def index
+        current_user.pdf_split_jobs.fail_stale!
         @jobs = current_user.pdf_split_jobs.order(created_at: :desc).limit(50)
       end
 

@@ -6,7 +6,12 @@
     <% if @job.expires_at %> ・ <%= l @job.expires_at, format: :short %> に自動削除<% end %></p>
 </div>
 
-<% if @job.failed? %><p class="alert-err">✕ 処理に失敗しました: <%= @job.error_message %></p><% end %>
+<% if @job.failed? %>
+  <div class="alert-err flex flex-wrap items-center gap-3">
+    <span>✕ 処理に失敗しました: <%= @job.error_message %></span>
+    <%= button_to "再試行", analyze_tools_pdf_splitter_job_path(@job), class: "btn-secondary btn-sm", form_class: "inline" %>
+  </div>
+<% end %>
 
 <% if @job.uploaded? || @job.analyzing? %>
   <p class="card">解析しています…</p>
