@@ -31,22 +31,22 @@ class QuizTest < ActiveSupport::TestCase
     assert_equal [ "範囲内の語数（25語）を超えています" ], q.errors[:count]
   end
 
-  test "count must be 20 to 50" do
-    assert_equal [ "問題数は 20〜50 で指定してください" ], quiz(count: 19).tap(&:valid?).errors[:count]
-    assert_equal [ "問題数は 20〜50 で指定してください" ], quiz(count: 51).tap(&:valid?).errors[:count]
+  test "count must be 10 to 50" do
+    assert_equal [ "問題数は 10〜50 で指定してください" ], quiz(count: 9).tap(&:valid?).errors[:count]
+    assert_equal [ "問題数は 10〜50 で指定してください" ], quiz(count: 51).tap(&:valid?).errors[:count]
   end
 
   test "blank numbers are rejected" do
     q = quiz(start_no: nil, end_no: nil, count: nil)
     assert_not q.valid?
     assert_equal [ "数字で入力してください" ], q.errors[:start_no]
-    assert_equal [ "問題数は 20〜50 で指定してください" ], q.errors[:count]
+    assert_equal [ "問題数は 10〜50 で指定してください" ], q.errors[:count]
   end
 
-  test "a book with fewer words than the minimum can never make a quiz" do
-    q = Quiz.defaults_for(wordbooks(:small))
+  test "a range with fewer words than the minimum can never make a quiz" do
+    q = quiz(start_no: 1, end_no: 9, count: 10)
     assert_not q.valid?
-    assert_equal [ "範囲内の語数（10語）を超えています" ], q.errors[:count]
+    assert_equal [ "範囲内の語数（9語）を超えています" ], q.errors[:count]
   end
 
   test "draw picks distinct words inside the range" do

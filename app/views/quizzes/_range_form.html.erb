@@ -1,69 +1,76 @@
-<%# 範囲と問題数。エラーはサーバーでも検証し、入力中は quiz-range コントローラーが同じ文言で出す %>
+<%# 範囲と問題数（Soft Gamified）。エラーはサーバーでも検証し、入力中は quiz-range コントローラーが同じ文言で出す %>
 <% wb = quiz.wordbook %>
 <% min, max = wb.min_number, wb.max_number %>
 <% error = ->(attr) { quiz.errors[attr].first } %>
-<% field_class = ->(attr) { "block w-40 h-12 px-3 rounded-lg border-2 bg-white text-base tnum focus:outline-2 focus:outline-primary " + (error.(attr) ? "border-ng" : "border-line-strong") } %>
+<% field_class = ->(attr) { "block w-full min-w-0 h-12 px-3 rounded-xl border-2 bg-white text-base tnum focus:outline-2 focus:outline-primary " + (error.(attr) ? "border-ng" : "border-quiz-line") } %>
+<% counts = ((Quiz::MIN_COUNT..Quiz::MAX_COUNT).step(10).to_a + [ quiz.count ]).compact.uniq.sort %>
+<% greeting = quiz.count.nil? ? "今日は何問いってみる？" : "#{quiz.count}問！いいね" %>
+<% in_range = quiz.start_no && quiz.end_no && quiz.start_no <= quiz.end_no ? quiz.available_count : nil %>
 <%= form_with url: quizzes_path, method: :post, scope: :quiz, data: { controller: "quiz-range", turbo: false,
       quiz_range_numbers_value: wb.words.pluck(:number), quiz_range_min_value: min, quiz_range_max_value: max,
       quiz_range_min_count_value: Quiz::MIN_COUNT, quiz_range_max_count_value: Quiz::MAX_COUNT } do |f| %>
   <%= hidden_field_tag "quiz[wordbook_id]", wb.id %>
-  <div class="flex gap-10 items-start">
-    <div class="flex-1 min-w-0 space-y-8">
-      <p class="text-sm text-ink-sub">単語帳：<span class="font-bold text-ink"><%= wb.name %></span>
-        <%= link_to "選び直す", new_quiz_path, class: "ml-3 text-primary font-bold hover:underline" %></p>
+  <p class="text-sm text-quiz-sub mb-4">単語帳：<span class="font-bold text-quiz-ink"><%= wb.name %></span>
+    <%= link_to "選び直す", new_quiz_path, class: "ml-3 text-primary font-bold hover:underline" %></p>
 
-      <section>
-        <h2 class="font-bold mb-3">範囲</h2>
-        <div class="flex items-center gap-3">
-          <div>
-            <%= label_tag "quiz_start_no", "開始", class: "block text-sm text-ink-sub mb-1" %>
-            <%= f.number_field :start_no, value: quiz.start_no, id: "quiz_start_no", inputmode: "numeric", class: field_class.(:start_no),
-                  data: { quiz_range_target: "start", action: "input->quiz-range#validate" }, "aria-invalid": error.(:start_no).present?, "aria-describedby": "quiz_range_hint" %>
-          </div>
-          <span class="mt-6" aria-hidden="true">〜</span>
-          <div>
-            <%= label_tag "quiz_end_no", "終了", class: "block text-sm text-ink-sub mb-1" %>
-            <%= f.number_field :end_no, value: quiz.end_no, id: "quiz_end_no", inputmode: "numeric", class: field_class.(:end_no),
-                  data: { quiz_range_target: "end", action: "input->quiz-range#validate" }, "aria-invalid": error.(:end_no).present?, "aria-describedby": "quiz_range_hint" %>
-          </div>
-        </div>
-        <p id="quiz_range_hint" class="mt-2 text-sm text-ink-sub tnum">範囲は <%= min %>〜<%= max %> です</p>
-        <p class="mt-2 text-sm font-bold text-ng" role="alert" data-quiz-range-target="startError" <%= "hidden" unless error.(:start_no) %>><%= "✕ #{error.(:start_no)}" if error.(:start_no) %></p>
-        <p class="mt-2 text-sm font-bold text-ng" role="alert" data-quiz-range-target="endError" <%= "hidden" unless error.(:end_no) %>><%= "✕ #{error.(:end_no)}" if error.(:end_no) %></p>
-      </section>
+  <div class="bg-surface rounded-[24px] p-6 max-w-[720px] text-quiz-ink flex flex-col gap-6">
+    <section class="bg-white rounded-[24px] shadow-quiz p-7 flex items-center gap-5" aria-label="あいさつ">
+      <svg width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="フクロウ" class="shrink-0"><ellipse cx="48" cy="54" rx="36" ry="38" fill="#2A4E9A"/><path d="M18 26 L28 38 L22 40Z M78 26 L68 38 L74 40Z" fill="#1B2440"/><ellipse cx="48" cy="64" rx="22" ry="22" fill="#DCE6FA"/><circle cx="34" cy="44" r="14" fill="#fff"/><circle cx="62" cy="44" r="14" fill="#fff"/><circle cx="36" cy="46" r="7" fill="#1B2440"/><circle cx="60" cy="46" r="7" fill="#1B2440"/><circle cx="38" cy="43" r="2.4" fill="#fff"/><circle cx="62" cy="43" r="2.4" fill="#fff"/><path d="M44 56 L52 56 L48 63Z" fill="#F2A93B"/><ellipse cx="22" cy="58" rx="5" ry="3" fill="#F6B4C4" opacity=".8"/><ellipse cx="74" cy="58" rx="5" ry="3" fill="#F6B4C4" opacity=".8"/></svg>
+      <p class="speech-bubble bg-bubble rounded-[20px] px-6 py-4 text-[22px] font-bold ml-2" role="status" data-quiz-range-target="greeting"><%= greeting %></p>
+    </section>
 
-      <section>
-        <h2 class="font-bold mb-3">問題数（<%= Quiz::MIN_COUNT %>〜<%= Quiz::MAX_COUNT %>）</h2>
-        <div class="flex items-center gap-3">
-          <button type="button" class="btn-secondary !h-12 !w-12 !text-lg" aria-label="問題数を減らす" data-action="quiz-range#decrement"><%= console_icon(:minus) %></button>
-          <%= f.number_field :count, value: quiz.count, id: "quiz_count", inputmode: "numeric", "aria-label": "問題数", class: field_class.(:count) + " !w-28 text-center",
-                data: { quiz_range_target: "count", action: "input->quiz-range#validate" }, "aria-invalid": error.(:count).present? %>
-          <button type="button" class="btn-secondary !h-12 !w-12 !text-lg" aria-label="問題数を増やす" data-action="quiz-range#increment"><%= console_icon(:plus) %></button>
-        </div>
-        <div class="mt-3 flex gap-2" role="group" aria-label="問題数のプリセット">
-          <% [ 20, 30, 40, 50 ].each do |n| %>
-            <button type="button" class="inline-flex items-center gap-1 h-10 px-4 rounded-full border text-sm font-bold cursor-pointer tnum bg-white border-line-strong text-ink"
-                    data-quiz-range-target="preset" data-count="<%= n %>" data-action="quiz-range#preset"><%= n %></button>
-          <% end %>
-        </div>
-        <p class="mt-2 text-sm font-bold text-ng" role="alert" data-quiz-range-target="countError" <%= "hidden" unless error.(:count) %>><%= "✕ #{error.(:count)}" if error.(:count) %></p>
-      </section>
+    <section class="bg-white rounded-[24px] shadow-quiz p-7" aria-labelledby="range_heading">
+      <h2 id="range_heading" class="text-base text-quiz-sub font-bold mb-2">① 範囲をえらぶ</h2>
+      <p class="text-[28px] font-bold tnum mb-2">No.<span class="text-primary" data-quiz-range-target="rangeA"><%= quiz.start_no %></span> 〜 No.<span class="text-primary" data-quiz-range-target="rangeB"><%= quiz.end_no %></span><span class="inline-block whitespace-nowrap">（<span data-quiz-range-target="rangeWords"><%= in_range || "–" %></span>語）</span></p>
 
-      <div class="flex items-center gap-4">
-        <%= f.button "問題を作成", type: "submit", class: "btn-primary !h-12 min-w-40", data: { quiz_range_target: "submit" } %>
+      <div class="range-slider" data-quiz-range-target="slider">
+        <div class="range-track"><div class="range-fill"></div></div>
+        <input type="range" class="range-thumb" min="<%= min %>" max="<%= max %>" step="1" value="<%= quiz.start_no || min %>" aria-label="開始の番号"
+               data-quiz-range-target="startSlider" data-action="input->quiz-range#fromStartSlider">
+        <input type="range" class="range-thumb" min="<%= min %>" max="<%= max %>" step="1" value="<%= quiz.end_no || max %>" aria-label="終了の番号"
+               data-quiz-range-target="endSlider" data-action="input->quiz-range#fromEndSlider">
       </div>
-    </div>
 
-    <aside class="w-[200px] shrink-0 text-center" aria-label="用紙プレビュー">
-      <div class="mx-auto w-[150px] aspect-[210/297] border border-line-strong rounded bg-white p-3 flex flex-col gap-2 shadow-card" aria-hidden="true">
-        <div class="h-2 border-b border-ink-sub"></div>
-        <div class="flex-1 grid grid-cols-2 gap-2">
-          <% 2.times do %><div class="flex flex-col justify-between"><% 8.times do %><div class="border-b border-ink-sub h-px"></div><% end %></div><% end %>
+      <div class="flex items-center gap-3 max-w-[420px]">
+        <div class="flex-1 min-w-0">
+          <%= label_tag "quiz_start_no", "開始", class: "block text-sm text-quiz-sub mb-1" %>
+          <%= f.number_field :start_no, value: quiz.start_no, id: "quiz_start_no", inputmode: "numeric", class: field_class.(:start_no),
+                data: { quiz_range_target: "start", action: "input->quiz-range#fromInputs" }, "aria-invalid": error.(:start_no).present?, "aria-describedby": "quiz_range_hint" %>
+        </div>
+        <span class="mt-6" aria-hidden="true">〜</span>
+        <div class="flex-1 min-w-0">
+          <%= label_tag "quiz_end_no", "終了", class: "block text-sm text-quiz-sub mb-1" %>
+          <%= f.number_field :end_no, value: quiz.end_no, id: "quiz_end_no", inputmode: "numeric", class: field_class.(:end_no),
+                data: { quiz_range_target: "end", action: "input->quiz-range#fromInputs" }, "aria-invalid": error.(:end_no).present?, "aria-describedby": "quiz_range_hint" %>
         </div>
       </div>
-      <% left, right = Quiz.split(quiz.count.to_i) %>
-      <p class="mt-3 text-sm tnum" data-quiz-range-target="split">左 <%= left %>／右 <%= right %></p>
-      <p class="text-xs text-ink-sub">A4 縦・2列</p>
-    </aside>
+      <p id="quiz_range_hint" class="mt-2 text-sm text-quiz-sub tnum">範囲は <%= min %>〜<%= max %> です</p>
+      <p class="mt-2 text-sm font-bold text-ng" role="alert" data-quiz-range-target="startError" <%= "hidden" unless error.(:start_no) %>><%= "✕ #{error.(:start_no)}" if error.(:start_no) %></p>
+      <p class="mt-2 text-sm font-bold text-ng" role="alert" data-quiz-range-target="endError" <%= "hidden" unless error.(:end_no) %>><%= "✕ #{error.(:end_no)}" if error.(:end_no) %></p>
+    </section>
+
+    <section class="bg-white rounded-[24px] shadow-quiz p-7" aria-labelledby="count_heading">
+      <h2 id="count_heading" class="text-base text-quiz-sub font-bold mb-4">② 問題数をえらぶ</h2>
+      <div class="flex flex-wrap justify-center gap-4" role="radiogroup" aria-labelledby="count_heading">
+        <% counts.each do |n| %>
+          <% checked = quiz.count == n %>
+          <label class="relative block w-[88px] h-[88px] cursor-pointer">
+            <%= radio_button_tag "quiz[count]", n, checked, id: "quiz_count_#{n}", class: "peer sr-only", "aria-checked": checked.to_s,
+                  data: { quiz_range_target: "count", action: "change->quiz-range#fromCount" } %>
+            <span class="flex flex-col items-center justify-center w-full h-full rounded-full border-2 border-quiz-line bg-white text-quiz-ink
+                         peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white peer-checked:scale-[.96] peer-checked:shadow-[inset_0_3px_6px_rgba(0,0,0,.25)]
+                         peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary transition-transform">
+              <span class="text-[32px] font-bold leading-none tnum"><%= n %></span>
+              <span class="text-sm leading-none mt-1">問</span>
+            </span>
+            <span class="hidden peer-checked:flex absolute -top-1 -right-1 w-[30px] h-[30px] rounded-full bg-white items-center justify-center text-primary shadow-quiz" aria-hidden="true"><%= console_icon(:check, size: 18) %></span>
+          </label>
+        <% end %>
+      </div>
+      <p class="mt-3 text-sm font-bold text-ng text-center" role="alert" data-quiz-range-target="countError" <%= "hidden" unless error.(:count) %>><%= "✕ #{error.(:count)}" if error.(:count) %></p>
+    </section>
+
+    <%= f.button "テストをつくる", type: "submit", class: "w-full h-14 rounded-[28px] text-xl font-bold text-white cursor-pointer bg-primary hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed",
+          data: { quiz_range_target: "submit", action: "click->quiz-range#celebrate" } %>
   </div>
 <% end %>

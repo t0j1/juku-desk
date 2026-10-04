@@ -23,6 +23,13 @@
   --color-warn-line: #F2B544;
   --color-warn-ink: #7A4B00;
   --shadow-card: 0 2px 12px rgba(60, 50, 140, .06);
+  /* 小テスト作成画面（Soft Gamified） */
+  --color-surface: #F6F5FB;
+  --color-bubble: #EEEBFF;
+  --color-quiz-ink: #1F1D2B;
+  --color-quiz-sub: #5E5A72;
+  --color-quiz-line: #E4E2F0;
+  --shadow-quiz: 0 4px 12px rgba(91, 75, 224, .12);
 }
 
 @layer components {
@@ -69,4 +76,31 @@
   .sheet-frame + .sheet-frame:not([hidden]) { margin-top: 0; }
   [data-mode="both"] .sheet-frame + .sheet-frame { break-before: page; }
   .sheet { height: 266mm; padding: 0; box-shadow: none; border: 0; }
+}
+
+/* 小テスト作成: つまみ2つの範囲スライダー。range を2枚重ね、トラックは触れず、つまみだけ触れるようにする */
+.range-slider { --lo: 0; --hi: 1; position: relative; height: 44px; margin: 8px 0 16px; }
+.range-track { position: absolute; left: 22px; right: 22px; top: 18px; height: 8px; border-radius: 9999px; background: var(--color-quiz-line); }
+.range-fill { position: absolute; top: 0; bottom: 0; border-radius: 9999px; background: var(--color-primary);
+              left: calc(var(--lo) * 100%); right: calc((1 - var(--hi)) * 100%); }
+.range-thumb { position: absolute; inset: 0; width: 100%; height: 44px; margin: 0; background: none; pointer-events: none; appearance: none; -webkit-appearance: none; }
+.range-thumb::-webkit-slider-runnable-track { height: 44px; background: none; }
+.range-thumb::-moz-range-track { height: 44px; background: none; }
+.range-thumb::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; pointer-events: auto; cursor: grab; width: 44px; height: 44px; border-radius: 9999px;
+  background: #fff; border: 3px solid var(--color-primary); box-sizing: border-box; box-shadow: var(--shadow-quiz); }
+.range-thumb::-moz-range-thumb { pointer-events: auto; cursor: grab; width: 44px; height: 44px; border-radius: 9999px;
+  background: #fff; border: 3px solid var(--color-primary); box-sizing: border-box; box-shadow: var(--shadow-quiz); }
+.range-thumb:focus-visible::-webkit-slider-thumb { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+.range-thumb:focus-visible::-moz-range-thumb { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+
+/* 吹き出しの左向きのしっぽ */
+.speech-bubble { position: relative; }
+.speech-bubble::before { content: ""; position: absolute; left: -10px; top: 50%; margin-top: -10px; border: 10px solid transparent; border-left-width: 0; border-right-color: var(--color-bubble); }
+
+/* 紙吹雪（0.8 秒）。reduced-motion のときは JS 側で出さない */
+.confetti { position: fixed; left: 0; top: 0; width: 100%; height: 0; pointer-events: none; z-index: 50; overflow: visible; }
+.confetti i { position: absolute; width: 10px; height: 14px; border-radius: 2px; opacity: 0; animation: confetti-fall .8s ease-out forwards; }
+@keyframes confetti-fall {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); }
 }

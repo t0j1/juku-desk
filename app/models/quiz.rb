@@ -3,7 +3,7 @@ class Quiz
   include ActiveModel::Model
   include ActiveModel::Attributes
 
-  MIN_COUNT = 20
+  MIN_COUNT = 10
   MAX_COUNT = 50
 
   attribute :wordbook
