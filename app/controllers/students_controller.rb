@@ -1,4 +1,5 @@
 class StudentsController < ApplicationController
+  before_action :require_system_admin!, only: :destroy # 削除は system_admin だけ（退塾は left_on で扱う）
   before_action :set_student, only: %i[ show edit update destroy ]
 
   def index

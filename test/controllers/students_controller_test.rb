@@ -83,7 +83,19 @@ class StudentsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "staff can delete and it is audited" do
+  test "staff cannot delete a student (403 or redirect) and no delete button is shown" do
+    assert_no_difference "Student.count" do
+      delete student_path(students(:mika))
+    end
+    assert_response :redirect
+    get student_path(students(:mika))
+    assert_select "button", text: "削除", count: 0
+  end
+
+  test "system_admin can delete and it is audited" do
+    sign_in_as users(:system_admin)
+    get student_path(students(:mika))
+    assert_select "button", text: "削除"
     assert_difference "Student.count", -1 do
       delete student_path(students(:mika))
     end

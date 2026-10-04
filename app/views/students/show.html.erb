@@ -16,7 +16,7 @@
 <div class="mt-4 flex gap-4 text-sm">
   <%= link_to "編集", edit_student_path(@student), class: "underline" if current_user.can_write? %>
   <%= link_to "一覧に戻る", students_path, class: "underline" %>
-  <% if current_user.can_write? %>
+  <% if current_user.system_admin? %>
     <%= button_to "削除", @student, method: :delete, class: "text-red-700 underline", data: { turbo_confirm: "本当に削除しますか？退塾の場合は退塾日を設定してください。" } %>
   <% end %>
 </div>
