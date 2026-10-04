@@ -5,7 +5,7 @@ class JobProgress < ApplicationRecord
   belongs_to :user, optional: true
   belongs_to :subject, polymorphic: true, optional: true
 
-  enum :status, { queued: 0, running: 1, succeeded: 2, failed: 3, cancelled: 4 }, default: :queued
+  enum :status, { queued: 0, running: 1, succeeded: 2, failed: 3, cancelled: 4, held: 5 }, default: :queued
 
   validates :kind, :title, presence: true
 
@@ -31,7 +31,8 @@ class JobProgress < ApplicationRecord
     subject.try(:progress_failed!, self) # 対象が処理中のまま取り残されないようにする
   end
 
-  def finished? = succeeded? || failed? || cancelled?
+  # held: Gemini の日次上限で止まった（キャンセルとは別の「保留」。残りは上限明けに自動で再開する）
+  def finished? = succeeded? || failed? || cancelled? || held?
 
   def cancel_requested? = cancel_requested_at.present?
 

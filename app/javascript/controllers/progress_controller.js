@@ -82,6 +82,11 @@ export default class extends Controller {
     }
     bar.parentElement.setAttribute("aria-valuenow", p.percent ?? "")
     f("message").textContent = this.statusText(p)
+    // 日次上限の保留は、失敗・キャンセルと見分けられる色にする
+    bar.classList.toggle("bg-warn-fg", p.status === "held")
+    bar.classList.toggle("bg-primary", p.status !== "held")
+    f("message").classList.toggle("text-warn-fg", p.status === "held")
+    f("message").classList.toggle("font-bold", p.status === "held")
     f("cancel").hidden = p.finished
     f("cancel").disabled = p.cancel_requested
     if (p.cancel_requested && !p.finished) f("cancel").textContent = "キャンセルしています…"
@@ -92,6 +97,7 @@ export default class extends Controller {
     if (p.status === "succeeded") return "完了しました"
     if (p.status === "failed") return `失敗しました${p.message ? `：${p.message}` : ""}`
     if (p.status === "cancelled") return "キャンセルしました"
+    if (p.status === "held") return p.message || "上限に達したため保留しています"
     if (p.status === "queued") return "順番待ちです"
     return p.message || ""
   }

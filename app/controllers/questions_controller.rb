@@ -42,7 +42,8 @@ class QuestionsController < ApplicationController
     @question_count = Question.where(region_id: regions.select(:id)).count
     return render :bulk_restructure unless params[:confirmed].present?
 
-    batch = Marking::BulkRestructure.enqueue!(regions, user: current_user)
+    batch, progress = Marking::BulkRestructure.enqueue!(regions, user: current_user)
+    open_progress(progress) if progress
     AuditLog.record!(:update, batch, metadata: { bulk_restructure: true, region_ids: batch.region_ids, approved_dropped: @approved_count })
     redirect_to questions_path, notice: "#{batch.total} 件の画像を構造化の順番待ちに入れました。1 件ずつ順番に処理します。", status: :see_other
   end
@@ -92,7 +93,8 @@ class QuestionsController < ApplicationController
       return redirect_to upload_path(@question.region.upload_id), alert: "この領域はすでに構造化の順番待ち（または処理中）です。", status: :see_other
     end
 
-    Marking::Enqueuer.call(CropRegion.where(id: @question.region_id))
+    progress = Marking::Enqueuer.call(CropRegion.where(id: @question.region_id), user: current_user, title: "問題 ##{@question.id} の再構造化", label: "再構造化中")
+    open_progress(progress) if progress
     AuditLog.record!(:update, @question, metadata: { restructure: true })
     redirect_to upload_path(@question.region.upload_id), notice: "この領域を構造化の順番待ちに入れました。", status: :see_other
   end

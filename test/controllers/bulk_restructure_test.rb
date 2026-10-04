@@ -43,14 +43,14 @@ class BulkRestructureTest < ActionDispatch::IntegrationTest
     assert_select "#bulk-restructure-outdated[value=?]", "未対応の問題をすべて再構造化（3 問）"
     assert_select "input[name='question_ids[]'][form=bulk-restructure-form]", 4
 
-    assert_no_enqueued_jobs only: Marking::ExtractJob do
+    assert_no_enqueued_jobs only: Marking::StructureJob do
       post bulk_restructure_questions_path, params: { target: "outdated" }
     end
     assert_response :success
     assert_select "#bulk-restructure-confirm", /3 件の画像/
     assert_select "#approved-warning", 0
 
-    assert_enqueued_jobs 3, only: Marking::ExtractJob do
+    assert_enqueued_jobs 1, only: Marking::StructureJob do # 3 件を 1 つのジョブで順に処理する（進捗モーダル 1 件）
       post bulk_restructure_questions_path, params: { target: "outdated", confirmed: "1" }
     end
     assert_redirected_to questions_path
@@ -63,7 +63,7 @@ class BulkRestructureTest < ActionDispatch::IntegrationTest
     assert_select "#restructure-progress-count", "3 件中 0 件"
     assert_select "#restructure-progress-box[data-restructure-progress-active-value=true]"
 
-    perform_enqueued_jobs(only: Marking::ExtractJob)
+    perform_enqueued_jobs(only: Marking::StructureJob)
     assert_equal 3, @gemini.calls
     rebuilt = olds.map { |q| q.region.questions.sole }
     assert_equal [ "reorder" ], rebuilt.map(&:question_type).uniq
@@ -89,18 +89,18 @@ class BulkRestructureTest < ActionDispatch::IntegrationTest
     assert approved.reload.approved?
     assert approved.region.reload.extracted?
 
-    assert_enqueued_jobs 1, only: Marking::ExtractJob do
+    assert_enqueued_jobs 1, only: Marking::StructureJob do
       post bulk_restructure_questions_path, params: { question_ids: [ approved.id, plain.id ], skip_approved: "1", confirmed: "1" }
     end
     assert approved.region.reload.extracted?
     assert plain.region.reload.queued?
-    perform_enqueued_jobs(only: Marking::ExtractJob)
+    perform_enqueued_jobs(only: Marking::StructureJob)
     assert approved.reload.approved?
 
-    assert_enqueued_jobs 1, only: Marking::ExtractJob do
+    assert_enqueued_jobs 1, only: Marking::StructureJob do
       post bulk_restructure_questions_path, params: { question_ids: [ approved.id ], confirmed: "1" }
     end
-    perform_enqueued_jobs(only: Marking::ExtractJob)
+    perform_enqueued_jobs(only: Marking::StructureJob)
     assert_raises(ActiveRecord::RecordNotFound) { approved.reload }
     assert_not approved.region.questions.sole.approved?
   end
@@ -109,7 +109,7 @@ class BulkRestructureTest < ActionDispatch::IntegrationTest
     used = old_question
     Exam.create!(title: "小テスト", mode: "random", filter: {}).items.create!(question: used, position: 1)
     with_gemini(reorder_response("〔1〕"))
-    assert_no_enqueued_jobs only: Marking::ExtractJob do
+    assert_no_enqueued_jobs only: Marking::StructureJob do
       post bulk_restructure_questions_path, params: { question_ids: [ used.id ], confirmed: "1" }
     end
     assert_redirected_to questions_path
@@ -120,7 +120,7 @@ class BulkRestructureTest < ActionDispatch::IntegrationTest
     olds = 3.times.map { old_question }
     with_gemini(reorder_response("〔1〕"), Gemini::DailyQuotaExceeded.new("daily"))
     post bulk_restructure_questions_path, params: { target: "outdated", confirmed: "1" }
-    perform_enqueued_jobs(only: Marking::ExtractJob)
+    perform_enqueued_jobs(only: Marking::StructureJob)
 
     assert_equal %w[extracted quota_exceeded queued], olds.map { |q| q.region.reload.status }
     assert_equal 2, @gemini.calls

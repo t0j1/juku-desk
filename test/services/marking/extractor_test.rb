@@ -16,7 +16,7 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
   end
 
   def run_all
-    perform_enqueued_jobs(only: Marking::ExtractJob)
+    perform_enqueued_jobs(only: Marking::StructureJob)
   end
 
   test "extracts a question from a region and keeps the raw response" do
@@ -99,8 +99,8 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     with_gemini(gemini_json, rpm: 10)
     freeze_time # 時計は sleeper の travel でだけ進める
     regions = make_regions(15, status: :confirmed)
-    assert_enqueued_jobs 15, only: Marking::ExtractJob do
-      assert_equal 15, Marking::Enqueuer.call(CropRegion.where(id: regions.map(&:id)))
+    assert_enqueued_jobs 1, only: Marking::StructureJob do # 15 件を 1 つのジョブ（進捗 1 件）で順に処理する
+      assert_equal 15, Marking::Enqueuer.call(CropRegion.where(id: regions.map(&:id))).total
     end
     assert_equal [ "queued" ], regions.map { |r| r.reload.status }.uniq
 
@@ -115,14 +115,14 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
   end
 
   test "the Solid Queue concurrency limit comes from GEMINI_MAX_CONCURRENCY (default 1)" do
-    assert_equal 1, Marking::ExtractJob.concurrency_limit
-    assert Marking::ExtractJob.new(1).concurrency_key.end_with?("/gemini")
+    assert_equal 1, Marking::StructureJob.concurrency_limit
+    assert Marking::StructureJob.new(1).concurrency_key.end_with?("/gemini")
   end
 
   test "without GEMINI_API_KEY nothing is enqueued and regions stay confirmed" do
     regions = make_regions(2, status: :confirmed)
     assert_no_enqueued_jobs do
-      assert_equal 0, Marking::Enqueuer.call(CropRegion.where(id: regions.map(&:id)))
+      assert_nil Marking::Enqueuer.call(CropRegion.where(id: regions.map(&:id)))
     end
     assert_equal [ "confirmed" ], regions.map { |r| r.reload.status }.uniq
   end
@@ -236,8 +236,8 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     assert_empty @sleeps
     assert_equal :model_unavailable, region.upload.extraction_status
 
-    assert_equal 1, Marking::Enqueuer.call(region.upload.crop_regions.where(status: CropRegion::RETRYABLE_STATUSES))
-    perform_enqueued_jobs(only: Marking::ExtractJob)
+    assert_equal 1, Marking::Enqueuer.call(region.upload.crop_regions.where(status: CropRegion::RETRYABLE_STATUSES)).total
+    perform_enqueued_jobs(only: Marking::StructureJob)
     assert_equal "extracted", region.reload.status
   end
 end
