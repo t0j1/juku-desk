@@ -2,6 +2,10 @@ Rails.application.routes.draw do
   resource :session, only: %i[ new create destroy ]
   resources :passwords, param: :token, only: %i[ new create edit update ]
 
+  resources :announcements, only: [] do
+    post :read, on: :member
+  end
+
   resources :user_sessions, path: "account/sessions", only: %i[ index destroy ] do
     delete :destroy_others, on: :collection
   end
@@ -11,6 +15,7 @@ Rails.application.routes.draw do
       post :unlock, on: :member
     end
     resources :login_events, only: :index
+    resources :announcements, except: :show
   end
 
   resources :students do

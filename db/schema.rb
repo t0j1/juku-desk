@@ -10,9 +10,30 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "announcement_reads", force: :cascade do |t|
+    t.bigint "announcement_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["announcement_id", "user_id"], name: "index_announcement_reads_on_announcement_id_and_user_id", unique: true
+    t.index ["announcement_id"], name: "index_announcement_reads_on_announcement_id"
+    t.index ["user_id"], name: "index_announcement_reads_on_user_id"
+  end
+
+  create_table "announcements", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "body"
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_announcements_on_created_by_id"
+    t.index ["starts_at", "ends_at"], name: "index_announcements_on_starts_at_and_ends_at"
+  end
 
   create_table "audit_logs", force: :cascade do |t|
     t.bigint "user_id"
@@ -185,6 +206,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_100000) do
     t.index ["wordbook_id"], name: "index_words_on_wordbook_id"
   end
 
+  add_foreign_key "announcement_reads", "announcements", on_delete: :cascade
+  add_foreign_key "announcement_reads", "users", on_delete: :cascade
+  add_foreign_key "announcements", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "audit_logs", "users"
   add_foreign_key "login_events", "users", on_delete: :nullify
   add_foreign_key "password_histories", "users"
