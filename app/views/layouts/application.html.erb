@@ -26,7 +26,11 @@
 
   <body class="min-h-screen bg-gradient-to-b from-console-bg-from to-console-bg-to text-ink font-sans text-[15px]">
     <% if authenticated? %>
-      <div class="flex <%= content_for?(:embed) ? "h-screen h-dvh" : "min-h-screen" %> flex-col gap-3 p-3 md:flex-row md:gap-4 md:p-4 lg:gap-6 lg:p-6 print:block print:p-0 print:min-h-0" data-controller="sidebar">
+      <% if impersonating? %>
+        <%= render "shared/impersonation_banner" %>
+        <div class="h-12 print:hidden" aria-hidden="true"></div>
+      <% end %>
+      <div class="flex <%= content_for?(:embed) ? (impersonating? ? "h-[calc(100vh-3rem)] h-[calc(100dvh-3rem)]" : "h-screen h-dvh") : "min-h-screen" %> flex-col gap-3 p-3 md:flex-row md:gap-4 md:p-4 lg:gap-6 lg:p-6 print:block print:p-0 print:min-h-0" data-controller="sidebar">
         <%# 768px 未満：ヘッダーの ☰ でサイドバーを開閉する %>
         <header class="md:hidden flex items-center gap-3 print:hidden">
           <button type="button" id="sidebar-toggle" data-sidebar-target="button" data-action="sidebar#toggle" aria-controls="app-sidebar" aria-expanded="false"

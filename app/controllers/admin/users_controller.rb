@@ -2,7 +2,7 @@ require "csv"
 
 module Admin
   class UsersController < BaseController
-    before_action :set_user, only: %i[ update unlock suspend activate resend_invitation ]
+    before_action :set_user, only: %i[ update unlock suspend activate resend_invitation reset_two_factor ]
 
     def index
       @users = User.order(:id)
@@ -83,6 +83,18 @@ module Admin
       @user.unlock!
       AuditLog.record!(:unlock, @user)
       redirect_to admin_users_path, notice: "#{@user.name} のロックを解除しました。"
+    end
+
+    # 2FA のリセット（端末を失くしたとき）。次のログインで再設定を求める。自分自身は別の管理者に頼む。
+    def reset_two_factor
+      if @user == current_user
+        redirect_to admin_users_path, alert: "自分自身の 2 段階認証はリセットできません。ほかの管理者に依頼してください。"
+      else
+        @user.reset_otp!
+        @user.sessions.destroy_all
+        AuditLog.record!(:two_factor_reset, @user)
+        redirect_to admin_users_path, notice: "#{@user.name} の 2 段階認証をリセットしました。次のログインで再設定が必要です。"
+      end
     end
 
     private
