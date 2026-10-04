@@ -72,4 +72,41 @@ class MarkingSectionsTest < ApplicationSystemTestCase
     assert_equal "【1】次の文を訳しなさい。", s.first.first
     assert_equal %w[translate_en_ja reorder passage compose_ja_en fill_blank], s.map { |x| x[2].uniq.sole }
   end
+
+  test "editing a section template does not change prints of tests already made, only new ones" do
+    create_grouped("編集前に作成")
+    assert_selector "#test-sections"
+    old_test = Exam.last
+    assert_equal [ 1, "reorder", "次の（ ）内の語を並べ替えて，英文を完成させなさい。" ], old_test.sections.first.values_at("section", "question_type", "instruction")
+
+    visit edit_section_template_path("reorder")
+    fill_in "section_template[instruction]", with: "語を並べ替えなさい（新しい指示文）。"
+    click_on "保存"
+    assert_text "指示文を保存しました"
+
+    visit print_marking_test_path(old_test, kind: "question")
+    assert_selector "#print_section_1 .mt-section-head", text: "【1】次の（ ）内の語を並べ替えて，英文を完成させなさい。"
+    visit print_marking_test_path(old_test, kind: "answer")
+    assert_selector "#print_section_1 .mt-section-head", text: "【1】次の（ ）内の語を並べ替えて，英文を完成させなさい。"
+    assert_no_text "新しい指示文"
+
+    create_grouped("編集後に作成")
+    assert_selector "#test-sections"
+    new_test = Exam.last
+    assert_not_equal old_test, new_test
+    visit print_marking_test_path(new_test, kind: "question")
+    assert_selector "#print_section_1 .mt-section-head", text: "【1】語を並べ替えなさい（新しい指示文）。"
+    visit print_marking_test_path(new_test, kind: "answer")
+    assert_selector "#print_section_1 .mt-section-head", text: "【1】語を並べ替えなさい（新しい指示文）。"
+  end
+
+  test "tests made before snapshots existed keep using the current template" do
+    create_grouped("以前の小テスト")
+    assert_selector "#test-sections"
+    old_test = Exam.last
+    old_test.update!(sections: [])
+    SectionTemplate.create!(question_type: "reorder", instruction: "テンプレートの指示文。")
+    visit print_marking_test_path(old_test, kind: "question")
+    assert_selector "#print_section_1 .mt-section-head", text: "【1】テンプレートの指示文。"
+  end
 end
