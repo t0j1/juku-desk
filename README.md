@@ -13,6 +13,8 @@ make test    # bin/rails test + schedule-web の node --test
 
 `apps/schedule-web` の使い方は `apps/schedule-web/README.md`。
 
+詳細: [構成](docs/ARCHITECTURE.md) / [開発](docs/DEVELOPMENT.md) / [デプロイ](docs/DEPLOYMENT.md) / [移行計画](docs/MIGRATION_PLAN.md)
+
 ## ローカル開発（Docker不使用）
 
 ```bash

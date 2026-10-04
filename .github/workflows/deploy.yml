@@ -19,8 +19,23 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+
+      # モノレポ: apps/schedule-web と docs/ のみの変更では Rails を再デプロイしない（Render の Free は再起動で数分止まる）
+      - name: Check whether Rails changed
+        id: scope
+        run: |
+          files=$(git diff --name-only HEAD^ HEAD 2>/dev/null || true)
+          echo "$files"
+          if [ -n "$files" ] && ! echo "$files" | grep -qvE '^(apps/schedule-web/|docs/|notes/|.*\.md$|\.github/workflows/schedule-backup\.yml$)'; then
+            echo "::notice::Rails に関係する変更がないため、デプロイをスキップします"
+            echo "rails=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "rails=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Check Ruby version consistency
+        if: steps.scope.outputs.rails == 'true'
         run: |
           a=$(grep -oP 'ARG RUBY_VERSION=\K[0-9.]+' Dockerfile | head -1)
           b=$(tr -d '\n' < .ruby-version)
@@ -29,6 +44,7 @@ jobs:
           [ "$a" = "$b" ] && [ "$b" = "$c" ] || { echo "::error::Ruby version mismatch"; exit 1; }
 
       - name: Trigger Render deploy
+        if: steps.scope.outputs.rails == 'true'
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |

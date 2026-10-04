@@ -6,7 +6,61 @@ on:
     branches: [ main ]
 
 jobs:
+  # モノレポ: 変更したパスに応じて Rails 側 / schedule-web 側のジョブだけ走らせる。
+  # スキップされたジョブは必須チェックでも成功扱いになる。判定できないとき（新規ブランチなど）は両方走らせる。
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      rails: ${{ steps.filter.outputs.rails }}
+      schedule: ${{ steps.filter.outputs.schedule }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed areas
+        id: filter
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          rails=true; schedule=true
+          if [ -n "$BASE" ] && ! echo "$BASE" | grep -qE '^0+$' && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            files=$(git diff --name-only "$BASE" "${{ github.sha }}")
+            echo "$files"
+            # Rails 側: apps/schedule-web 以外に変更があれば
+            echo "$files" | grep -qv '^apps/schedule-web/' || rails=false
+            # schedule 側: apps/schedule-web か、共通の設定・このワークフロー
+            echo "$files" | grep -qE '^(apps/schedule-web/|Makefile$|\.mise\.toml$|\.github/workflows/ci\.yml$)' || schedule=false
+          fi
+          echo "rails=$rails" >> "$GITHUB_OUTPUT"
+          echo "schedule=$schedule" >> "$GITHUB_OUTPUT"
+
+  schedule-web:
+    needs: changes
+    if: needs.changes.outputs.schedule == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/schedule-web
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # package.json を持たない（依存ゼロ）ため、DB テスト用の pglite だけ一時的に入れる
+      - name: Install test dependency
+        run: npm i --no-save @electric-sql/pglite
+
+      - name: Run tests
+        run: node --test scripts/*.test.mjs
   scan_ruby:
+    needs: changes
+    if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -25,6 +79,8 @@ jobs:
         run: bin/bundler-audit
       
   scan_js:
+    needs: changes
+    if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -40,6 +96,8 @@ jobs:
         run: bin/importmap audit
 
   lint:
+    needs: changes
+    if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
     env:
       RUBOCOP_CACHE_ROOT: tmp/rubocop
@@ -66,6 +124,8 @@ jobs:
         run: bin/rubocop -f github
 
   test:
+    needs: changes
+    if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
 
     services:
@@ -105,6 +165,8 @@ jobs:
         run: bin/rails db:test:prepare test
 
   system-test:
+    needs: changes
+    if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
 
     services:

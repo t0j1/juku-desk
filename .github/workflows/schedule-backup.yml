@@ -1,4 +1,4 @@
-name: Weekly backup
+name: Schedule weekly backup
 
 on:
   schedule:
@@ -19,16 +19,33 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Supabase の接続情報（Repository secrets）が未登録なら、失敗させずに何もしない
+      - name: Check secrets
+        id: secrets
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "::notice::SUPABASE_URL / SUPABASE_ANON_KEY が未登録のため、バックアップをスキップします"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-node@v7
+        if: steps.secrets.outputs.ready == 'true'
         with:
           node-version: 24
 
       # 検証ロジック自体のテスト（壊したデータで検証が失敗することの確認）。失敗したら以降は実行しない
       - name: Self-test verification
-        run: node --test scripts/backup.test.mjs
+        if: steps.secrets.outputs.ready == 'true'
+        run: node --test apps/schedule-web/scripts/backup.test.mjs
 
       # backup ブランチ用の作業ディレクトリを用意（main とは履歴の無い専用ブランチ）
       - name: Prepare backup branch
+        if: steps.secrets.outputs.ready == 'true'
         run: |
           if git ls-remote --exit-code --heads origin backup >/dev/null 2>&1; then
             git fetch --depth=1 origin backup
@@ -41,12 +58,14 @@ jobs:
 
       # 取得・検証（件数・CSV往復・形式・急減）に失敗すると、ここで止まる（既存のバックアップは無変更、push もされない）
       - name: Take backup
+        if: steps.secrets.outputs.ready == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: node scripts/backup.mjs --out ../backup-wt/backups --keep 12
+        run: node apps/schedule-web/scripts/backup.mjs --out ../backup-wt/backups --keep 12
 
       - name: Commit and push
+        if: steps.secrets.outputs.ready == 'true'
         working-directory: ../backup-wt
         run: |
           git config user.name "github-actions[bot]"
