@@ -6,6 +6,9 @@ Rails.application.routes.draw do
   resources :announcements, only: [] do
     post :read, on: :member
   end
+  resource :impersonation, only: :destroy
+  resource :two_factor, only: %i[ show new create destroy ]
+  resource :two_factor_challenge, only: %i[ new create ]
 
   resources :user_sessions, path: "account/sessions", only: %i[ index destroy ] do
     delete :destroy_others, on: :collection
@@ -17,6 +20,8 @@ Rails.application.routes.draw do
       post :suspend, on: :member
       post :activate, on: :member
       post :resend_invitation, on: :member
+      post :reset_two_factor, on: :member
+      resource :impersonation, only: %i[ new create ]
     end
     resources :login_events, only: :index
     resources :mail_templates, only: %i[ index edit update ], param: :key do

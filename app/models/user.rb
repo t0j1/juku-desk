@@ -8,6 +8,7 @@ class User < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :pdf_split_jobs, dependent: :destroy
   has_many :password_histories, dependent: :destroy
+  has_many :recovery_codes, dependent: :destroy
 
   # system_admin: 全操作 + ユーザー・ログイン履歴の管理 / staff: 通常の作成・更新・削除 / viewer: 閲覧のみ
   enum :role, { staff: 1, system_admin: 2, viewer: 3 }, validate: true
@@ -40,6 +41,64 @@ class User < ApplicationRecord
   # 招待中ユーザーの仮パスワード。誰も知らない値で、方針（12文字以上・英字と数字）も満たす
   def self.unusable_password
     "#{SecureRandom.alphanumeric(30)}a1"
+  end
+
+  # --- 2FA（TOTP） ---
+
+  def otp_enabled?
+    otp_enabled_at.present?
+  end
+
+  # system_admin は必須。管理者にリセットされた人も、再設定が終わるまで必須
+  def two_factor_required?
+    system_admin? || otp_setup_required?
+  end
+
+  def otp_secret
+    return if otp_secret_ciphertext.blank?
+
+    self.class.otp_encryptor.decrypt_and_verify(otp_secret_ciphertext)
+  end
+
+  def otp_secret=(value)
+    self.otp_secret_ciphertext = value.presence && self.class.otp_encryptor.encrypt_and_sign(value)
+  end
+
+  def self.otp_encryptor
+    @otp_encryptor ||= ActiveSupport::MessageEncryptor.new(Rails.application.key_generator.generate_key("user otp secret", 32))
+  end
+
+  # 有効化。確認コードが合ったあとに呼ぶ。戻り値はリカバリーコード（平文）
+  def enable_otp!(secret, step)
+    transaction do
+      update_columns(otp_secret_ciphertext: self.class.otp_encryptor.encrypt_and_sign(secret), otp_enabled_at: Time.current,
+                     otp_last_used_step: step, otp_setup_required: false)
+      RecoveryCode.regenerate_for!(self)
+    end
+  end
+
+  def disable_otp!
+    transaction do
+      recovery_codes.delete_all
+      update_columns(otp_secret_ciphertext: nil, otp_enabled_at: nil, otp_last_used_step: nil)
+    end
+  end
+
+  # 管理者によるリセット。次のログインで再設定を求める
+  def reset_otp!
+    disable_otp!
+    update_columns(otp_setup_required: true)
+  end
+
+  # TOTP かリカバリーコードのどちらかが合えば :totp / :recovery、合わなければ nil。TOTP は同じコードの使い回しを許さない。
+  def verify_second_factor(input)
+    return unless otp_enabled?
+
+    if (step = Totp.verify(otp_secret, input))
+      :totp if User.where(id: id).where("otp_last_used_step IS NULL OR otp_last_used_step < ?", step).update_all(otp_last_used_step: step) == 1
+    elsif RecoveryCode.consume!(self, input)
+      :recovery
+    end
   end
 
   def locked?

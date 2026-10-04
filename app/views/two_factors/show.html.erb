@@ -1,0 +1,21 @@
+<% content_for :title, "2段階認証" %>
+<h1 class="font-bold text-[22px] mb-6">2段階認証</h1>
+<% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
+<% if alert %><p id="alert" class="mb-4 text-sm font-bold text-ng"><%= alert %></p><% end %>
+<% if current_user.otp_enabled? %>
+  <p class="mb-2"><%= status_pill("有効", :ok) %></p>
+  <p class="mb-6 text-sm text-ink-sub">未使用のリカバリーコード：<%= current_user.recovery_codes.unused.count %>個</p>
+  <% if current_user.two_factor_required? %>
+    <p class="text-sm text-ink-sub">このアカウントは 2 段階認証が必須のため、解除できません。端末を失くしたときは、ほかのシステム管理者にリセットを依頼してください。</p>
+  <% else %>
+    <%= form_with url: two_factor_path, method: :delete, class: "space-y-4 max-w-md" do |form| %>
+      <p class="text-sm font-bold">解除する</p>
+      <div><%= form.label :password, "パスワード", class: "block text-sm" %><%= form.password_field :password, required: true, autocomplete: "current-password", class: "input mt-1" %></div>
+      <div><%= form.label :code, "認証コード（またはリカバリーコード）", class: "block text-sm" %><%= form.text_field :code, required: true, autocomplete: "one-time-code", class: "input mt-1" %></div>
+      <%= form.submit "2段階認証を解除", class: "btn-danger cursor-pointer" %>
+    <% end %>
+  <% end %>
+<% else %>
+  <p class="mb-4"><%= status_pill("未設定", :neutral) %></p>
+  <%= link_to "設定する", new_two_factor_path, class: "btn-primary" %>
+<% end %>
