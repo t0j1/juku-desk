@@ -1,3 +1,4 @@
+<% content_for :head do %><%= stylesheet_link_tag "katex/katex" %><% end %>
 <% content_for :title, @test.title %>
 <div class="flex flex-wrap items-center gap-3 mb-6">
   <h1 class="font-bold text-[22px] mr-auto"><%= @test.title %></h1>
@@ -14,7 +15,7 @@
 <ol id="test-items" class="space-y-3">
   <% @items.each do |item| %>
     <li id="test_item_<%= item.position %>" class="rounded-xl border border-line bg-white/70 p-3">
-      <span class="tnum font-bold mr-2"><%= item.position %></span><span class="whitespace-pre-wrap"><%= item.question.question_text %></span>
+      <span class="tnum font-bold mr-2"><%= item.position %></span><span class="whitespace-pre-wrap" data-controller="math"><%= item.question.question_text %></span>
     </li>
   <% end %>
 </ol>
