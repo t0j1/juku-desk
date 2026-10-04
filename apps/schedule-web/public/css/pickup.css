@@ -1,0 +1,94 @@
+/* 送迎予約（生徒用）。style.css の上に重ねる。スマホ（LINE の中）で開く前提 */
+.pickup { max-width: 560px; }
+.pickup header p { margin-bottom: 16px; }
+.pickup .glass { margin-bottom: 16px; }
+.who { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; margin: 0 0 12px; }
+
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.slot {
+  font: inherit; color: var(--text); cursor: pointer; min-height: 56px; padding: 6px 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  background: rgba(255, 255, 255, .9); border: 1px solid rgba(75, 79, 179, .35); border-radius: 12px;
+}
+.slot .t { font-weight: 700; font-size: 1.05rem; }
+.slot .sub { font-size: .72rem; color: var(--muted); }
+.slot.group { border-color: #1f4fa0; }
+.slot.group .sub { color: #1f4fa0; font-weight: 700; }
+.slot[aria-checked=true] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.slot[aria-checked=true] .sub { color: #fff; }
+.slot:disabled { cursor: not-allowed; opacity: .5; background: #eceef2; }
+
+.summary { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0 0 12px; }
+.summary dt { font-weight: 700; color: var(--muted); font-size: .9rem; }
+.summary dd { margin: 0; font-weight: 700; }
+.done-msg { font-size: 1.1rem; font-weight: 700; color: #1d6b3a; margin: 0 0 8px; }
+
+.res-card { padding: 12px 14px; margin-bottom: 10px; border-radius: 14px; background: rgba(255, 255, 255, .75); border: 1px solid var(--border); display: grid; gap: 6px; }
+.res-card.st-rejected, .res-card.st-cancelled { opacity: .75; }
+.res-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.res-time { font-size: 1.05rem; font-weight: 700; }
+.res-note { font-size: .88rem; color: var(--muted); }
+.res-card .btn.small { justify-self: start; }
+.proposal { padding: 10px 12px; border-radius: 12px; background: #e3eeff; border: 1px solid #1f4fa0; }
+.proposal p { margin: 0 0 8px; }
+
+/* ---- 予約できたときの猫（pickup-cat.js） ---- */
+.cat-stage { position: fixed; inset: 0; z-index: 80; pointer-events: none; overflow: hidden; }
+.cat-pop {
+  position: absolute; left: 50%; bottom: 0; width: min(220px, 56vw);
+  transform: translate(-50%, 105%); animation: cat-rise 3.2s cubic-bezier(.3, 1.4, .5, 1) forwards;
+}
+.cat-svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 8px 18px rgba(60, 40, 20, .25)); }
+.cat-paw { transform-origin: 140px 140px; animation: cat-wave .5s ease-in-out .55s 4 alternate; }
+.cat-tail { transform-origin: 150px 165px; animation: cat-tail 1s ease-in-out infinite alternate; }
+.cat-bubble {
+  position: absolute; left: 50%; bottom: 92%; transform: translateX(-50%) scale(0); transform-origin: 50% 100%;
+  white-space: nowrap; padding: 8px 14px; border-radius: 16px; background: #fff; color: #3b2a1e;
+  font-weight: 700; font-size: .95rem; box-shadow: 0 6px 18px rgba(60, 40, 20, .18);
+  animation: cat-bubble 3.2s ease forwards;
+}
+.cat-bubble::after { content: ""; position: absolute; left: 50%; top: 100%; margin-left: -8px; border: 8px solid transparent; border-top-color: #fff; }
+.cat-pawprint {
+  position: absolute; bottom: -40px; width: var(--s); height: var(--s); opacity: 0;
+  animation: cat-float 2.2s ease-out var(--d) forwards;
+}
+.cat-pawprint svg { width: 100%; height: 100%; fill: #f7a1b0; transform: rotate(var(--r)); }
+@keyframes cat-rise {
+  0% { transform: translate(-50%, 105%); }
+  16%, 80% { transform: translate(-50%, 8%); }
+  100% { transform: translate(-50%, 110%); }
+}
+@keyframes cat-wave { from { transform: rotate(-14deg); } to { transform: rotate(18deg); } }
+@keyframes cat-tail { from { transform: rotate(-8deg); } to { transform: rotate(10deg); } }
+@keyframes cat-bubble {
+  0%, 14% { transform: translateX(-50%) scale(0); }
+  22%, 76% { transform: translateX(-50%) scale(1); }
+  84%, 100% { transform: translateX(-50%) scale(0); }
+}
+@keyframes cat-float {
+  0% { opacity: 0; transform: translateY(0) scale(.6); }
+  20% { opacity: .9; }
+  100% { opacity: 0; transform: translateY(-60vh) scale(1.1); }
+}
+/* 視差効果を減らす設定のとき：完了メッセージの横の小さな猫（動かない） */
+.done-cat { display: inline-block; width: 44px; margin-right: 8px; vertical-align: middle; }
+.done-cat .cat-paw, .done-cat .cat-tail { animation: none; }
+
+/* ---- 生徒ページのタブ（送迎 / 欠席・振替） ---- */
+.page-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 14px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .7); border: 1px solid var(--border); }
+.page-tabs button { font: inherit; font-weight: 700; min-height: 44px; border: 0; border-radius: 999px; background: none; color: var(--accent); cursor: pointer; }
+.page-tabs button.active { background: var(--accent); color: #fff; }
+
+/* ---- 欠席・振替 ---- */
+.stock-count { margin: 4px 0 8px; font-weight: 700; }
+.stock-count strong { font-size: 2rem; margin: 0 4px; color: var(--accent); }
+.ab-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ab-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .75); border: 1px solid var(--border); }
+.ab-item.is-absent { background: #fff8e6; }
+.ab-sub { font-size: .85rem; color: var(--muted); }
+.ab-sub.ok { color: #1d6b3a; font-weight: 700; }
+.ab-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.ab-form { grid-column: 1 / -1; display: grid; gap: 8px; }
+.ab-form label { display: grid; gap: 4px; font-weight: 700; font-size: .9rem; }
+.ab-empty { padding: 10px 4px; color: var(--muted); }
+#ab-msg:not(.error) { color: #1d6b3a; background: rgba(230, 246, 236, .9); border-radius: 12px; }

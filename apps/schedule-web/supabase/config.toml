@@ -1,0 +1,6 @@
+# Supabase CLI の設定（Edge Function のデプロイにだけ使う。DB は SQL Editor で schema.sql / pickup.sql を実行する方式）
+project_id = "sekigaku-schedule"
+
+# 利用者向け API は、自分で本人確認（LINE / 開発用メール）をするので、Supabase の JWT 検証は使わない
+[functions.pickup-api]
+verify_jwt = false

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>碩学館 生徒ページ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/admin.css?v=6">  <!-- フォーム・ボタンの共通スタイル -->
+<link rel="stylesheet" href="css/pickup.css?v=3">
+</head>
+<body>
+<div class="wrap pickup">
+  <header>
+    <h1>碩学館 生徒ページ</h1>
+    <p>送迎の予約・欠席の連絡・振替の申請</p>
+  </header>
+
+  <div id="status" class="status" role="status" hidden></div>
+
+  <!-- 開発用：メールアドレスで本人を識別（本番は LINE） -->
+  <section id="sec-login" class="glass" hidden>
+    <h2>メールアドレスの入力</h2>
+    <p class="hint">開発用の画面です。本番では LINE から開くので、この入力はありません。</p>
+    <form id="login-form" class="form">
+      <label>メールアドレス<input id="login-mail" type="email" autocomplete="email" required></label>
+      <button class="btn primary" type="submit">次へ</button>
+    </form>
+  </section>
+
+  <!-- 登録コードの入力（初回だけ） -->
+  <section id="sec-link" class="glass" hidden>
+    <h2>はじめての方：登録コードの入力</h2>
+    <p class="hint">碩学館から受け取った8文字の登録コードを入力してください。1回だけ入力すれば、次からは不要です。</p>
+    <form id="link-form" class="form">
+      <label>登録コード<input id="link-code" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="例：ABCD-2345" required></label>
+      <p id="link-msg" class="msg" role="alert"></p>
+      <button class="btn primary" type="submit">登録する</button>
+    </form>
+    <p class="dev-only" hidden><button class="btn small" type="button" data-act="change-mail">メールアドレスを変える</button></p>
+  </section>
+
+  <div id="sec-main" hidden>
+    <p class="who"><span id="who-name"></span>
+      <button class="btn small dev-only" type="button" data-act="change-mail" hidden>メールアドレスを変える</button></p>
+
+    <nav class="page-tabs" aria-label="ページの切り替え">
+      <button type="button" data-page="pickup" class="active" aria-pressed="true">🚗 送迎</button>
+      <button type="button" data-page="absence" aria-pressed="false">📝 欠席・振替</button>
+    </nav>
+
+    <div id="page-pickup">
+    <!-- 予約 -->
+    <section class="glass" id="book">
+      <h2>送迎を予約する</h2>
+      <p class="hint">乗車場所：<strong id="place">勝瑞駅</strong>（勝瑞駅 → 碩学館）</p>
+
+      <form id="book-form" class="form">
+        <label>日付<input id="b-date" type="date" required></label>
+        <p id="date-msg" class="hint" aria-live="polite"></p>
+        <fieldset id="slot-box" hidden>
+          <legend>時刻（勝瑞駅を出る時刻）</legend>
+          <div id="slots" class="slots" role="radiogroup" aria-label="時刻"></div>
+        </fieldset>
+        <label id="size-box" hidden>人数（本人を含む）<select id="b-size"></select></label>
+        <label>備考（任意）<textarea id="b-notes" rows="2" maxlength="300" placeholder="例：電車が遅れたら連絡します"></textarea></label>
+        <button class="btn primary" type="submit" id="to-confirm" disabled>確認へ</button>
+      </form>
+
+      <div id="confirm" hidden>
+        <h3>この内容で予約しますか？</h3>
+        <dl class="summary">
+          <dt>日付</dt><dd id="c-date"></dd>
+          <dt>時刻</dt><dd id="c-time"></dd>
+          <dt>人数</dt><dd id="c-size"></dd>
+          <dt>乗車場所</dt><dd id="c-place"></dd>
+          <dt>備考</dt><dd id="c-notes"></dd>
+        </dl>
+        <p id="book-msg" class="msg" role="alert"></p>
+        <div class="cols">
+          <button class="btn" type="button" id="back">戻る</button>
+          <button class="btn primary" type="button" id="submit">予約する</button>
+        </div>
+      </div>
+
+      <div id="done" hidden>
+        <p class="done-msg" role="status">予約を受け付けました。<br>管理者の承認をお待ちください。</p>
+        <p class="hint" id="done-note"></p>
+        <button class="btn" type="button" id="again">別の日を予約する</button>
+      </div>
+    </section>
+
+    <!-- 自分の予約 -->
+    <section class="glass" id="mine">
+      <div class="bar"><h2 style="margin:0">自分の予約</h2><span class="spacer"></span><button class="btn small" type="button" id="mine-refresh">更新</button></div>
+      <div id="mine-list"></div>
+    </section>
+    </div>
+
+    <!-- 欠席・振替 -->
+    <div id="page-absence" hidden>
+      <p id="ab-msg" class="status" role="status" hidden></p>
+
+      <section class="glass" id="ab-stock">
+        <div class="bar"><h2 style="margin:0">振替ストック</h2><span class="spacer"></span><button class="btn small" type="button" id="ab-refresh">更新</button></div>
+        <p class="stock-count">使えるストック <strong id="ab-count">–</strong> 回</p>
+        <p class="hint">授業を休む連絡をすると、ストックが1つ増えます（授業の開始時刻まで）。ストックは、欠席した日から3か月以内の、ほかの学年の授業で使えます。</p>
+        <ul id="ab-credits" class="ab-list"></ul>
+      </section>
+
+      <section class="glass" id="ab-classes">
+        <h2>欠席の連絡</h2>
+        <p class="hint">自分の学年の授業です。休む授業の「休む」を押してください。授業の開始時刻を過ぎると連絡できません（直接ご連絡ください）。</p>
+        <ul id="ab-class-list" class="ab-list"></ul>
+      </section>
+
+      <section class="glass" id="ab-makeup">
+        <h2>振替の申請</h2>
+        <p class="hint">ほかの学年の授業に、ストックを使って振替を申請できます。管理者が承認すると、その授業に出席できます。</p>
+        <ul id="ab-options" class="ab-list"></ul>
+      </section>
+
+      <section class="glass" id="ab-requests">
+        <h2>振替の申請状況</h2>
+        <ul id="ab-request-list" class="ab-list"></ul>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js?v=6"></script>
+<script src="js/common.js?v=6"></script>
+<script src="js/pickup-common.js?v=2"></script>
+<script src="js/pickup-cat.js?v=2"></script>
+<script src="js/pickup.js?v=5"></script>
+<script src="js/absence.js?v=1"></script>
+</body>
+</html>

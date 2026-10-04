@@ -1,0 +1,15 @@
+name = "sekigaku-keepalive"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+# 3日おき 03:00 UTC（日本時間 12:00）。
+# 月をまたぐと間隔が最大4日になりますが、停止の目安（7日）には収まります。
+[triggers]
+crons = ["0 3 */3 * *"]
+
+[vars]
+# 自分の Project URL に書き換えてください（公開情報なのでコミットして構いません）
+SUPABASE_URL = "https://qhdbpccbkhggyaussnkp.supabase.co"
+
+# SUPABASE_ANON_KEY は次のコマンドで登録します（ファイルには書きません）:
+#   npx wrangler secret put SUPABASE_ANON_KEY
