@@ -8,12 +8,11 @@ module PdfSplitter
         range = "#{Integer(from)}-#{Integer(to)}"
         # --pages の中で渡せるのは --password= だけ（--password-file は不可）。パスワードを引数に載せないよう、
         # パスワード付きのときは暗号化PDFを入力に指定し、そのページを取り出す（--pages .）
-        cmd = if pw.empty?
-          [ "qpdf", "--empty", "--pages", input_path.to_s, range, "--", output_path.to_s ]
+        _out, err, st = if pw.empty?
+          Open3.capture3("qpdf", "--empty", "--pages", input_path.to_s, range, "--", output_path.to_s)
         else
-          [ "qpdf", *pw, "--decrypt", input_path.to_s, "--pages", ".", range, "--", output_path.to_s ]
+          Open3.capture3("qpdf", *pw, "--decrypt", input_path.to_s, "--pages", ".", range, "--", output_path.to_s)
         end
-        _out, err, st = Open3.capture3(*cmd)
         # 終了コード 3 は「警告あり・出力成功」
         raise SplitError, err.presence || "qpdf failed" unless st.success? || st.exitstatus == 3
       end
