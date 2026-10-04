@@ -2,6 +2,9 @@ Rails.application.routes.draw do
   resource :session, only: %i[ new create destroy ]
   resources :passwords, param: :token, only: %i[ new create edit update ]
 
+  resource :two_factor, only: %i[ show new create destroy ]
+  resource :two_factor_challenge, only: %i[ new create ]
+
   resources :user_sessions, path: "account/sessions", only: %i[ index destroy ] do
     delete :destroy_others, on: :collection
   end
@@ -9,6 +12,7 @@ Rails.application.routes.draw do
   namespace :admin do
     resources :users, only: %i[ index update ] do
       post :unlock, on: :member
+      post :reset_two_factor, on: :member
     end
     resources :login_events, only: :index
   end
