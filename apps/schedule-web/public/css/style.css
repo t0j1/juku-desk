@@ -1,0 +1,132 @@
+[hidden] { display: none !important; }
+
+:root {
+  --text: #1f2440;
+  --muted: #545a7a;
+  --glass: rgba(255, 255, 255, .55);
+  --glass-strong: rgba(255, 255, 255, .8);
+  --border: rgba(255, 255, 255, .85);
+  --shadow: 0 8px 32px rgba(88, 80, 160, .18);
+  --accent: #4b4fb3;
+  --sun: #b3273a;
+  --sat: #1f5bb5;
+  --danger: #b3273a;
+  --radius: 24px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh; color: var(--text);
+  font-family: "Zen Maru Gothic", "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+  background: linear-gradient(135deg, #dbe6ff 0%, #e4dcff 50%, #f3d9f5 100%) fixed;
+  line-height: 1.6;
+}
+body::before, body::after { content: ""; position: fixed; z-index: -1; border-radius: 50%; filter: blur(70px); opacity: .55; }
+body::before { width: 380px; height: 380px; background: #a9c0ff; top: -80px; left: -80px; }
+body::after  { width: 420px; height: 420px; background: #d5a8ff; bottom: -120px; right: -100px; }
+
+.wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 56px; }
+header h1 { margin: 0; font-size: clamp(1.4rem, 3vw, 1.9rem); letter-spacing: .06em; }
+header p { margin: 4px 0 24px; color: var(--muted); }
+
+.glass {
+  background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 28px;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: var(--glass-strong); }
+}
+
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.nav h2 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.6rem); text-align: center; flex: 1; }
+.btn {
+  font: inherit; font-weight: 700; color: var(--accent); cursor: pointer;
+  background: var(--glass-strong); border: 1px solid var(--border); border-radius: 999px;
+  padding: 10px 18px; min-height: 44px; box-shadow: 0 2px 10px rgba(88, 80, 160, .12);
+}
+.btn:hover { background: #fff; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.primary:hover { background: #3d40a0; }
+.btn.danger { color: var(--danger); }
+.btn.small { min-height: 36px; padding: 6px 14px; font-size: .85rem; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* ---- カレンダー（PC/タブレット） ---- */
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.dow { text-align: center; font-weight: 700; font-size: .85rem; padding: 4px 0; }
+.dow.sun { color: var(--sun); } .dow.sat { color: var(--sat); }
+.cell {
+  font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 96px; padding: 6px;
+  background: rgba(255, 255, 255, .6); border: 1px solid var(--border); border-radius: 14px;
+  display: flex; flex-direction: column; gap: 3px; overflow: hidden;
+}
+.cell:hover { background: #fff; }
+.cell.blank { visibility: hidden; }
+.cell .num { font-weight: 700; font-size: .9rem; }
+.cell.sun .num { color: var(--sun); } .cell.sat .num { color: var(--sat); }
+.cell.today, .row.today { border: 2px solid var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(75, 79, 179, .18); }
+.today-badge {
+  display: inline-block; margin-left: 4px; padding: 0 6px; font-size: .65rem; font-weight: 700;
+  background: var(--accent); color: #fff; border-radius: 999px; vertical-align: middle;
+}
+.more { font-size: .7rem; color: var(--muted); }
+
+/* 種別チップ：色＋記号＋文字で区別 */
+.chip {
+  display: block; font-size: .72rem; line-height: 1.35; padding: 1px 6px; border-radius: 6px;
+  border-left: 4px solid var(--c); background: color-mix(in srgb, var(--c) 14%, #fff);
+  color: #1f2440; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chip .sym { font-weight: 700; margin-right: 3px; color: var(--c); }
+
+/* ---- リスト（スマホ） ---- */
+.list { display: none; list-style: none; margin: 0; padding: 0; }
+.row {
+  display: block; width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer;
+  padding: 12px 14px; margin-bottom: 8px; background: rgba(255, 255, 255, .65);
+  border: 1px solid var(--border); border-radius: 16px;
+}
+.row.sun .rd { color: var(--sun); } .row.sat .rd { color: var(--sat); }
+.rd { font-weight: 700; margin-bottom: 4px; }
+.row .chip { white-space: normal; margin-top: 3px; font-size: .82rem; padding: 3px 8px; }
+.row .empty { color: var(--muted); font-size: .85rem; }
+
+/* ---- 凡例 ---- */
+.legend { margin-top: 24px; }
+.legend h3 { margin: 0 0 10px; font-size: 1rem; }
+.legend ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0; padding: 0; }
+.legend .chip { font-size: .85rem; padding: 4px 12px; border-radius: 999px; }
+
+/* ---- ダイアログ ---- */
+dialog {
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: min(460px, 92vw);
+  background: rgba(255, 255, 255, .88); color: var(--text); box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+}
+dialog::backdrop { background: rgba(60, 50, 120, .3); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+dialog h3 { margin: 0 0 12px; font-size: 1.15rem; }
+.item { padding: 12px 14px; margin-bottom: 10px; border-radius: 14px; border-left: 6px solid var(--c); background: color-mix(in srgb, var(--c) 12%, #fff); }
+.item .kind { font-size: .8rem; font-weight: 700; }
+.item .kind .sym { color: var(--c); }
+.item .title { font-weight: 700; font-size: 1.05rem; }
+.item .time, .item .note { font-size: .9rem; color: var(--muted); }
+dialog .btn.full { width: 100%; margin-top: 6px; }
+
+.status { padding: 16px; text-align: center; color: var(--muted); }
+.status.error { color: #8a1c2b; background: rgba(255, 255, 255, .8); border-radius: 12px; }
+.status .btn { margin-top: 8px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .wrap { padding: 20px 12px 40px; }
+  .glass { padding: 18px; border-radius: 20px; }
+  .grid { display: none; }
+  .list { display: block; }
+  .btn { padding: 10px 14px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cell, .row, .btn { transition: background .15s, transform .15s; }
+  .cell:hover, .row:hover { transform: translateY(-1px); }
+}

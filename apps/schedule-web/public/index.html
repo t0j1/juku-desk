@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>碩学館 年間スケジュール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>碩学館 年間スケジュール</h1>
+    <p>日付をタップすると詳細が表示されます。</p>
+  </header>
+
+  <main class="glass">
+    <div class="nav">
+      <button class="btn" id="prev" type="button" aria-label="前の月">‹ 前月</button>
+      <h2 id="title" aria-live="polite"></h2>
+      <button class="btn" id="next" type="button" aria-label="次の月">次月 ›</button>
+    </div>
+    <div style="text-align:center;margin:-8px 0 16px">
+      <button class="btn small" id="today" type="button">今日へ</button>
+    </div>
+    <div id="status" class="status" role="status" hidden></div>
+    <div class="grid" id="grid"></div>
+    <ul class="list" id="list"></ul>
+
+    <section class="legend" aria-label="凡例">
+      <h3>凡例</h3>
+      <ul id="legend"></ul>
+    </section>
+  </main>
+</div>
+
+<dialog id="dlg">
+  <h3 id="dlg-title"></h3>
+  <div id="dlg-body"></div>
+  <button class="btn full" id="dlg-close" type="button">閉じる</button>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/common.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

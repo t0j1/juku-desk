@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>碩学館 送迎：相乗りのお願い</title>
+<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/admin.css?v=9">
+<link rel="stylesheet" href="css/pickup.css?v=1">
+</head>
+<body>
+<div class="wrap pickup">
+  <header>
+    <h1>碩学館 送迎</h1>
+    <p>相乗りのお願い</p>
+  </header>
+  <div id="status" class="status" role="status">読み込み中…</div>
+  <section id="card" class="glass" hidden>
+    <p id="who"></p>
+    <dl class="summary">
+      <dt>日付</dt><dd id="r-date"></dd>
+      <dt>希望の時刻</dt><dd id="r-orig"></dd>
+      <dt>変更後の時刻</dt><dd id="r-new"></dd>
+    </dl>
+    <p>ほかの生徒との相乗りのため、<strong id="r-new2"></strong> 発に変更できますか？</p>
+    <p class="hint" id="r-exp"></p>
+    <div class="cols" id="buttons">
+      <button class="btn primary" type="button" data-accept="1">変更してよい</button>
+      <button class="btn" type="button" data-accept="0">できない</button>
+    </div>
+    <p id="result" class="done-msg" role="status" hidden></p>
+  </section>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js?v=6"></script>
+<script src="js/common.js?v=6"></script>
+<script src="js/pickup-common.js?v=2"></script>
+<script src="js/pickup-respond.js?v=1"></script>
+</body>
+</html>
