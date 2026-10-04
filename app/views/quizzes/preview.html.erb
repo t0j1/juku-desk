@@ -19,7 +19,7 @@
     <%= f.hidden_field :count, value: @quiz.count %>
     <%= f.button "問題を入れ替える", type: "submit", class: "inline-flex items-center h-12 px-2 text-primary font-bold cursor-pointer hover:underline whitespace-nowrap" %>
   <% end %>
-  <%= link_to "範囲を変更", new_quiz_path(wordbook_id: @wordbook.id, start_no: @quiz.start_no, end_no: @quiz.end_no, count: @quiz.count), class: "inline-flex items-center h-12 px-2 text-ink-sub font-bold hover:underline whitespace-nowrap" %>
+  <%= link_to "範囲を変更", new_quiz_path(wordbook_id: @wordbook.id, start_no: @quiz.start_no, end_no: @quiz.end_no, span: @quiz.span, count: @quiz.count), class: "inline-flex items-center h-12 px-2 text-ink-sub font-bold hover:underline whitespace-nowrap" %>
   <span class="ml-auto text-sm text-ink-sub tnum whitespace-nowrap">左 <%= @left %>／右 <%= @right %></span>
 </div>
 <div data-print-target="sheets" data-mode="question">

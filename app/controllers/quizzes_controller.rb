@@ -6,10 +6,17 @@ class QuizzesController < ApplicationController
     @wordbooks = Wordbook.order(:name)
     return unless @wordbook
 
-    # 「範囲を変更」で戻ってきたときは、前回の入力値を初期値にする
+    # 開始No. は毎回 1、語数は 100 から始める（前回の続きは自動で入れない）。
+    # 「範囲を変更」で戻ってきたときだけ、プレビューの入力値を初期値にする
     @quiz = Quiz.defaults_for(@wordbook)
     @quiz.count = nil # 最初は問題数を選んでいない状態から始める（あいさつの吹き出しが「何問いってみる？」と聞く）
-    @quiz.assign_attributes(params.permit(:start_no, :end_no, :count))
+    @quiz.end_no = nil
+    @quiz.span = Quiz::DEFAULT_SPAN
+    given = params.permit(:start_no, :end_no, :span, :count)
+    @quiz.assign_attributes(given)
+    if given[:span].blank? && @quiz.start_no && @quiz.end_no && @quiz.end_no >= @quiz.start_no
+      @quiz.span = @quiz.end_no - @quiz.start_no + 1
+    end
   end
 
   # 検証して抽選し、印刷プレビュー（3）を出す。「問題を入れ替える」も同じ条件でここへ送る
@@ -34,6 +41,6 @@ class QuizzesController < ApplicationController
     end
 
     def quiz_params
-      params.expect(quiz: %i[ start_no end_no count ])
+      params.expect(quiz: %i[ start_no end_no span count ])
     end
 end
