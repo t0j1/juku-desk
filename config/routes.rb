@@ -21,6 +21,10 @@ Rails.application.routes.draw do
       resource :impersonation, only: %i[ new create ]
     end
     resources :login_events, only: :index
+    resources :mail_templates, only: %i[ index edit update ], param: :key do
+      post :preview, on: :member
+      post :reset, on: :member
+    end
     resource :user_import, only: %i[ new create ] do
       post :confirm
     end

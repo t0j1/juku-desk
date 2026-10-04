@@ -22,6 +22,7 @@
       <div role="group" aria-label="システム管理" class="space-y-1">
         <p class="px-4 pb-1 text-xs font-bold text-ink-sub">システム管理</p>
         <%= nav_item "ユーザー管理", admin_users_path, :users, active: controller_path == "admin/users" %>
+        <%= nav_item "メール文面", admin_mail_templates_path, :mail, active: controller_path == "admin/mail_templates" %>
         <%= nav_item "ログイン履歴", admin_login_events_path, :search, active: controller_path == "admin/login_events" %>
       </div>
     <% end %>
