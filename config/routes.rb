@@ -48,6 +48,7 @@ Rails.application.routes.draw do
   get "schedule" => "schedule#index", as: :schedule
   get "schedule/admin" => "schedule#admin", as: :schedule_admin
   get "schedule/pickup" => "schedule#pickup", as: :schedule_pickup
+  post "schedule/token" => "schedule_tokens#create", as: :schedule_token
 
   # 印刷（講師ログイン）
   get  "print" => "print_library#index", as: :print_library
