@@ -1,7 +1,7 @@
 <% content_for :title, "代理ログイン" %>
-<h1 class="font-bold text-[22px] mb-6">代理ログイン</h1>
+<h1 class="page-title mb-6">代理ログイン</h1>
 <p class="mb-4"><span class="font-bold"><%= @user.name %></span>（<%= @user.email_address %> / <%= t("roles.#{@user.role}") %>）として操作します。</p>
-<div class="mb-6 max-w-md py-2 px-3 bg-warn-bg text-warn-ink rounded-lg text-sm">
+<div class="mb-6 max-w-md py-2 px-3 bg-warn-bg text-warn-fg rounded-lg text-lg">
   <ul class="list-disc pl-5">
     <li><%= Session::IMPERSONATION_LIMIT.in_minutes.to_i %>分で自動的に終了します。画面上部の赤い帯の「元に戻る」でいつでも戻れます。</li>
     <li>開始・終了と、その間の操作はすべて、あなたの ID つきで監査ログに記録されます。</li>
@@ -10,7 +10,7 @@
 </div>
 <%= form_with url: admin_user_impersonation_path(@user), class: "space-y-4 max-w-md" do |f| %>
   <div>
-    <%= f.label :reason, "理由（必須）", class: "block text-sm" %>
+    <%= f.label :reason, "理由（必須）", class: "label" %>
     <%= f.text_area :reason, value: params[:reason], required: true, maxlength: 500, rows: 3, class: "input mt-1 !h-auto", placeholder: "例：〇〇さんの画面が表示されない問い合わせの確認" %>
   </div>
   <div class="flex items-center gap-3">

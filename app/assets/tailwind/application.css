@@ -42,7 +42,7 @@
 }
 
 @layer base {
-  body { background: var(--color-bg); color: var(--color-text); }
+  body { background: var(--color-bg); color: var(--color-text); font-size: 18px; }
   /* フォーカスは全部品で同じ */
   :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }
@@ -50,14 +50,14 @@
 @layer components {
   /* カード：浮き出し。枠線で区切らず影で区切る */
   .card { @apply rounded-card bg-surface shadow-raise px-8 py-7; border: 1px solid var(--color-card-edge); }
-  .page-title { @apply text-2xl font-bold text-text; }
-  .section-title { @apply text-lg font-bold text-text; }
-  .caption { @apply text-[13px] text-text-sub; }
-  .label { @apply block text-[15px] font-bold text-text mb-1.5; }
+  .page-title { @apply text-[30px] leading-tight font-bold text-text; }
+  .section-title { @apply text-[22px] font-bold text-text; }
+  .caption { @apply text-base text-text-sub; }
+  .label { @apply block text-lg font-bold text-text mb-1.5; }
 
   /* ボタン：押せるもの＝浮き出し、押している間はへこむ。primary は 1 画面 1 つ */
   .btn-primary, .btn-secondary, .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 h-12 px-6 rounded-button text-base font-bold cursor-pointer select-none
+    @apply inline-flex items-center justify-center gap-2 h-[52px] px-6 rounded-button text-[19px] font-bold cursor-pointer select-none
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary { background-image: var(--primary-grad); @apply text-white shadow-primary; }
@@ -66,30 +66,30 @@
   .btn-secondary { @apply bg-bg text-text shadow-raise-sm; }
   .btn-danger { @apply bg-bg text-err-fg shadow-raise-sm; }
   .btn-secondary:active:not(:disabled), .btn-danger:active:not(:disabled) { @apply shadow-inset; }
-  .btn-sm { @apply h-10 px-4 text-[15px]; }
+  .btn-sm { @apply h-11 px-4 text-[17px]; }
 
   /* 入力：へこみ＋ 1px の線 */
-  .input { @apply block w-full max-w-[480px] h-12 px-4 rounded-field bg-bg text-base text-text shadow-inset; border: 1px solid var(--color-field-border); }
+  .input { @apply block w-full max-w-[420px] h-[52px] px-4 rounded-field bg-bg text-[19px] text-text shadow-inset; border: 1px solid var(--color-field-border); }
   .input[aria-invalid="true"], .input.is-invalid { border-color: var(--color-err-fg); }
   textarea.input { @apply h-auto py-3; }
 
   /* ピル：浮き出し。意味は必ず「記号＋文字」で示す */
-  .pill { @apply inline-flex items-center gap-1.5 h-7 px-3 rounded-pill text-[13px] font-bold whitespace-nowrap shadow-raise-sm; }
+  .pill { @apply inline-flex items-center gap-1.5 h-[34px] px-3.5 rounded-pill text-base font-bold whitespace-nowrap shadow-raise-sm; }
   .pill-ok { @apply text-ok-fg bg-ok-bg; }
   .pill-busy { @apply text-run-fg bg-run-bg; }
   .pill-ng { @apply text-err-fg bg-err-bg; }
   .pill-neutral { @apply text-text-sub bg-bg; }
 
-  /* 表：外枠なし、行区切りだけ、行高 56 */
-  .table-console { @apply w-full text-[15px] text-text; }
-  .table-console thead th { @apply h-10 px-4 text-left text-[13px] font-bold text-text-sub; border-bottom: 1px solid var(--color-row-line); }
-  .table-console tbody td { @apply h-14 px-4; border-bottom: 1px solid var(--color-row-line); }
+  /* 表：外枠なし、行区切りだけ、行高 64 */
+  .table-console { @apply w-full text-lg text-text; }
+  .table-console thead th { @apply h-11 px-4 text-left text-base font-bold text-text-sub; border-bottom: 1px solid var(--color-row-line); }
+  .table-console tbody td { @apply h-16 px-4; border-bottom: 1px solid var(--color-row-line); }
   .table-console tbody tr:last-child td { border-bottom: 0; }
 
-  .alert-ok { @apply rounded-field bg-ok-bg text-ok-fg px-4 py-3 font-bold; }
-  .alert-err { @apply rounded-field bg-err-bg text-err-fg px-4 py-3 font-bold; }
-  .alert-warn { @apply rounded-field bg-warn-bg text-warn-fg px-4 py-3 font-bold shadow-raise-sm; }
-  .link { @apply font-bold text-primary hover:underline; }
+  .alert-ok { @apply text-lg rounded-field bg-ok-bg text-ok-fg px-4 py-3 font-bold; }
+  .alert-err { @apply text-lg rounded-field bg-err-bg text-err-fg px-4 py-3 font-bold; }
+  .alert-warn { @apply text-lg rounded-field bg-warn-bg text-warn-fg px-4 py-3 font-bold shadow-raise-sm; }
+  .link { @apply text-lg font-bold text-primary hover:underline; }
   .tnum { font-variant-numeric: tabular-nums; }
 }
 
@@ -118,7 +118,7 @@
 
 /* マーキングの小テスト印刷（問題用・解答用）。A4・余白 15mm は印刷ビューの @page で指定。色は使わず、日本語フォントは明示する */
 :root { --marking-font: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic", "Meiryo", sans-serif; }
-.mt-sheet { font-family: var(--marking-font); color: #000; background: #fff; max-width: 210mm; padding: 15mm; box-sizing: border-box; box-shadow: var(--shadow-card); border: 1px solid var(--color-line-strong); }
+.mt-sheet { font-family: var(--marking-font); color: #000; background: #fff; max-width: 210mm; padding: 15mm; box-sizing: border-box; box-shadow: var(--shadow-raise); }
 .mt-head { padding-bottom: 4mm; border-bottom: .4mm solid #000; margin-bottom: 6mm; }
 .mt-title { font-size: 15pt; font-weight: 700; margin-bottom: 3mm; }
 .mt-kind { margin-left: 2mm; }

@@ -1,8 +1,8 @@
 <%# 代理ログイン中は常に表示する（固定表示。レイアウト側で高さ 3rem ぶんの余白をとる） %>
-<div id="impersonation-banner" role="alert" class="fixed top-0 inset-x-0 z-50 h-12 px-3 md:px-6 flex items-center gap-3 bg-ng text-white text-sm print:hidden">
+<div id="impersonation-banner" role="alert" class="fixed top-0 inset-x-0 z-50 h-12 px-3 md:px-6 flex items-center gap-3 bg-err-fg text-white text-lg print:hidden">
   <p class="min-w-0 flex-1 truncate">
     <span class="font-bold">代理ログイン中：</span><%= current_user.name %> として操作しています
     <span class="hidden md:inline">（管理者：<%= Current.impersonator.name %>／理由：<%= Current.session.impersonation_reason %>／<%= l Current.session.impersonation_expires_at, format: :short %> に自動終了）</span>
   </p>
-  <%= button_to "元に戻る", impersonation_path, method: :delete, class: "shrink-0 h-9 px-4 rounded-lg bg-white text-ng font-bold cursor-pointer" %>
+  <%= button_to "元に戻る", impersonation_path, method: :delete, class: "shrink-0 h-9 px-4 rounded-lg bg-bg text-err-fg font-bold cursor-pointer" %>
 </div>

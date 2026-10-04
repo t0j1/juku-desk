@@ -24,7 +24,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-screen bg-bg text-text font-sans text-[15px]">
+  <body class="min-h-screen bg-bg text-text font-sans text-lg">
     <% if authenticated? %>
       <% if impersonating? %>
         <%= render "shared/impersonation_banner" %>

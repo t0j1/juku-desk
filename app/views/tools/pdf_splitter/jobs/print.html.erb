@@ -1,5 +1,5 @@
 <% content_for :title, "印刷 - #{@job.original_filename}" %>
-<%= link_to print_list_path, class: "inline-flex items-center gap-1 h-12 -ml-2 px-2 mb-2 rounded-lg text-[15px] font-bold text-primary hover:bg-run-bg" do %><span aria-hidden="true">←</span> 教材一覧へ戻る<% end %>
+<%= link_to print_list_path, class: "inline-flex items-center gap-1 h-12 -ml-2 px-2 mb-2 rounded-lg text-lg font-bold text-primary hover:bg-run-bg" do %><span aria-hidden="true">←</span> 教材一覧へ戻る<% end %>
 <h1 class="font-bold text-2xl mb-4">印刷するファイルを選ぶ</h1>
 <% if @outputs.empty? %>
   <p>まだ分割されていません。<% unless kiosk_mode? %><%= link_to "分割画面へ", tools_pdf_splitter_job_path(@job), class: "underline" %><% end %></p>
@@ -10,19 +10,19 @@
     <% if @rounds.any? %>
       <section id="print-queue" class="mb-6 max-w-2xl bg-amber-50 border border-amber-200 rounded p-3">
         <div class="flex items-center justify-between mb-1">
-          <h2 class="font-bold">印刷リスト <span class="text-[15px] font-normal text-text-sub" data-print-queue-target="count"></span></h2>
-          <button type="button" data-action="print-queue#clear" class="text-[15px] underline">リストを空にする</button>
+          <h2 class="font-bold">印刷リスト <span class="text-lg font-normal text-text-sub" data-print-queue-target="count"></span></h2>
+          <button type="button" data-action="print-queue#clear" class="text-lg underline">リストを空にする</button>
         </div>
-        <p data-print-queue-target="empty" class="text-[15px] text-text-sub">下の表の「＋ リストに追加」で、まとめて印刷する回を選んでください。</p>
+        <p data-print-queue-target="empty" class="text-lg text-text-sub">下の表の「＋ リストに追加」で、まとめて印刷する回を選んでください。</p>
         <ol data-print-queue-target="list" class="text-base"></ol>
         <%= form_with url: print_queue_path_for(@job), method: :get, data: { turbo: false, print_queue_target: "form" }, html: { target: "_blank", hidden: true }, class: "mt-2 flex flex-wrap items-center gap-3" do %>
-          <label class="text-[15px]"><%= check_box_tag :pad_even, "1", false %> 両面印刷用に白紙を入れて、各ファイルを偶数ページにそろえる</label>
+          <label class="text-lg"><%= check_box_tag :pad_even, "1", false %> 両面印刷用に白紙を入れて、各ファイルを偶数ページにそろえる</label>
           <button type="submit" class="rounded px-4 py-2 bg-stone-800 text-white">まとめて印刷</button>
         <% end %>
       </section>
 
-      <table id="round-list" class="w-full max-w-2xl bg-white border border-stone-200 text-base mb-6">
-        <thead class="bg-stone-100 text-left text-[15px]"><tr><th class="p-2">回</th><th class="p-2">印刷する内容</th><th></th></tr></thead>
+      <table id="round-list" class="w-full max-w-2xl bg-bg border border-stone-200 text-base mb-6">
+        <thead class="bg-stone-100 text-left text-lg"><tr><th class="p-2">回</th><th class="p-2">印刷する内容</th><th></th></tr></thead>
         <% @rounds.each do |round, outs| %>
           <% kinds = outs.map(&:section_kind) %>
           <% options = labels.select { |k, _| ::PdfSplitter::PrintQueue::KINDS[k].all? { |x| kinds.include?(x) } } %>
@@ -40,8 +40,8 @@
     <% end %>
 
     <details <%= "open" if @rounds.empty? %>>
-      <summary class="cursor-pointer text-[15px] mb-2">ファイルごとに印刷・保存する</summary>
-  <table id="print-list" class="w-full max-w-2xl bg-white border border-stone-200 text-base">
+      <summary class="cursor-pointer text-lg mb-2">ファイルごとに印刷・保存する</summary>
+  <table id="print-list" class="w-full max-w-2xl bg-bg border border-stone-200 text-base">
     <% @outputs.each do |o| %>
       <tr class="border-t border-stone-200">
         <td class="p-3"><%= o.filename %></td>
@@ -58,16 +58,16 @@
 <% end %>
 
 <div class="mt-6 flex flex-wrap gap-6 items-start">
-  <div class="bg-white border border-stone-200 p-4">
-    <p class="text-[15px] mb-2">iPadのカメラで読み取ると、このページが開きます</p>
+  <div class="bg-bg border border-stone-200 p-4">
+    <p class="text-lg mb-2">iPadのカメラで読み取ると、このページが開きます</p>
     <div id="qr"><%= qr_svg(print_page_url_for(@job)) %></div>
   </div>
-  <ol class="text-[15px] list-decimal pl-5 space-y-1">
+  <ol class="text-lg list-decimal pl-5 space-y-1">
     <li>QRコードをiPadのカメラで読み取る<%= "（初回はログインが必要です）" unless kiosk_mode? %></li>
     <li>回ごとに「印刷」をタップ。何回分かまとめるときは「＋ リストに追加」→「まとめて印刷」</li>
     <li>PDFが開いたら、共有メニューから「プリント」</li>
     <li>プリンタを選び、部数・両面・モノクロを設定して印刷</li>
   </ol>
 </div>
-<p class="mt-4 text-[15px] text-warn-fg">⚠ ファイルは<%= l(@job.expires_at, format: :short) if @job.expires_at %>（<%= PdfBlob.retention_days %>日後）にサーバーから消えます</p>
-<% unless kiosk_mode? %><p class="mt-4 text-[15px]"><%= link_to "分割画面に戻る", tools_pdf_splitter_job_path(@job), class: "underline" %></p><% end %>
+<p class="mt-4 text-lg text-warn-fg">⚠ ファイルは<%= l(@job.expires_at, format: :short) if @job.expires_at %>（<%= PdfBlob.retention_days %>日後）にサーバーから消えます</p>
+<% unless kiosk_mode? %><p class="mt-4 text-lg"><%= link_to "分割画面に戻る", tools_pdf_splitter_job_path(@job), class: "underline" %></p><% end %>

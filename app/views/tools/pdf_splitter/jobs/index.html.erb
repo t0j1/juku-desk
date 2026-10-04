@@ -5,7 +5,7 @@
   <label class="relative flex flex-col items-center justify-center gap-1 max-w-[480px] h-[120px] rounded-drop border border-dashed border-field-border bg-bg shadow-inset text-text-sub cursor-pointer hover:border-primary data-[dragging]:border-primary data-[dragging]:text-primary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary"
          data-action="dragover->dropzone#dragover dragleave->dropzone#dragleave drop->dropzone#drop">
     <%= console_icon(:upload, size: 24) %>
-    <span class="text-[15px]" data-dropzone-target="label" data-empty="PDFをドラッグ、またはクリックして選択">PDFをドラッグ、またはクリックして選択</span>
+    <span class="text-lg" data-dropzone-target="label" data-empty="PDFをドラッグ、またはクリックして選択">PDFをドラッグ、またはクリックして選択</span>
     <%= f.file_field :file, accept: "application/pdf", required: true, class: "absolute inset-0 opacity-0 cursor-pointer", data: { dropzone_target: "input", action: "change->dropzone#update" } %>
   </label>
   <div>
@@ -16,7 +16,7 @@
 <% end %>
 <div class="card">
 <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-  <h2 class="section-title">これまでのファイル <span class="text-[13px] font-normal text-text-sub">（新しい順）</span></h2>
+  <h2 class="section-title">これまでのファイル <span class="text-base font-normal text-text-sub">（新しい順）</span></h2>
   <p class="caption">ファイルは<%= PdfBlob.retention_days %>日後にサーバーから自動で消えます。</p>
 </div>
 <table id="jobs" class="table-console">

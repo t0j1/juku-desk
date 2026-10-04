@@ -17,7 +17,7 @@
       <li class="relative flex items-center gap-4 min-h-16 py-2 px-2 border-b border-row-line last:border-b-0">
         <div class="flex-1 min-w-0">
           <%= link_to job.original_filename, job_path.(job), class: "block font-bold text-base text-text truncate after:absolute after:inset-0" %>
-          <p class="text-[13px] text-text-sub tnum"><%= job.output_count %>ファイル ・ <time datetime="<%= job.created_at.iso8601 %>"><%= l job.created_at, format: "%Y/%m/%d %H:%M" %></time> 作成</p>
+          <p class="text-base text-text-sub tnum"><%= job.output_count %>ファイル ・ <time datetime="<%= job.created_at.iso8601 %>"><%= l job.created_at, format: "%Y/%m/%d %H:%M" %></time> 作成</p>
         </div>
         <span class="btn-secondary shrink-0" aria-hidden="true">印刷 ›</span>
       </li>

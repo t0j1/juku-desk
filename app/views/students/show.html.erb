@@ -1,6 +1,6 @@
 <% content_for :title, @student.name %>
 <h1 class="page-title"><%= @student.name %></h1>
-<dl class="card grid grid-cols-[8rem_1fr] gap-x-4 gap-y-3 max-w-xl text-[15px]">
+<dl class="card grid grid-cols-[8rem_1fr] gap-x-4 gap-y-3 max-w-xl text-lg">
   <dt class="text-text-sub font-bold">学年</dt><dd><%= @student.grade %></dd>
   <dt class="text-text-sub font-bold">入塾日</dt><dd class="tnum"><%= @student.enrolled_on && l(@student.enrolled_on) %></dd>
   <dt class="text-text-sub font-bold">退塾日</dt><dd class="tnum"><%= @student.left_on && l(@student.left_on) %></dd>

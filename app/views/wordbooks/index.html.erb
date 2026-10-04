@@ -15,9 +15,9 @@
   </div>
   <div>
     <%= label_tag :file, "CSV ファイル（ヘッダー No,単語,意味 / UTF-8）", class: "label" %>
-    <%= file_field_tag :file, accept: ".csv,text/csv", required: true, class: "block text-[15px] text-text" %>
+    <%= file_field_tag :file, accept: ".csv,text/csv", required: true, class: "block text-lg text-text" %>
   </div>
-  <label class="flex items-center gap-2 min-h-11 text-[15px]">
+  <label class="flex items-center gap-2 min-h-11 text-lg">
     <%= check_box_tag :overwrite, "1", params[:overwrite] == "1", class: "size-5 accent-primary" %>
     同じ番号を上書きする
   </label>

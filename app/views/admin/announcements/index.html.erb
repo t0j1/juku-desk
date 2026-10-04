@@ -1,9 +1,9 @@
 <% content_for :title, "お知らせ" %>
 <div class="flex items-center mb-6">
-  <h1 class="font-bold text-[22px]">お知らせ</h1>
+  <h1 class="page-title">お知らせ</h1>
   <%= link_to "お知らせを作成", new_admin_announcement_path, class: "btn-primary ml-auto" %>
 </div>
-<% if notice %><p id="notice" class="mb-4 text-sm font-bold text-ok"><%= notice %></p><% end %>
+<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
 <table id="announcements" class="table-console">
   <thead><tr><th>タイトル</th><th>表示期間</th><th>状態</th><th>既読</th><th></th></tr></thead>
   <tbody>
@@ -19,6 +19,6 @@
         </td>
       </tr>
     <% end %>
-    <% if @announcements.empty? %><tr><td colspan="5" class="text-center text-ink-sub">お知らせはありません</td></tr><% end %>
+    <% if @announcements.empty? %><tr><td colspan="5" class="text-center text-text-sub">お知らせはありません</td></tr><% end %>
   </tbody>
 </table>

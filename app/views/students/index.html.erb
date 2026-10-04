@@ -12,7 +12,7 @@
 <% else %>
 <div class="card">
   <div class="mb-5 flex flex-wrap gap-3" role="group" aria-label="通い曜日で絞り込み">
-    <% seg = ->(on) { "inline-flex items-center h-10 px-5 rounded-pill text-[15px] #{on ? 'bg-bg shadow-inset text-primary font-bold' : 'bg-bg shadow-raise-sm text-text hover:text-primary'}" } %>
+    <% seg = ->(on) { "inline-flex items-center h-10 px-5 rounded-pill text-lg #{on ? 'bg-bg shadow-inset text-primary font-bold' : 'bg-bg shadow-raise-sm text-text hover:text-primary'}" } %>
     <%= link_to "全員", students_path, class: seg.(params[:weekday].blank?), aria: { pressed: params[:weekday].blank? } %>
     <% StudentWeekday::NAMES.each_with_index do |n, i| %>
       <%= link_to n, students_path(weekday: i), class: seg.(params[:weekday] == i.to_s), aria: { pressed: params[:weekday] == i.to_s } %>

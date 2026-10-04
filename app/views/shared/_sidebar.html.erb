@@ -1,18 +1,18 @@
 <%# サイドバー（ログイン後の画面で共通）。項目は config/navigation.yml。768px 未満では ☰ で開閉する（sidebar_controller） %>
 <aside id="app-sidebar" data-sidebar-target="panel" class="hidden data-[open=true]:flex md:flex flex-col print:hidden
        max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:w-[280px] max-md:overflow-y-auto max-md:bg-bg max-md:p-4 max-md:shadow-xl
-       md:w-[220px] lg:w-[300px] md:shrink-0 md:min-h-0 md:overflow-y-auto">
-  <button type="button" data-action="sidebar#close" class="md:hidden self-end mb-2 inline-flex items-center gap-2 h-12 px-4 rounded-button text-[15px] font-bold text-text-sub bg-bg shadow-raise-sm cursor-pointer" aria-label="メニューを閉じる">
+       md:w-[220px] lg:w-[280px] md:shrink-0 md:min-h-0 md:overflow-y-auto">
+  <button type="button" data-action="sidebar#close" class="md:hidden self-end mb-2 inline-flex items-center gap-2 h-12 px-4 rounded-button text-lg font-bold text-text-sub bg-bg shadow-raise-sm cursor-pointer" aria-label="メニューを閉じる">
     <span aria-hidden="true">✕</span>閉じる
   </button>
   <%= link_to root_path, class: "flex items-center gap-3 px-2 mb-6 lg:mb-8" do %>
     <span class="flex items-center justify-center size-11 rounded-button text-white text-xl font-bold shadow-raise-sm" style="background-image: var(--primary-grad)" aria-hidden="true">塾</span>
-    <span class="leading-tight"><span class="block font-bold text-text">塾日報ステーション</span><span class="block text-[13px] text-text-sub">Admin Console</span></span>
+    <span class="leading-tight"><span class="block font-bold text-text">塾日報ステーション</span><span class="block text-base text-text-sub">Admin Console</span></span>
   <% end %>
   <nav aria-label="メインメニュー" class="space-y-5">
     <% navigation_groups.each_with_index do |group, i| %>
       <div role="group" aria-label="<%= group.label %>" class="space-y-1">
-        <% if i.positive? %><p class="px-4 pb-1 text-[13px] font-bold text-text-sub"><%= group.label %></p><% end %>
+        <% if i.positive? %><p class="px-4 pb-1 text-base font-bold text-text-sub"><%= group.label %></p><% end %>
         <% group.items.each do |item| %>
           <%= nav_item item.label, item.href, item.icon, active: item.active %>
         <% end %>
@@ -20,7 +20,7 @@
     <% end %>
     <% if current_user.system_admin? %>
       <div role="group" aria-label="システム管理" class="space-y-1">
-        <p class="px-4 pb-1 text-xs font-bold text-ink-sub">システム管理</p>
+        <p class="px-4 pb-1 text-base font-bold text-text-sub">システム管理</p>
         <%= nav_item "ユーザー管理", admin_users_path, :users, active: controller_path == "admin/users" %>
         <%= nav_item "お知らせ", admin_announcements_path, :bell, active: controller_path == "admin/announcements" %>
         <%= nav_item "メール文面", admin_mail_templates_path, :mail, active: controller_path == "admin/mail_templates" %>
@@ -30,11 +30,11 @@
   </nav>
   <div class="mt-auto pt-6">
     <div class="rounded-card bg-bg shadow-raise-sm p-4">
-      <p class="font-bold text-[15px] text-text"><%= current_user.name %></p>
-      <p class="text-[13px] text-text-sub mb-3"><%= t("roles.#{current_user.role}") %></p>
-      <%= link_to "2段階認証", two_factor_path, class: "block mb-1 text-[15px] text-text-sub hover:text-text underline" %>
-      <%= link_to "ログイン中の端末", user_sessions_path, class: "block mb-2 text-[15px] text-text-sub hover:text-text underline" %>
-      <%= button_to session_path, method: :delete, class: "inline-flex items-center gap-2 text-[15px] text-text-sub hover:text-text cursor-pointer" do %>
+      <p class="font-bold text-lg text-text"><%= current_user.name %></p>
+      <p class="text-base text-text-sub mb-3"><%= t("roles.#{current_user.role}") %></p>
+      <%= link_to "2段階認証", two_factor_path, class: "block mb-1 text-lg text-text-sub hover:text-text underline" %>
+      <%= link_to "ログイン中の端末", user_sessions_path, class: "block mb-2 text-lg text-text-sub hover:text-text underline" %>
+      <%= button_to session_path, method: :delete, class: "inline-flex items-center gap-2 text-lg text-text-sub hover:text-text cursor-pointer" do %>
         <%= console_icon(:logout, size: 16) %>ログアウト
       <% end %>
     </div>

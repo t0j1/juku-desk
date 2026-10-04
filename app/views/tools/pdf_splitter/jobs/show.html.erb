@@ -2,7 +2,7 @@
 <% if @job.uploaded? || @job.analyzing? || @job.splitting? %><meta http-equiv="refresh" content="2"><% end %>
 <div>
   <h1 class="page-title"><%= @job.original_filename %></h1>
-  <p class="text-[15px] text-text-sub mt-1 tnum"><%= @job.page_count %>ページ ・ 状態: <span id="status"><%= t("pdf_splitter.status.#{@job.status}") %></span>
+  <p class="text-lg text-text-sub mt-1 tnum"><%= @job.page_count %>ページ ・ 状態: <span id="status"><%= t("pdf_splitter.status.#{@job.status}") %></span>
     <% if @job.expires_at %> ・ <%= l @job.expires_at, format: :short %> に自動削除<% end %></p>
 </div>
 
@@ -14,7 +14,7 @@
   <% if @job.outputs.any? %>
     <section class="card">
       <h2 class="section-title mb-3">分割したファイル（<%= @job.outputs.size %>）</h2>
-      <%= form_with url: update_names_tools_pdf_splitter_job_path(@job), method: :patch, class: "text-[15px]" do |f| %>
+      <%= form_with url: update_names_tools_pdf_splitter_job_path(@job), method: :patch, class: "text-lg" do |f| %>
         <table id="outputs" class="table-console">
           <% @job.outputs.each do |o| %>
             <tr>
@@ -32,7 +32,7 @@
           <%= f.submit "名前を保存", class: "btn-secondary" %>
         </div>
       <% end %>
-      <div class="mt-4 flex gap-5 text-[15px]">
+      <div class="mt-4 flex gap-5 text-lg">
         <%= link_to "ZIPでまとめて保存", download_zip_tools_pdf_splitter_job_path(@job), class: "link", data: { turbo: false } %>
         <%= link_to "印刷ページ（iPad用QR）", print_tools_pdf_splitter_job_path(@job), class: "link" %>
       </div>
@@ -42,12 +42,12 @@
   <section class="card">
     <h2 class="section-title mb-3">分割範囲</h2>
     <% if @job.auto_detected? %>
-      <p class="text-[15px] mb-3">自動判定: <%= @job.pattern_label %>（信頼度 <%= (@job.confidence * 100).round %>%）。内容を確認してから分割してください。</p>
+      <p class="text-lg mb-3">自動判定: <%= @job.pattern_label %>（信頼度 <%= (@job.confidence * 100).round %>%）。内容を確認してから分割してください。</p>
     <% elsif @job.analyzed? || @job.done? %>
       <p id="manual-notice" class="alert-warn mb-3"><span aria-hidden="true">!</span> 自動判定できませんでした<%= "（候補: #{@job.pattern_label}・信頼度 #{(@job.confidence.to_f * 100).round}%）" if @job.pattern %>。範囲を確認・入力してから分割してください。</p>
     <% end %>
 
-    <%= form_with url: split_tools_pdf_splitter_job_path(@job), method: :post, class: "text-[15px] mb-8", id: "pairs-form", data: { controller: "pair-rows" } do |f| %>
+    <%= form_with url: split_tools_pdf_splitter_job_path(@job), method: :post, class: "text-lg mb-8", id: "pairs-form", data: { controller: "pair-rows" } do |f| %>
       <h3 class="font-bold text-base mb-1">問題と解答を回ごとに入力</h3>
       <p class="caption mb-3">1行が1回分です。問題と解答のページ範囲を入れると、問題をすべて並べたあとに解答が並ぶ順で分割します。</p>
       <% pairs = ::PdfSplitter::PairRows.from_boundaries(@boundaries).presence || [ {} ] %>
@@ -66,7 +66,7 @@
     <% end %>
 
     <h3 class="font-bold text-base mb-3">1ファイルずつ入力</h3>
-    <%= form_with url: split_tools_pdf_splitter_job_path(@job), method: :post, class: "text-[15px]", id: "boundaries-form" do |f| %>
+    <%= form_with url: split_tools_pdf_splitter_job_path(@job), method: :post, class: "text-lg", id: "boundaries-form" do |f| %>
       <table class="table-console !w-auto">
         <thead><tr><th>開始</th><th>終了</th><th>回</th><th>種別</th><th>ファイル名（空欄なら自動）</th><th>先頭ページ</th></tr></thead>
         <% rows = @boundaries + Array.new(3) { {} } %>
@@ -88,7 +88,7 @@
       </div>
     <% end %>
 
-    <div class="mt-6 flex flex-wrap gap-4 text-[15px] items-center">
+    <div class="mt-6 flex flex-wrap gap-4 text-lg items-center">
       <%= form_with url: update_boundaries_tools_pdf_splitter_job_path(@job), method: :patch, class: "flex gap-3 items-center" do |f| %>
         <%= f.number_field :equal_parts, min: 1, max: @job.page_count, value: 10, class: "input !h-10 !w-20 !px-2 tnum", aria: { label: "等分する数" } %>
         <%= f.submit "等分の範囲を入れる", class: "btn-secondary btn-sm" %>
