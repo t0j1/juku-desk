@@ -31,3 +31,13 @@ ja:
       splitting: 分割中
       done: 分割済み
       failed: 失敗
+  crop_region_status:
+    pending: 確定前
+    confirmed: 確定（構造化前）
+    rejected: 除外
+    queued: 順番待ち
+    processing: 処理中
+    extracted: 構造化済み
+    needs_review: 要確認
+    failed: エラー
+    quota_exceeded: 日次上限で保留

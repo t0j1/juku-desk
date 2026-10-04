@@ -1,6 +1,8 @@
 require "test_helper"
 
 class UploadsControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     sign_in_as users(:staff)
     @dir = Dir.mktmpdir
@@ -53,6 +55,17 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
     assert File.exist?(ImageStorage.disk_path(upload.r2_key))
     assert File.exist?(ImageStorage.disk_path(regions.first.r2_key))
     assert_equal "create", AuditLog.last.action
+  end
+
+  test "with GEMINI_API_KEY the confirmed regions are queued for structuring and the request returns right away" do
+    with_gemini(gemini_json)
+    assert_enqueued_jobs 2, only: Marking::ExtractJob do
+      post uploads_path, params: payload
+    end
+    assert_response :created
+    assert_equal %w[queued queued], Upload.last.crop_regions.order(:id).map(&:status)
+  ensure
+    reset_gemini
   end
 
   test "the same image uploaded twice stays one upload" do
