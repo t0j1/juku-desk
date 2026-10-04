@@ -1,6 +1,6 @@
 <% content_for :title, @job.original_filename %>
-<% if @job.uploaded? || @job.analyzing? || @job.splitting? %><meta http-equiv="refresh" content="2"><% end %>
-<div>
+<% busy = @job.uploaded? || @job.analyzing? || @job.splitting? %>
+<div<% if busy %> data-controller="job-status" data-job-status-url-value="<%= status_tools_pdf_splitter_job_path(@job) %>" data-job-status-current-value="<%= @job.status %>"<% end %>>
   <h1 class="page-title"><%= @job.original_filename %></h1>
   <p class="text-lg text-text-sub mt-1 tnum"><%= @job.page_count %>ページ ・ 状態: <span id="status"><%= t("pdf_splitter.status.#{@job.status}") %></span>
     <% if @job.expires_at %> ・ <%= l @job.expires_at, format: :short %> に自動削除<% end %></p>

@@ -35,7 +35,7 @@ module PdfSplitter
     end
 
     def self.extract(path, from, to)
-      out, _err, st = Open3.capture3("pdftotext", "-layout", "-enc", "UTF-8", "-f", from.to_s, "-l", to.to_s, path.to_s, "-")
+      out, _err, st = Open3.capture3(*PdfSplitter::NICE, "pdftotext", "-layout", "-enc", "UTF-8", "-f", from.to_s, "-l", to.to_s, path.to_s, "-")
       texts = st.success? ? out.force_encoding(Encoding::UTF_8).scrub("").split("\f", -1) : []
       Array.new(to - from + 1) { |i| texts[i].to_s }
     end

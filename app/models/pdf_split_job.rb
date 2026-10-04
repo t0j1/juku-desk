@@ -28,7 +28,8 @@ class PdfSplitJob < ApplicationRecord
 
   def fail_if_stale!
     return unless (analyzing? || splitting?) && updated_at < STALE_AFTER.ago
-    update!(status: :failed, error_message: STALE_MESSAGE)
+    # status のポーリングは列を絞って読むので、検証を通さず列だけ書く
+    update_columns(status: self.class.statuses[:failed], error_message: STALE_MESSAGE, updated_at: Time.current)
   end
 
   STALE_MESSAGE = "処理中にサーバーが停止しました（メモリ不足の可能性）。「再試行」でやり直せます。".freeze

@@ -3,8 +3,8 @@
 class PdfSplitter::SplitJob < ApplicationJob
   queue_as :default
   # 解析と分割は原本を丸ごと扱って重いので、全ユーザー合わせて同時に1つだけ動かす（Render 512MB で落ちないように）。
-  # duration はプロセスごと落ちたときにロックが外れるまでの時間
-  limits_concurrency to: 1, key: ->(_job_id) { "pdf_heavy" }, duration: 15.minutes
+  # duration はプロセスごと落ちたときにロックが外れるまでの時間。STALE_AFTER と揃え、「再試行」が待たされないようにする
+  limits_concurrency to: 1, key: ->(_job_id) { "pdf_heavy" }, duration: PdfSplitJob::STALE_AFTER
   discard_on ActiveRecord::RecordNotFound
 
   def perform(job_id)
