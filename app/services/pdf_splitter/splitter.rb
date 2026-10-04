@@ -9,9 +9,9 @@ module PdfSplitter
         # --pages の中で渡せるのは --password= だけ（--password-file は不可）。パスワードを引数に載せないよう、
         # パスワード付きのときは暗号化PDFを入力に指定し、そのページを取り出す（--pages .）
         _out, err, st = if pw.empty?
-          Open3.capture3("qpdf", "--empty", "--pages", input_path.to_s, range, "--", output_path.to_s)
+          Open3.capture3(*NICE, "qpdf", "--empty", "--pages", input_path.to_s, range, "--", output_path.to_s)
         else
-          Open3.capture3("qpdf", *pw, "--decrypt", input_path.to_s, "--pages", ".", range, "--", output_path.to_s)
+          Open3.capture3(*NICE, "qpdf", *pw, "--decrypt", input_path.to_s, "--pages", ".", range, "--", output_path.to_s)
         end
         # 終了コード 3 は「警告あり・出力成功」
         raise SplitError, err.presence || "qpdf failed" unless st.success? || st.exitstatus == 3
@@ -21,7 +21,7 @@ module PdfSplitter
 
     def self.page_count(path, password: nil)
       with_password_args(password) do |pw|
-        out, err, st = Open3.capture3("qpdf", *pw, "--show-npages", path.to_s)
+        out, err, st = Open3.capture3(*NICE, "qpdf", *pw, "--show-npages", path.to_s)
         raise InvalidPdf, err.presence || "page count failed" unless st.success? || st.exitstatus == 3
         out.to_i
       end
@@ -30,7 +30,7 @@ module PdfSplitter
     # パスワード付きPDFを復号した平文PDFをファイルに書き出す（パスワードは保存しない）
     def self.decrypt(input, output, password:)
       with_password_args(password) do |pw|
-        _o, err, st = Open3.capture3("qpdf", *pw, "--decrypt", input.to_s, output.to_s)
+        _o, err, st = Open3.capture3(*NICE, "qpdf", *pw, "--decrypt", input.to_s, output.to_s)
         raise InvalidPdf, err.presence || "decrypt failed" unless st.success? || st.exitstatus == 3
       end
       output

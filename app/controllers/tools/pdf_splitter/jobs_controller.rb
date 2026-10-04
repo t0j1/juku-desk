@@ -4,9 +4,10 @@ module Tools
       # サムネイルは1件ずつ作る（同時に何十MBもの元PDFを読み込んでメモリ不足で落ちるのを防ぐ）
       THUMB_LOCK = Mutex.new
 
-      before_action :set_job, except: %i[ index create ]
+      before_action :set_job, except: %i[ index create status ]
 
       def index
+        current_user.pdf_split_jobs.fail_stale!
         @jobs = current_user.pdf_split_jobs.order(created_at: :desc).limit(50)
       end
 
@@ -121,6 +122,14 @@ module Tools
         ::PdfSplitter::Zipper.with_zip(outputs) do |path|
           send_pdf_file(path, filename: "#{File.basename(@job.original_filename, '.*')}.zip", type: "application/zip", disposition: "attachment")
         end
+      end
+
+      # 解析中・分割中の画面がポーリングする軽い状態（ページ本体は読み直さない）。
+      # 必要な列だけを読み、bytea やページの解析結果には触らない
+      def status
+        job = current_user.pdf_split_jobs.select(:id, :status, :updated_at).find(params[:id])
+        job.fail_if_stale!
+        render json: { status: job.status, busy: job.uploaded? || job.analyzing? || job.splitting? }
       end
 
       # 境界確認用のサムネイル（保存しない）
