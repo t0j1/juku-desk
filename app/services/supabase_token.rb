@@ -13,9 +13,10 @@ class SupabaseToken
     secret.present?
   end
 
-  # 発行できないとき（秘密鍵なし・ユーザーなし・停止中）は nil
+  # 発行できないとき（秘密鍵なし・ユーザーなし・停止中・代理ログイン中）は nil
   def self.issue(user, now: Time.current)
     return unless enabled? && user&.active?
+    return if Current.session&.impersonating? # 代理ログイン中に schedule-web 用の本物のトークンを作らない
 
     issued_at = now.to_i
     expires_at = issued_at + LIFETIME.to_i

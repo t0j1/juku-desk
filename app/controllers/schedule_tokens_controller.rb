@@ -6,6 +6,7 @@ class ScheduleTokensController < ApplicationController
 
   def create
     return head :unauthorized unless authenticated?
+    return head :forbidden if impersonating?
 
     result = SupabaseToken.issue(current_user)
     return head :no_content unless result # SUPABASE_JWT_SECRET 未設定

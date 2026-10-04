@@ -1,5 +1,6 @@
 # 自分の 2FA（TOTP）の設定・解除。system_admin は必須なので解除できない。
 class TwoFactorsController < ApplicationController
+  forbid_during_impersonation # 代理ログイン中は 2FA の設定・解除をさせない
   allow_viewer_writes                # 自分のアカウントの設定は viewer にも許す
   allow_without_two_factor only: %i[ new create ] # 必須なのに未設定の人は、ここだけ使える
   before_action :redirect_if_enabled, only: %i[ new create ]
