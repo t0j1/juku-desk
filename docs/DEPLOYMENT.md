@@ -89,6 +89,15 @@ Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が
 - よって、バックアップは旧 private リポジトリで動かし続ける。このリポジトリに `SUPABASE_URL` / `SUPABASE_ANON_KEY` を登録しない。
 - `backups/*.csv` を public リポジトリの Git に入れない。移すなら push 先を private にするか、暗号化した成果物にすること。
 
+### 全体バックアップ（旧リポジトリ・週次）
+旧 private リポジトリ sekigaku-schedule の `.github/workflows/backup-full.yml` が、Supabase の DB 全体を `pg_dump` で取得する。上の CSV バックアップとは別に動き、CSV バックアップの側は変えていない。
+- 保存先: 世代ごとに orphan ブランチ `backup-full-YYYYMMDD-HHMMSS` を 1 本作り、コミットは 1 つだけにする。最新 8 本を残し、9 本目以降は `git push --delete` で消す。force push は使わない。
+- 消したブランチのオブジェクトは GitHub 上ですぐには GC されない。暗号化済みの古いダンプは、しばらくリポジトリに残る。
+- ダンプは暗号化の前に検証する（`pg_restore --list` と必須テーブルの確認）。検証に失敗したら push しない。平文のファイルは毎回削除する。
+- `pg_dump` は PGDG から入れる。サーバーのメジャーバージョンより古ければジョブは失敗する。
+- Secrets が未登録のときは notice を出してスキップし、ジョブは成功扱いになる。
+- **人間の作業（必須）**: マージ後に一度手動で実行して緑になることを確認し、手元でダンプを復号して復元できるか確かめる。それまではこのバックアップを完成扱いにしない。このリポジトリに DB 接続文字列を登録しないこと。
+
 ## トラブルシューティング
 - **Rails を変えていないのに Render が再デプロイされた**: `deploy.yml` は前回成功した Deploy 実行からの差分で判定する。前回の実行履歴が取れないとき（初回など）は安全側でデプロイする。
 - **schedule-web だけ変えたのに Rails の CI が走る**: 同じ PR で Rails 側や `ci.yml` 以外のルートのファイルも変えていないか確認する。
