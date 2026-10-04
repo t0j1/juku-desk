@@ -145,3 +145,17 @@ Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が
 - **日次上限**（自前の RPD に到達、または Gemini の RESOURCE_EXHAUSTED が日次のもの）は `failed` ではなく `quota_exceeded`。残りは `queued` のまま保留し、太平洋時間 0 時の 1 分後に `Marking::ResumeJob` が自動で再開する。画面上部に専用のバナー（残り件数と再開時刻（JST））を出し、監査ログに `gemini_daily_quota_exceeded` を記録する。
 - 科目が null か 5 科目以外のときは `needs_review`（問題は保存して、レビューで科目を決める）。`question_text` / `answer_text` が空なら `failed`。生の応答は `questions.raw_ai` に残る。
 - メモリ計測: `RAILS_ENV=test bin/rails runner script/marking_extract_memory_probe.rb [件数] [1 枚の KB]`。
+
+### LIFF 送迎予約と管理画面の連携（L-4）
+
+LIFF から入った予約（`pickup_reservations.status = 'pending'`）は、埋め込み済みの schedule-web 管理画面（`/schedule/admin` の「承認待ち」）にそのまま出て、承認・却下できる。DB は統合しない（予約は Supabase、監査ログと お知らせは juku-desk）。
+
+- **承認・却下の監査ログ**: Supabase のトリガー（`pickup.sql` の `pickup_notify_rails`）が、管理者による pending → approved / rejected のときだけ pg_net で `POST /internal/schedule_events` を呼び、`audit_logs` に `schedule_reservation_approve` / `schedule_reservation_reject` を1件残す（再送されても予約ごとに1件）。期限切れの自動却下・本人の取り消しは対象外。署名は `"<unix秒>.<event>.<reservation_id>.<actor_id>"` の HMAC-SHA256（ヘッダ `X-Schedule-Timestamp` / `X-Schedule-Signature: sha256=<hex>`、時刻のずれは5分まで）。送信に失敗しても承認は成功する。
+- **LINE の残り通数のバナー（L-3 との取り決め）**: 送る側は `POST /internal/schedule_events` に、次の JSON を署名つきで送る。
+  - 本文: `{"event":"line_quota_updated","remaining":19}`。`event` は固定の文字列、`remaining` は 0 以上の整数（JSON の number。文字列・小数・負数は 422）。その月の残り通数そのもの（差分ではない）。
+  - ヘッダ: `X-Schedule-Timestamp`（unix 秒）と `X-Schedule-Signature: sha256=<hex>`。署名は `"<unix秒>.line_quota_updated.<remaining>."` の HMAC-SHA256（末尾の `.` の後ろの actor_id は空）。鍵は `SCHEDULE_EVENTS_SECRET`。時刻のずれは5分まで。
+  - 応答: 成功は 204、署名不正・期限切れは 401、秘密未設定は 503、本文不正は 422。
+  - 動作: `remaining < 20` でお知らせバナー（#17。`announcements.system_key = 'line_quota_low'`、月末まで）を出し、既読にされていても、一度 20 通以上に戻ってからまた切ったときは出し直す。ちょうど 20 通は出さない。20 通以上になったら閉じる。送る側（L-3 の保存処理）はこの PR には含まない。
+**人間の作業**:
+1. Render に `SCHEDULE_EVENTS_SECRET`（16 文字以上のランダムな文字列）を登録する。未設定の間、エンドポイントは 503 を返す。
+2. Supabase の SQL Editor で最新の `pickup.sql` を流し（`create extension pg_net` が有効なこと）、続けて宛先を1回だけ登録する: `insert into public.rails_webhook (id, url, secret) values (1, 'https://<juku-desk>/internal/schedule_events', '<SCHEDULE_EVENTS_SECRET と同じ値>') on conflict (id) do update set url = excluded.url, secret = excluded.secret;`（`rails_webhook` は anon / 管理者のブラウザからは読めない）。未登録のあいだは通知しない。

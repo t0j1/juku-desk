@@ -1163,3 +1163,66 @@ begin
     end if;
   end loop;
 end $$;
+
+------------------------------------------------------------
+-- 12. juku-desk への通知（承認・却下を juku-desk の audit_logs に残す）
+--     管理者が承認待ちの予約を承認・却下したとき、pg_net で juku-desk（Rails）に知らせる。
+--     DB のトリガーなので、どの画面・どの経路から承認しても漏れない。送信に失敗しても承認は成功させる。
+--     期限切れの自動却下（pg_cron、auth.uid() が無い）は対象外。
+--     宛先と秘密は、公開しない表 rails_webhook に入れる（SQL Editor で1回だけ）:
+--       insert into public.rails_webhook (id, url, secret) values (1, 'https://<juku-desk>/internal/schedule_events', '<SCHEDULE_EVENTS_SECRET>')
+--         on conflict (id) do update set url = excluded.url, secret = excluded.secret;
+--     署名は "<unix秒>.<event>.<reservation_id>.<actor_id>" の HMAC-SHA256（Rails の ScheduleEventSignature と同じ）。
+------------------------------------------------------------
+create table if not exists public.rails_webhook (
+  id     int primary key default 1 check (id = 1),
+  url    text not null check (url ~ '^https://'),
+  secret text not null check (length(secret) >= 16)
+);
+alter table public.rails_webhook enable row level security;
+revoke all on public.rails_webhook from public, anon, authenticated;
+
+create or replace function public.pickup_notify_rails()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  cfg public.rails_webhook;
+  ev text;
+  ts text;
+  actor text := auth.uid()::text;
+  payload jsonb;
+begin
+  if actor is null or old.status <> 'pending' or new.status not in ('approved', 'rejected') then return new; end if;
+  select * into cfg from public.rails_webhook where id = 1;
+  if not found then return new; end if;
+  ev := case new.status when 'approved' then 'reservation_approved' else 'reservation_rejected' end;
+  ts := extract(epoch from now())::bigint::text;
+  payload := jsonb_strip_nulls(jsonb_build_object(
+    'event', ev, 'reservation_id', new.id, 'student_id', new.student_id, 'actor_id', actor,
+    'pickup_date', new.pickup_date, 'party_size', new.party_size,
+    'reject_reason', nullif(new.reject_reason, '')));
+  begin
+    perform net.http_post(
+      url := cfg.url,
+      body := payload,
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'X-Schedule-Timestamp', ts,
+        'X-Schedule-Signature', 'sha256=' || encode(
+          extensions.hmac(convert_to(ts || '.' || ev || '.' || new.id || '.' || actor, 'UTF8'), convert_to(cfg.secret, 'UTF8'), 'sha256'), 'hex')),
+      timeout_milliseconds := 3000);
+  exception when others then
+    raise warning 'juku-desk への通知に失敗しました（%）', sqlerrm;
+  end;
+  return new;
+end;
+$$;
+revoke all on function public.pickup_notify_rails() from public, anon, authenticated;
+
+drop trigger if exists pickup_reservations_notify_rails on public.pickup_reservations;
+create trigger pickup_reservations_notify_rails
+  after update of status on public.pickup_reservations
+  for each row execute function public.pickup_notify_rails();
