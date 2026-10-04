@@ -14,4 +14,6 @@ class Exam < ApplicationRecord
   def requested_count = filter["count"].to_i
   def shortfall = [ requested_count - items.size, 0 ].max
   def short? = shortfall.positive?
+  # 形式ごとに並べて、大問・小問の番号を振った小テストか
+  def sectioned? = filter["group_by_type"] == true
 end

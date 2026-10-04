@@ -23,26 +23,19 @@
       </div>
     </header>
     <% if @test.short? %><p class="mt-short print:hidden">※ 問題が足りないため <%= @items.size %> 問で作成されています。</p><% end %>
-    <ol class="mt-list">
-      <% @items.each do |item| %>
-        <% q = item.question %>
-        <li class="mt-item" id="print_item_<%= item.position %>">
-          <span class="mt-no"><%= item.position %></span>
-          <div class="mt-main">
-            <% if @kind == :question %>
-              <div class="mt-text"><%= q.question_text %></div>
-              <% if q.options.any? %>
-                <ol class="mt-options"><% q.options.each.with_index(1) do |o, i| %><li><span class="mt-opt-no"><%= i %></span><%= o %></li><% end %></ol>
-              <% else %>
-                <div class="mt-ruled" aria-label="解答欄"></div>
-              <% end %>
-            <% else %>
-              <div class="mt-answer"><%= q.answer_text %></div>
-              <% if q.explanation.present? %><div class="mt-expl"><%= q.explanation %></div><% end %>
-            <% end %>
-          </div>
-        </li>
+    <% if @test.sectioned? %>
+      <% @items.chunk_while { |a, b| a.section == b.section }.each do |group| %>
+        <section class="mt-section" id="print_section_<%= group.first.section %>">
+          <h2 class="mt-section-head"><span class="mt-section-no">【<%= group.first.section %>】</span><%= @instructions[group.first.question_type] %></h2>
+          <ol class="mt-list">
+            <% group.each do |item| %><%= render "print_item", item: item %><% end %>
+          </ol>
+        </section>
       <% end %>
-    </ol>
+    <% else %>
+      <ol class="mt-list">
+        <% @items.each do |item| %><%= render "print_item", item: item %><% end %>
+      </ol>
+    <% end %>
   </article>
 </div>

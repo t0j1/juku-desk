@@ -26,12 +26,14 @@ class MarkingTestsController < ApplicationController
 
   def show
     @items = @test.items.includes(:question)
+    @instructions = SectionTemplate.instructions if @test.sectioned?
   end
 
   # kind=question（問題用）/ answer（解答用）
   def print
     @kind = params[:kind] == "answer" ? :answer : :question
     @items = @test.items.includes(:question)
+    @instructions = SectionTemplate.instructions if @test.sectioned?
     AuditLog.record!(:print, @test, metadata: { kind: @kind })
     render layout: "application"
   end
@@ -42,6 +44,6 @@ class MarkingTestsController < ApplicationController
     end
 
     def builder_params
-      params.require(:marking_test).permit(:title, :mode, :count, :subject, :tags_text, :tag_logic, :difficulty_min, :difficulty_max)
+      params.require(:marking_test).permit(:title, :mode, :count, :subject, :tags_text, :tag_logic, :difficulty_min, :difficulty_max, :group_by_type, :type_order)
     end
 end

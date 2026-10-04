@@ -1,0 +1,27 @@
+<% content_for :title, "大問の指示文" %>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="page-title mr-auto">大問の指示文（問題形式ごと）</h1>
+  <%= link_to "小テストの出題", new_marking_test_path, class: "btn-secondary" %>
+</div>
+<p class="mb-4 text-lg text-text-sub">「形式ごとに並べる」で小テストを作ると、大問【1】【2】…の先頭にこの文が入ります。</p>
+<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
+<table id="section_templates" class="table-console">
+  <thead><tr><th>形式</th><th>指示文</th><th>状態</th><th></th></tr></thead>
+  <tbody>
+    <% @templates.each do |t| %>
+      <tr id="section_template_<%= t.question_type %>">
+        <td class="font-bold"><%= t.label %></td>
+        <td><%= t.instruction %></td>
+        <td><%= t.customized? ? status_pill("編集済み", :busy) : status_pill("初期値", :neutral) %></td>
+        <td class="flex items-center gap-2">
+          <% if current_user.can_write? %>
+            <%= link_to "編集", edit_section_template_path(t.question_type), class: "btn-secondary" %>
+            <% if t.customized? %>
+              <%= button_to "初期値に戻す", reset_section_template_path(t.question_type), method: :post, class: "btn-danger", data: { turbo_confirm: "「#{t.label}」の指示文を初期値に戻します。よろしいですか？" } %>
+            <% end %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

@@ -126,6 +126,10 @@
 .mt-name-line { display: inline-block; width: 45mm; border-bottom: .3mm solid #000; }
 .mt-short { font-size: 10pt; margin-bottom: 4mm; }
 .mt-list { list-style: none; margin: 0; padding: 0; }
+.mt-section { margin-bottom: 4mm; }
+.mt-section-head { font-size: 12pt; font-weight: 700; margin-bottom: 3mm; break-after: avoid; page-break-after: avoid; }
+.mt-section-no { margin-right: 1mm; }
+.mt-section .mt-no { width: 10mm; }
 .mt-item { display: flex; gap: 3mm; margin-bottom: 6mm; font-size: 11.5pt; line-height: 1.7; break-inside: avoid; page-break-inside: avoid; }
 .mt-no { flex: none; width: 9mm; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mt-main { flex: 1; min-width: 0; }

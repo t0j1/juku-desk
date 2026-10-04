@@ -54,6 +54,9 @@ Rails.application.routes.draw do
     end
     post :bulk_approve, on: :collection
   end
+  resources :section_templates, path: "marking/section_templates", only: %i[ index edit update ], param: :question_type do
+    post :reset, on: :member
+  end
   resources :marking_tests, path: "marking/tests", only: %i[ index new create show ] do
     get :print, on: :member
   end
