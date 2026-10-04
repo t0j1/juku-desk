@@ -1,0 +1,18 @@
+/* アプリを行き来する共通ナビ（js/unified-nav.js）。juku-desk のサイドバーと同じ見た目・同じ並び */
+.unav-nav { display: grid; gap: 18px; }
+.unav-group { display: grid; gap: 4px; }
+.unav-label { margin: 0; padding: 0 14px 2px; font-size: .78rem; font-weight: 700; color: #6B7080; }
+.unav-link {
+  display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 12px;
+  font-size: .95rem; color: #6B7080; text-decoration: none;
+}
+.unav-link:hover { background: rgba(255, 255, 255, .6); }
+.unav-link:focus-visible { outline: 2px solid #5B4BE0; outline-offset: 2px; }
+.unav-link.is-current { background: #fff; color: #1F2433; font-weight: 700; box-shadow: 0 2px 12px rgba(60, 50, 140, .06); }
+
+/* 管理画面は a に独自の色が付いているので、詳しさで勝つ */
+.unav-nav .unav-link { color: #6B7080; }
+.unav-nav .unav-link.is-current { color: #1F2433; }
+
+/* 管理画面のサイドバーの中に置く（#unified-nav）。狭い画面の開閉は管理画面の既存の ☰ が担う */
+#unified-nav { margin: 4px 0 14px; padding-bottom: 14px; border-bottom: 1px solid #E6E4F0; }

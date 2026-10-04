@@ -30,6 +30,7 @@ DATABASE_URL        = Neon の接続文字列（?sslmode=require 付き）
 SOLID_QUEUE_IN_PUMA = true
 WEB_CONCURRENCY     = 0   # 512MB プランでは single mode（ワーカープロセスを増やさない）
 RAILS_MAX_THREADS   = 3
+SCHEDULE_WEB_URL    = https://<project>.pages.dev   # 任意。サイドバーに schedule-web へのリンクを出す。未設定なら出さない
 ```
 Settings → Deploy Hook の URL を控える。
 
