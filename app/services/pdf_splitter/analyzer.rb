@@ -1,7 +1,15 @@
 module PdfSplitter
   class Analyzer
-    def self.call(job)
-      texts = job.with_original_file { |path| TextExtractor.pages_from_path(path, job.page_count.presence || Splitter.page_count(path)) }
+    # progress があれば、ページ単位で進み具合を知らせる。キャンセルされたら ProgressReporting::Cancelled を投げ、
+    # 結果は最後の 1 トランザクションでしか書かないので、途中までの解析結果は残らない
+    def self.call(job, progress: nil)
+      texts = job.with_original_file do |path|
+        count = job.page_count.presence || Splitter.page_count(path)
+        TextExtractor.pages_from_path(path, count) do |done|
+          progress&.step!(done, "解析中 #{done}/#{count}ページ（#{done * 100 / count}%）")
+        end
+      end
+      progress&.check_cancel!
       detector = HeadingDetector.new
       headings = []
       rows = texts.each_with_index.map do |text, i|

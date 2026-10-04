@@ -1,5 +1,7 @@
 <% content_for :title, @job.original_filename %>
-<% if @job.uploaded? || @job.analyzing? || @job.splitting? %><meta http-equiv="refresh" content="2"><% end %>
+<% progress = @job.active_progress %>
+<%# 進捗モーダルが無い古い行（進捗の行がない処理中）だけ、従来どおり自動更新する %>
+<% if progress.nil? && (@job.uploaded? || @job.analyzing? || @job.splitting?) && @job.job_progresses.none? %><meta http-equiv="refresh" content="2"><% end %>
 <div>
   <h1 class="page-title"><%= @job.original_filename %></h1>
   <p class="text-lg text-text-sub mt-1 tnum"><%= @job.page_count %>ページ ・ 状態: <span id="status"><%= t("pdf_splitter.status.#{@job.status}") %></span>
@@ -8,8 +10,22 @@
 
 <% if @job.failed? %><p class="alert-err">✕ 処理に失敗しました: <%= @job.error_message %></p><% end %>
 
-<% if @job.uploaded? || @job.analyzing? %>
-  <p class="card">解析しています…</p>
+<% if progress || @job.analyzing? || @job.splitting? %>
+  <%# 進み具合は共通の進捗モーダル（画面右上の「処理中」から開く）。終わったら自動でこの画面を読み直す %>
+  <div class="card space-y-3" data-controller="progress-reload" data-progress-reload-subject-id-value="<%= @job.id %>"
+       data-action="progress:finished@window->progress-reload#reload">
+    <p class="font-bold"><%= @job.splitting? ? "分割しています…" : "解析しています…" %></p>
+    <p class="caption">進み具合は右上の「処理中」から見られます。キャンセルもそこでできます。</p>
+    <button type="button" class="btn-secondary btn-sm" data-action="progress-reload#open">進み具合を見る</button>
+  </div>
+<% elsif @job.uploaded? %>
+  <section class="card space-y-3">
+    <p class="font-bold">解析はまだ行われていません（キャンセルされたか、途中で止まりました）。</p>
+    <div class="flex flex-wrap gap-3">
+      <%= button_to "解析をやり直す", analyze_tools_pdf_splitter_job_path(@job), class: "btn-primary" %>
+      <%= button_to "このファイルを削除", tools_pdf_splitter_job_path(@job), method: :delete, class: "btn-danger", data: { turbo_confirm: "元のPDFを削除します。" } %>
+    </div>
+  </section>
 <% else %>
   <% if @job.outputs.any? %>
     <section class="card">

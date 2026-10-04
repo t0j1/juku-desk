@@ -2,7 +2,7 @@
 <% active_ids = JobProgress.where(user: current_user).active.pluck(:id) %>
 <% open_id = flash[:open_progress] %>
 <div data-controller="progress" data-progress-url-value="<%= progresses_path %>" data-progress-ids-value="<%= (active_ids | [ open_id ].compact).to_json %>"
-     data-progress-open-value="<%= open_id.present? %>" class="print:hidden">
+     data-progress-open-value="<%= open_id.present? %>" data-action="progress:open@window->progress#open" class="print:hidden">
   <button type="button" data-progress-target="badge" data-action="progress#open" hidden
           class="fixed top-3 right-3 z-40 inline-flex items-center gap-2 h-11 px-4 rounded-pill bg-bg text-text font-bold text-base shadow-raise-sm cursor-pointer">
     <span class="inline-block size-3 rounded-full bg-primary animate-pulse" aria-hidden="true"></span>

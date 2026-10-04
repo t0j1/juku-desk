@@ -12,7 +12,7 @@ export default class extends Controller {
     this.tick = setInterval(() => this.renderClock(), 1000)
     this.onVisibility = () => { if (!document.hidden) this.poll() }
     document.addEventListener("visibilitychange", this.onVisibility)
-    if (this.idsValue.length) this.poll().then(() => { if (this.openValue) this.open() })
+    if (this.idsValue.length) this.poll().then(() => { if (this.openValue && this.running().length) this.open() })
   }
 
   disconnect() {
@@ -38,7 +38,7 @@ export default class extends Controller {
       const res = await fetch(this.urlValue, { headers: { Accept: "application/json" } })
       if (res.ok) (await res.json()).progresses.forEach((p) => this.update(p))
     } catch (_) { /* 通信が切れても次の周期でやり直す */ }
-    if ([ ...this.items.values() ].some((i) => !i.data.finished)) {
+    if (this.running().length) {
       this.timer = setTimeout(() => this.poll(), this.intervalValue)
     }
   }
@@ -55,9 +55,11 @@ export default class extends Controller {
     }
     item.data = p
     item.fetchedAt = Date.now()
+    if (!p.finished) item.sawRunning = true
     this.render(item)
     this.renderBadge()
-    if (p.finished && !(item.announced)) {
+    // 画面を開く前に終わっていたものは知らせない（知らせると、受け取った画面が読み直しを繰り返す）
+    if (p.finished && item.sawRunning && !item.announced) {
       item.announced = true
       this.element.dispatchEvent(new CustomEvent("progress:finished", { bubbles: true, detail: p }))
     }
@@ -112,10 +114,12 @@ export default class extends Controller {
   }
 
   renderBadge() {
-    const running = [ ...this.items.values() ].filter((i) => !i.data.finished)
+    const running = this.running()
     this.badgeTarget.hidden = running.length === 0 && !this.dialogTarget.open
     this.badgeTextTarget.textContent = running.length > 1 ? `処理中 ${running.length}件` : "処理中"
   }
+
+  running() { return [ ...this.items.values() ].filter((i) => !i.data.finished) }
 
   mmss(s) { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` }
 

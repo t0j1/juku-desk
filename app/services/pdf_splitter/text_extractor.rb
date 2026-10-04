@@ -16,12 +16,18 @@ module PdfSplitter
       end
     end
 
-    def self.pages_from_path(path, page_count)
+    # on_pages: 何ページ目まで済んだかを CHUNK ごとに知らせる（進捗表示用。呼び出し側でキャンセルを確かめて raise してよい）
+    def self.pages_from_path(path, page_count, &on_pages)
       if page_count > PROBE_PAGES
         probe = extract(path, 1, PROBE_PAGES)
-        return probe + Array.new(page_count - PROBE_PAGES, "") if probe.all? { |t| t.strip.empty? }
+        if probe.all? { |t| t.strip.empty? }
+          on_pages&.call(page_count)
+          return probe + Array.new(page_count - PROBE_PAGES, "")
+        end
       end
-      (1..page_count).each_slice(CHUNK).flat_map { |chunk| extract(path, chunk.first, chunk.last) }
+      (1..page_count).each_slice(CHUNK).flat_map do |chunk|
+        extract(path, chunk.first, chunk.last).tap { on_pages&.call(chunk.last) }
+      end
     end
 
     def self.extract(path, from, to)

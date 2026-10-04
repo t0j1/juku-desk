@@ -61,11 +61,12 @@ class JobProgress < ApplicationRecord
 
     if JobProgress::Queue.remove(active_job_id)
       update!(status: :cancelled, finished_at: Time.current, message: "キャンセルしました")
+      subject.try(:progress_cancelled!, self) # ジョブが動かないので、対象の後始末はここで行う
     end
   end
 
   def as_progress_json
-    { id: id, kind: kind, title: title, status: status, total: total, done: done, percent: percent, message: message,
+    { id: id, kind: kind, subject_type: subject_type, subject_id: subject_id, title: title, status: status, total: total, done: done, percent: percent, message: message,
       elapsed_seconds: elapsed_seconds, eta_seconds: eta_seconds, cancel_requested: cancel_requested?, finished: finished? }
   end
 end

@@ -31,6 +31,27 @@ class PdfSplitJob < ApplicationRecord
     update!(status: :failed, error_message: "処理中にサーバーが停止しました。ページ数の少ないPDFで再度お試しください。")
   end
 
+  has_many :job_progresses, as: :subject, dependent: :delete_all
+
+  # 解析・分割の進捗が cancelled になったときの後始末（ジョブ側のキャンセルと、キューから外した場合の両方から呼ぶ）。
+  # 解析：結果は最後にしか書かないので途中結果はなく、PDF 本体は残して「解析をやり直す」を出す。
+  # 分割：作りかけの出力（行と保存済みPDF）を消して、範囲の確認画面に戻す
+  def progress_cancelled!(progress)
+    case progress.kind
+    when "pdf_analyze"
+      update!(status: :uploaded, error_message: nil)
+    when "pdf_split"
+      PdfBlob.purge(pdf_blobs.where(kind: "output"))
+      outputs.delete_all
+      update!(status: :analyzed, output_count: 0, error_message: nil)
+    end
+  end
+
+  # 画面に出す進捗（処理中のもの。なければ nil）
+  def active_progress
+    job_progresses.active.order(:id).last
+  end
+
   def original_blob
     pdf_blobs.without_data.where(kind: "original").where("expires_at > ?", Time.current).first
   end
