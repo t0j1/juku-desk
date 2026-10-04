@@ -40,9 +40,11 @@ module Marking
       Exam.transaction do
         @test = Exam.create!(title: title, mode: mode, subject: subject.presence, created_by: user, filter: filter_json)
         if group_by_type
-          Marking::SectionNumbering.new(picked, type_order_list).entries.each do |e|
+          entries = Marking::SectionNumbering.new(picked, type_order_list).entries
+          entries.each do |e|
             @test.items.create!(question: e.question, position: e.position, section: e.section, sub_position: e.sub_position, question_type: e.question_type)
           end
+          @test.update!(sections: section_snapshot(entries))
         else
           picked.each.with_index(1) { |q, pos| @test.items.create!(question: q, position: pos) }
         end
@@ -54,6 +56,14 @@ module Marking
     def type_order_list = Marking::SectionNumbering.normalize_order(type_order)
 
     private
+      # 使った大問ごとの指示文を小テストに保存する（あとでテンプレートを編集しても印刷が変わらないように）
+      def section_snapshot(entries)
+        instructions = SectionTemplate.instructions
+        entries.uniq(&:section).map do |e|
+          { "section" => e.section, "question_type" => e.question_type, "instruction" => instructions.fetch(e.question_type) }
+        end
+      end
+
       def picker
         Marking::QuestionPicker.new(Marking::QuestionPicker::Params.new(
           mode: mode, count: count, subject: subject.presence, tags: tags, tag_logic: tag_logic,

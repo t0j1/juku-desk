@@ -26,14 +26,14 @@ class MarkingTestsController < ApplicationController
 
   def show
     @items = @test.items.includes(:question)
-    @instructions = SectionTemplate.instructions if @test.sectioned?
+    @instructions = @test.section_instructions if @test.sectioned?
   end
 
   # kind=question（問題用）/ answer（解答用）
   def print
     @kind = params[:kind] == "answer" ? :answer : :question
     @items = @test.items.includes(:question)
-    @instructions = SectionTemplate.instructions if @test.sectioned?
+    @instructions = @test.section_instructions if @test.sectioned?
     AuditLog.record!(:print, @test, metadata: { kind: @kind })
     render layout: "application"
   end

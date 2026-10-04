@@ -16,4 +16,10 @@ class Exam < ApplicationRecord
   def short? = shortfall.positive?
   # 形式ごとに並べて、大問・小問の番号を振った小テストか
   def sectioned? = filter["group_by_type"] == true
+
+  # 大問の指示文 { 形式 => 指示文 }。作成時に保存したものを優先し、保存が無い（以前の）小テストはテンプレートの指示文を使う
+  def section_instructions
+    saved = Array(sections).to_h { |s| [ s["question_type"], s["instruction"] ] }
+    saved.empty? ? SectionTemplate.instructions : SectionTemplate::DEFAULTS.merge(saved)
+  end
 end
