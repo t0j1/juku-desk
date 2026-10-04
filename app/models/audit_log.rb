@@ -1,5 +1,5 @@
 class AuditLog < ApplicationRecord
-  ACTIONS = %w[view create update delete export send print login logout unlock lock role_change revoke_session password_change user_invite user_suspend user_activate user_import invitation_accept].freeze
+  ACTIONS = %w[view create update delete export send print login logout unlock lock role_change revoke_session password_change user_invite user_suspend user_activate user_import invitation_accept mail_template_update mail_template_reset].freeze
 
   belongs_to :user, optional: true
   belongs_to :auditable, polymorphic: true, optional: true
