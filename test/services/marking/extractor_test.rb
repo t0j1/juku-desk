@@ -25,7 +25,7 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     Marking::Extractor.call(region)
 
     assert_equal "extracted", region.reload.status
-    question = region.question
+    question = region.questions.sole
     assert_equal [ "英語", [ "am", "is", "are" ], "am", [ "be動詞", "中1" ] ], [ question.subject, question.options, question.answer_text, question.tags ]
     assert_equal 0.92, question.raw_ai.dig("response", "confidence")
     assert_nil question.reviewed_at
@@ -37,8 +37,8 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     Marking::Extractor.call(a)
     Marking::Extractor.call(b)
     assert_equal %w[needs_review needs_review], [ a.reload.status, b.reload.status ]
-    assert_nil a.question.subject
-    assert_equal "音楽", a.question.raw_ai.dig("response", "subject") # 生の応答は残る
+    assert_nil a.questions.sole.subject
+    assert_equal "音楽", a.questions.sole.raw_ai.dig("response", "subject") # 生の応答は残る
   end
 
   test "empty question_text or answer_text fails the region, and the raw response is kept" do
@@ -48,7 +48,7 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     Marking::Extractor.call(b)
     assert_equal %w[failed failed], [ a.reload.status, b.reload.status ]
     assert_match(/answer_text/, a.error_message)
-    assert a.question.raw_ai["response"].present?
+    assert a.questions.sole.raw_ai["response"].present?
     assert_equal 0, Question.reviewable.count
   end
 
@@ -57,7 +57,7 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     a, b = make_regions(2)
     Marking::Extractor.call(a)
     Marking::Extractor.call(b)
-    assert_equal [ "要確認" ], a.reload.question.tags
+    assert_equal [ "要確認" ], a.reload.questions.sole.tags
     assert_equal "failed", b.reload.status
   end
 
@@ -185,5 +185,59 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     region = make_regions(1).first
     2.times { Marking::Extractor.call(CropRegion.find(region.id)) }
     assert_equal 1, @gemini.calls
+  end
+
+  test "a region with two questions (〔1〕〔2〕) creates two questions; the label goes to source_label, not question_text" do
+    with_gemini(gemini_questions_json({ "source_label" => "〔1〕", "question_text" => "be動詞を選べ。" }, { "source_label" => "〔2〕", "question_text" => "一般動詞を選べ。", "subject" => nil }))
+    region = make_regions(1).first
+    Marking::Extractor.call(region)
+
+    assert_equal "needs_review", region.reload.status # 2 問目の科目が null なので要確認
+    assert_equal [ [ "〔1〕", "be動詞を選べ。", "英語" ], [ "〔2〕", "一般動詞を選べ。", nil ] ], region.questions.map { |q| [ q.source_label, q.question_text, q.subject ] }
+    assert_equal [ region.id ], Question.pluck(:region_id).uniq
+  end
+
+  test "a single question in the questions array still works, with a null source_label" do
+    with_gemini(gemini_questions_json("source_label" => nil))
+    region = make_regions(1).first
+    Marking::Extractor.call(region)
+    assert_equal "extracted", region.reload.status
+    assert_equal 1, region.questions.count
+    assert_nil region.questions.sole.source_label
+  end
+
+  test "re-extracting a region replaces its questions instead of piling them up" do
+    with_gemini(gemini_questions_json({}, {}), gemini_json)
+    region = make_regions(1).first
+    Marking::Extractor.call(region)
+    assert_equal 2, region.questions.count
+    region.update!(status: :queued)
+    Marking::Extractor.call(region)
+    assert_equal 1, region.reload.questions.count
+  end
+
+  test "one broken question in the array fails the region and keeps the raw response" do
+    with_gemini(gemini_questions_json({}, { "answer_text" => "" }))
+    region = make_regions(1).first
+    Marking::Extractor.call(region)
+    assert_equal "failed", region.reload.status
+    assert_match(/2 問目: answer_text が空です/, region.error_message)
+    assert_equal 0, Question.reviewable.count
+  end
+
+  test "a 404 (model retired) is model_unavailable with its own message, not a plain failure, and can be re-queued" do
+    with_gemini(Gemini::ModelUnavailable.new("Gemini のモデル gemini-2.5-flash が利用できません"), gemini_json)
+    region = make_regions(1).first
+    Marking::Extractor.call(region)
+
+    assert_equal "model_unavailable", region.reload.status
+    assert_equal "モデルが利用できません：GEMINI_MODELを更新してください", region.error_message
+    assert_equal 1, @gemini.calls, "404 はやり直さない"
+    assert_empty @sleeps
+    assert_equal :model_unavailable, region.upload.extraction_status
+
+    assert_equal 1, Marking::Enqueuer.call(region.upload.crop_regions.where(status: CropRegion::RETRYABLE_STATUSES))
+    perform_enqueued_jobs(only: Marking::ExtractJob)
+    assert_equal "extracted", region.reload.status
   end
 end

@@ -41,3 +41,4 @@ ja:
     needs_review: 要確認
     failed: エラー
     quota_exceeded: 日次上限で保留
+    model_unavailable: モデルが利用できません

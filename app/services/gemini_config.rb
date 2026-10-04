@@ -5,7 +5,7 @@ module GeminiConfig
 
   def api_key = ENV["GEMINI_API_KEY"].presence
   def configured? = api_key.present?
-  def model = ENV["GEMINI_MODEL"].presence || "gemini-2.5-flash"
+  def model = ENV["GEMINI_MODEL"].presence || "gemini-3.8-flash"
   def endpoint = ENV["GEMINI_ENDPOINT"].presence || "https://generativelanguage.googleapis.com"
   def rpm = int("GEMINI_RPM", 10)
   def rpd = int("GEMINI_RPD", 250)

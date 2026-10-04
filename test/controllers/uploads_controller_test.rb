@@ -137,6 +137,31 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "a model_unavailable region shows its own message and 構造化を開始・やり直す re-queues it; several questions per region are listed" do
+    post uploads_path, params: payload
+    upload = Upload.last
+    unavailable, extracted = upload.crop_regions.order(:id)
+    unavailable.update!(status: :model_unavailable, error_message: CropRegion::MODEL_UNAVAILABLE_MESSAGE)
+    extracted.update!(status: :extracted)
+    extracted.questions.create!(source_label: "〔1〕", question_text: "問一", answer_text: "答")
+    extracted.questions.create!(source_label: "〔2〕", question_text: "問二", answer_text: "答")
+
+    get upload_path(upload)
+    assert_select "#extraction-status", /モデルが利用できません/
+    assert_select "#region_#{unavailable.id}", /モデルが利用できません：GEMINI_MODELを更新してください/
+    assert_select "#region_#{extracted.id} [data-question]", 2
+    get questions_path
+    assert_select "#model-unavailable", /GEMINI_MODELを更新してください（1 件）/
+
+    ENV["GEMINI_API_KEY"] = "test-key"
+    assert_enqueued_jobs 1, only: Marking::ExtractJob do
+      post extract_upload_path(upload)
+    end
+    assert_equal "queued", unavailable.reload.status
+  ensure
+    ENV.delete("GEMINI_API_KEY")
+  end
+
   test "new page hands the detector thresholds to the browser from the environment" do
     ENV["MARKING_MIN_AREA_RATIO"] = "0.02"
     get new_upload_path
