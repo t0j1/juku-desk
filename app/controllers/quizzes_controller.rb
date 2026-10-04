@@ -8,6 +8,7 @@ class QuizzesController < ApplicationController
 
     # 「範囲を変更」で戻ってきたときは、前回の入力値を初期値にする
     @quiz = Quiz.defaults_for(@wordbook)
+    @quiz.count = nil # 最初は問題数を選んでいない状態から始める（あいさつの吹き出しが「何問いってみる？」と聞く）
     @quiz.assign_attributes(params.permit(:start_no, :end_no, :count))
   end
 

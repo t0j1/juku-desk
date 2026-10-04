@@ -21,13 +21,17 @@ class QuizzesControllerTest < ActionDispatch::IntegrationTest
     assert_select "button[disabled]", text: "次へ"
   end
 
-  test "step 2 shows the range hint and the split" do
+  test "step 2 shows the greeting, the range hint and the count buttons with none selected" do
     get new_quiz_path(wordbook_id: wordbooks(:leap).id)
     assert_response :success
     assert_select "[aria-current=step]", text: /範囲と問題数/
     assert_select "p", text: "範囲は 1〜50 です"
     assert_select "input[name='quiz[start_no]'][value='1']"
-    assert_select "[data-quiz-range-target=split]", text: "左 15／右 15"
+    assert_select "[data-quiz-range-target=greeting]", text: "今日は何問いってみる？"
+    assert_select "input[type=radio][name='quiz[count]']", count: 5
+    assert_select "input[type=radio][name='quiz[count]'][checked]", count: 0
+    assert_select "input[type=range]", count: 2
+    assert_select "button[type=submit]", text: "テストをつくる"
   end
 
   test "step 2 keeps the previous values when coming back from the preview" do
@@ -37,16 +41,17 @@ class QuizzesControllerTest < ActionDispatch::IntegrationTest
     get new_quiz_path(wordbook_id: wordbooks(:leap).id, start_no: 11, end_no: 40, count: 25)
     assert_select "input[name='quiz[start_no]'][value='11']"
     assert_select "input[name='quiz[end_no]'][value='40']"
-    assert_select "input[name='quiz[count]'][value='25']"
+    assert_select "input[type=radio][name='quiz[count]'][value='25'][checked]" # 候補にない値も、そのまま選択状態で戻す
+    assert_select "[data-quiz-range-target=greeting]", text: "25問！いいね"
     assert_select "[data-quiz-range-target=startError]:not([hidden])", count: 0
   end
 
   test "invalid range re-renders step 2 with errors" do
-    create_quiz(start_no: 0, end_no: 60, count: 10)
+    create_quiz(start_no: 0, end_no: 60, count: 5)
     assert_response :unprocessable_entity
     assert_select "[data-quiz-range-target=startError]:not([hidden])", text: /✕ 1〜50 の範囲/
     assert_select "[data-quiz-range-target=endError]:not([hidden])", text: /✕ 1〜50 の範囲/
-    assert_select "[data-quiz-range-target=countError]:not([hidden])", text: /✕ 問題数は 20〜50/
+    assert_select "[data-quiz-range-target=countError]:not([hidden])", text: /✕ 問題数は 10〜50/
   end
 
   test "valid request renders the A4 preview with distinct words and a left-heavy split" do
