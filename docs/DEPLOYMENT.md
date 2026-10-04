@@ -58,6 +58,20 @@ Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を�
   URL は Render の環境変数に常設しない（使い終わったら期限切れにする）。代わりに管理画面の CSV 取り込みからアップロードしてもよい。
 - 環境変数が無い場合、`db:seed` は単語帳をスキップする（エラーにならない）。
 
+## Neon compute の予算
+Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が停止する。**消費量 ≒ compute サイズ × Neon が起きている時間**。
+
+- compute を **0.25 CU 固定**にする（オートスケールを切る）と、100 CU-hours ÷ 0.25 CU ＝ 月 **400 時間**まで起きていられる。
+- Neon が起きている時間は、ほぼ「Render が起きている時間」。Solid Queue がワーカーで DB をポーリングするため、Render が動いている間は Neon も起きっぱなしになる。
+- そのため、ポーリング間隔を伸ばし（Solid Queue 2 秒。Solid Cable は使わず `async` アダプタ＝DB を触らない）、keepalive は塾で実際に使う時間帯だけに絞る。例: 12:00〜23:00 JST は 11 時間 × 30 日 ＝ 330 時間 ＝ 82.5 CU-hours（0.25 CU 固定の場合）。使う時間帯がもっと短ければ、その分だけ余裕が増える。
+- PDF 分割のジョブの開始は、ポーリング間隔が 2 秒になったので最大 1 秒遅くなる。
+- Action Cable（ブロードキャスト）は使っていない。使うようになったら `config/cable.yml` を `solid_cable` に戻す必要がある（`database.yml` の cable 設定はそのために残してある）。
+
+### 毎月の確認手順（人間）
+1. Neon の Usage 画面で、今月の CU-hours とストレージを見る。月の途中で 70 CU-hours を超えていたら、keepalive の時間帯を短くする。
+2. Neon の compute が 0.25 CU 固定のままか確認する（オートスケールが入っていないこと）。
+3. cron-job.org の keepalive が、塾で実際に使う時間帯だけになっているか確認する。
+
 ## 6. CI / デプロイのモノレポ対応
 - `ci.yml` は変更パスで判定する。`apps/schedule-web/` 以外が変わったときだけ Rails のジョブ、`apps/schedule-web/`（と Makefile / .mise.toml / ci.yml）が変わったときだけ `schedule-web` ジョブ（`node --test`、pglite は一時インストール）が走る。スキップされたジョブは必須チェックでも成功扱い。
 - `deploy.yml` は、直近に成功した Deploy 実行の `head_sha` から今回までの差分が `apps/schedule-web/`・`docs/`・`*.md` だけなら Render を叩かない。起点が取れないときは必ずデプロイする（Free は再起動で数分止まるため）。
