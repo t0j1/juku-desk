@@ -53,7 +53,7 @@ R2_BUCKET            = バケット名
 5. `PDF_STORAGE=r2` に切り替えて再デプロイし、アップロード・分割・ダウンロード・印刷が動くか確認する。
 6. 問題がなければ、DB のコピーを消す: `CONFIRM=yes bin/rails pdf_blobs:purge_db_copies`。R2 側を照合し直して、一致したものだけ消す。**これを実行すると `db` には戻せない**。容量を実際に空けるには、そのあと Neon で `VACUUM FULL pdf_blobs;` が必要（ロックがかかるので、使っていない時間に）。
 
-**ロールバック**: `PDF_STORAGE=db` に戻す。purge する前なら、移行済みのデータも DB に残っているのでそのまま読める。`PDF_STORAGE=r2` の間に新しくアップロードした PDF は R2 にしか無い（`R2_*` を消さないこと。期限は 7 日なので、待てば消える）。
+**ロールバック**: `PDF_STORAGE=db` に戻す。purge する前なら、移行済みのデータも DB に残っているのでそのまま読める。`PDF_STORAGE=r2` の間に新しくアップロードした PDF は R2 にしか無い（`R2_*` を消さないこと。期限は 7 日なので、待てば消える）。`R2_*` を外した場合、cleanup は R2 にある行の削除を飛ばして警告だけ出し、DB だけの行は消す（`R2_*` を戻せば次回消える）。
 
 実装の要点: Active Storage ではなく薄いアダプタ（`app/services/pdf_storage/r2.rb`、`aws-sdk-s3`）。PDF は独自の期限・容量上限・一括削除を持ち、Active Storage の添付テーブルに載せ替えると二重管理になるため。読み書きはファイルへのストリーミングで、PDF 全体を 1 つの String にするのは db モードの保存と、出力 PDF（小さい）のレスポンスだけ。メモリの比較は `bin/rails runner script/pdf_memory_probe.rb 25`（`PROBE_R2=1` と `R2_*` を付けると R2 も測る）。
 

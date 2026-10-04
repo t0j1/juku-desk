@@ -84,6 +84,19 @@ class PdfBlobStorageTest < ActiveSupport::TestCase
     end
   end
 
+  test "purge without R2 settings keeps the R2 rows and still deletes DB-only rows" do
+    db_only = store_blob(@job)
+    in_r2 = with_pdf_storage("r2") { store_blob(@job, kind: "output") }
+    keys = %w[R2_ACCOUNT_ID R2_ENDPOINT R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET]
+    saved = keys.index_with { |k| ENV.delete(k) }
+    PdfStorage.r2 = nil
+    PdfBlob.purge(PdfBlob.where(pdf_split_job: @job))
+    assert_not PdfBlob.exists?(db_only.id)
+    assert PdfBlob.exists?(in_r2.id)
+  ensure
+    keys.each { |k| saved[k].nil? ? ENV.delete(k) : ENV[k] = saved[k] }
+  end
+
   test "a blob needs data or an r2_key" do
     blob = PdfBlob.new(kind: "original", pdf_split_job: @job, byte_size: 1, expires_at: 1.day.from_now)
     assert_not blob.valid?

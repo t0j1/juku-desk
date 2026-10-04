@@ -49,7 +49,13 @@ class PdfBlob < ApplicationRecord
   # 行と、R2 上のオブジェクトをまとめて消す。R2 を先に消す（失敗したら行を残して次回やり直せる）。
   def self.purge(relation)
     keys = relation.in_r2.pluck(:r2_key)
-    PdfStorage.r2.delete(keys) if keys.any?
+    begin
+      PdfStorage.r2.delete(keys) if keys.any?
+    rescue PdfStorage::NotConfigured => e
+      # PDF_STORAGE=db に戻して R2_* も外した場合。R2 にある行は残して、DB だけの行を消す（R2_* を戻せば次回消える）
+      Rails.logger.warn("PdfBlob.purge: R2 が未設定のため R2 上の #{keys.size} 件は消せません（#{e.message}）")
+      relation = relation.where(r2_key: nil)
+    end
     where(id: relation.select(:id)).delete_all
   end
 
