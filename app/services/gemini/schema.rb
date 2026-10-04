@@ -7,10 +7,10 @@ module Gemini
       properties: {
         subject: { type: "STRING", nullable: true, enum: Question::SUBJECTS },
         source_label: { type: "STRING", nullable: true },
-        question_text: { type: "STRING" },
-        options: { type: "ARRAY", items: { type: "STRING" } },
-        answer_text: { type: "STRING" },
-        explanation: { type: "STRING" },
+        question_text: { type: "STRING", description: "数式は $...$ か $$...$$ で囲んだ LaTeX。日本語の文章は LaTeX にしない" },
+        options: { type: "ARRAY", items: { type: "STRING", description: "数式は $...$ か $$...$$ で囲んだ LaTeX。日本語の文章は LaTeX にしない" } },
+        answer_text: { type: "STRING", description: "数式は $...$ か $$...$$ で囲んだ LaTeX。日本語の文章は LaTeX にしない" },
+        explanation: { type: "STRING", description: "数式は $...$ か $$...$$ で囲んだ LaTeX。日本語の文章は LaTeX にしない" },
         tags: { type: "ARRAY", items: { type: "STRING" } },
         confidence: { type: "NUMBER" }
       },

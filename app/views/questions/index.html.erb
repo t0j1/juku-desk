@@ -1,3 +1,4 @@
+<% content_for :head do %><%= stylesheet_link_tag "katex/katex" %><% end %>
 <% content_for :title, "問題のレビュー" %>
 <div class="flex flex-wrap items-center gap-3 mb-6">
   <h1 class="font-bold text-[22px] mr-auto">問題のレビュー</h1>
@@ -50,7 +51,7 @@
     </div>
   <% end %>
 <% end %>
-<table id="questions" class="table-console">
+<table id="questions" class="table-console" data-controller="math">
   <thead><tr><th><% if current_user.can_write? %><input type="checkbox" id="select-all" aria-label="承認できる問題をすべて選ぶ" data-bulk-select-target="all" data-action="bulk-select#toggleAll"><% end %></th><th>切り出し</th><th>科目</th><th>問題</th><th>解答</th><th>タグ</th><th>状態</th><th></th></tr></thead>
   <tbody>
     <% @questions.each do |q| %>
