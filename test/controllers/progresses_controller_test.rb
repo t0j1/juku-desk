@@ -47,7 +47,7 @@ class ProgressesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show and index report a stalled running job as failed" do
-    @progress.update_columns(updated_at: 5.minutes.ago)
+    @progress.update_columns(updated_at: 10.minutes.ago)
     get progress_path(@progress), as: :json
     assert_equal "failed", response.parsed_body["status"]
     assert_equal true, response.parsed_body["finished"]

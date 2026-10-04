@@ -39,4 +39,13 @@ class Tools::PdfSplitter::JobsProgressTest < ActionDispatch::IntegrationTest
     assert_select "button", text: "解析をやり直す"
     assert_select "[data-controller=progress-reload]", false
   end
+
+  test "while splitting, the outputs stay visible and the modal card is added" do
+    @job.outputs.create!(display_name: "第1回", page_from: 1, page_to: 100, position: 0)
+    @job.update!(status: :splitting)
+    JobProgress.create!(user: users(:staff), kind: "pdf_split", title: "分割", subject: @job, status: :running, total: 100)
+    get tools_pdf_splitter_job_path(@job)
+    assert_select "[data-controller=progress-reload]", text: /分割しています/
+    assert_select "#outputs"
+  end
 end

@@ -6,6 +6,7 @@ class PdfSplitter::AnalyzeJob < ApplicationJob
   def perform(progress_id)
     progress = JobProgress.find(progress_id)
     job = progress.subject
+    return progress.finish!(:cancelled, message: "対象が削除されました") if job.nil? # PDF を消した後に動き出した
     job.analyzing!
     progress.run(total: job.page_count, on_cancel: -> { job.progress_cancelled!(progress) }) do |p|
       PdfSplitter::Analyzer.call(job, progress: p)

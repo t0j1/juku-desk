@@ -127,4 +127,22 @@ class PdfSplitter::ProgressTest < ActiveJob::TestCase
     assert_match "分割中 3/3ファイル", progress.message
     assert @job.reload.done?
   end
+
+  test "a stalled running progress also fails the job so the user can retry" do
+    @job.update!(status: :analyzing)
+    progress = enqueue(PdfSplitter::AnalyzeJob, "pdf_analyze", 255)
+    progress.update_columns(status: JobProgress.statuses[:running], started_at: 20.minutes.ago, updated_at: 10.minutes.ago)
+    progress.fail_if_stale!
+
+    assert progress.reload.failed?
+    assert @job.reload.failed?
+    assert_match "止まりました", @job.error_message
+  end
+
+  test "an analysis whose job was deleted ends the progress instead of staying queued" do
+    progress = enqueue(PdfSplitter::AnalyzeJob, "pdf_analyze", 255)
+    @job.delete
+    perform_enqueued_jobs
+    assert progress.reload.finished?
+  end
 end

@@ -47,6 +47,11 @@ class PdfSplitJob < ApplicationRecord
     end
   end
 
+  # 進捗が止まって failed になったとき、対象も失敗に倒す（「解析をやり直す」が出せる状態にする）
+  def progress_failed!(progress)
+    update!(status: :failed, error_message: progress.message) if analyzing? || splitting?
+  end
+
   # 画面に出す進捗（処理中のもの。なければ nil）
   def active_progress
     job_progresses.active.order(:id).last

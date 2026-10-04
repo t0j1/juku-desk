@@ -10,11 +10,20 @@
 
 <% if @job.failed? %><p class="alert-err">✕ 処理に失敗しました: <%= @job.error_message %></p><% end %>
 
-<% if progress || @job.analyzing? || @job.splitting? %>
-  <%# 進み具合は共通の進捗モーダル（画面右上の「処理中」から開く）。終わったら自動でこの画面を読み直す %>
+<% if @job.splitting? && progress %>
+  <%# 分割は出力の一覧を見せたまま、進み具合は共通の進捗モーダルに任せる。終わったら自動でこの画面を読み直す %>
   <div class="card space-y-3" data-controller="progress-reload" data-progress-reload-subject-id-value="<%= @job.id %>"
        data-action="progress:finished@window->progress-reload#reload">
-    <p class="font-bold"><%= @job.splitting? ? "分割しています…" : "解析しています…" %></p>
+    <p class="font-bold">分割しています…</p>
+    <p class="caption">進み具合は右上の「処理中」から見られます。キャンセルもそこでできます。</p>
+    <button type="button" class="btn-secondary btn-sm" data-action="progress-reload#open">進み具合を見る</button>
+  </div>
+<% end %>
+<% if (progress && !@job.splitting?) || @job.analyzing? %>
+  <%# 解析の進み具合は共通の進捗モーダル（画面右上の「処理中」から開く）。終わったら自動でこの画面を読み直す %>
+  <div class="card space-y-3" data-controller="progress-reload" data-progress-reload-subject-id-value="<%= @job.id %>"
+       data-action="progress:finished@window->progress-reload#reload">
+    <p class="font-bold">解析しています…</p>
     <p class="caption">進み具合は右上の「処理中」から見られます。キャンセルもそこでできます。</p>
     <button type="button" class="btn-secondary btn-sm" data-action="progress-reload#open">進み具合を見る</button>
   </div>
