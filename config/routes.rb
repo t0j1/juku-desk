@@ -3,6 +3,9 @@ Rails.application.routes.draw do
   resources :invitations, param: :token, only: %i[ edit update ]
   resources :passwords, param: :token, only: %i[ new create edit update ]
 
+  resources :announcements, only: [] do
+    post :read, on: :member
+  end
   resource :impersonation, only: :destroy
   resource :two_factor, only: %i[ show new create destroy ]
   resource :two_factor_challenge, only: %i[ new create ]
@@ -31,6 +34,7 @@ Rails.application.routes.draw do
     resource :user_suspension, only: %i[ new create ] do
       post :confirm
     end
+    resources :announcements, except: :show
   end
 
   resources :students do
