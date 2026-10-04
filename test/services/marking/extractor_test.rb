@@ -97,8 +97,8 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
 
   test "15 regions are processed in order within the RPM (accepting is instant, work happens in jobs)" do
     with_gemini(gemini_json, rpm: 10)
+    freeze_time # 時計は sleeper の travel でだけ進める
     regions = make_regions(15, status: :confirmed)
-    started = Time.current
     assert_enqueued_jobs 15, only: Marking::ExtractJob do
       assert_equal 15, Marking::Enqueuer.call(CropRegion.where(id: regions.map(&:id)))
     end
@@ -107,8 +107,10 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     run_all
     assert_equal [ "extracted" ], regions.map { |r| r.reload.status }.uniq
     assert_equal 15, @gemini.calls
-    # RPM 10 = 6 秒おき。最初の 1 件は待たず、あとの 14 件ぶんは待つ
-    assert_in_delta 14 * 6.0, Time.current - started, 1.0
+    # RPM 10 = 6 秒おき。最初の 1 件は待たず、あとの 14 件ぶんは 1 回ずつ待つ。
+    # 実時間ではなく、スタブした sleeper に渡った待ち時間で確かめる（CI の速さに左右されない）
+    assert_equal 14, @sleeps.size, @sleeps.inspect
+    assert_equal [ 6.0 ] * 14, @sleeps.map { |s| s.round(3) }
     assert_equal 15, GeminiQuota.first.day_count
   end
 
