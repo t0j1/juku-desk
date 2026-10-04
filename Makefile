@@ -30,6 +30,7 @@ dev-web:
 	python3 -m http.server $(SCHEDULE_PORT) -d apps/schedule-web/public
 
 test-rails:
+	node --test test/javascript/*.test.mjs
 	bin/rails test
 
 test-web:

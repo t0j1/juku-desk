@@ -4,6 +4,7 @@ require "rails/test_help"
 require_relative "test_helpers/session_test_helper"
 require_relative "test_helpers/totp_test_helper"
 require_relative "test_helpers/pdf_test_helper"
+require_relative "test_helpers/marking_image_helper"
 require_relative "test_helpers/pdf_storage_test_helper"
 
 module ActiveSupport
@@ -14,6 +15,9 @@ module ActiveSupport
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 
+    include MarkingImageHelper
+
+    # Add more helper methods to be used by all tests here...
     include TotpTestHelper
   end
 end

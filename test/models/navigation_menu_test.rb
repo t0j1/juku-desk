@@ -10,7 +10,7 @@ class NavigationMenuTest < ActiveSupport::TestCase
   test "without SCHEDULE_WEB_URL only the juku-desk group is shown" do
     groups = menu
     assert_equal [ "塾日報ステーション" ], groups.map(&:label)
-    assert_equal %w[生徒データベース PDF分割 印刷 小テスト作成], groups.first.items.map(&:label)
+    assert_equal %w[生徒データベース PDF分割 印刷 小テスト作成 マーキング検出], groups.first.items.map(&:label)
   end
 
   test "a blank or invalid SCHEDULE_WEB_URL hides the group too" do

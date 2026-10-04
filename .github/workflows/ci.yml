@@ -156,6 +156,15 @@ jobs:
         with:
           bundler-cache: true
 
+      # マーキング検出（ブラウザ側の JS）のユニットテスト。依存パッケージなし
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Run JS unit tests
+        run: node --test test/javascript/*.test.mjs
+
       - name: Run tests
         env:
           RAILS_ENV: test

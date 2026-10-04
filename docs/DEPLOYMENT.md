@@ -119,3 +119,12 @@ Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が
 - **schedule-web だけ変えたのに Rails の CI が走る**: 同じ PR で Rails 側や `ci.yml` 以外のルートのファイルも変えていないか確認する。
 - **schedule-web のテストが `import` で落ちる**: Node 24 が必要（`mise install`）。pglite 系は `npm i --no-save @electric-sql/pglite` を `apps/schedule-web` で実行してから。
 - **バックアップが動かない**: 旧 private リポジトリ側の Actions を確認する（このリポジトリでは動かさない）。
+
+## マーキング検出（画像の取り込み）
+
+赤枠でマーキングした教材画像を取り込む機能（`/marking`）。画像（縮小済みの元画像と切り出し）は R2 に置き、DB には `uploads` / `crop_regions` を持つ。
+
+- **本番では `R2_*` の設定が必須**（`PDF_STORAGE` が `db` のままでも、画像だけは R2 を使う）。`R2_BUCKET` が無いと、本番では取り込み時にエラーになる（Render Free のディスクは消えるため、ローカルには置かない）。開発・テストは `storage/marking`（`MARKING_DISK_PATH` で変更可）。
+- 画像のデコードはブラウザで行う。サーバーは大きな画像をデコードしない。
+- 設定値は環境変数（すべて任意。未設定なら既定値）。しきい値: `MARKING_MIN_AREA_RATIO`（0.005）、`MARKING_MAX_AREA_RATIO`（0.9）、`MARKING_MAX_ASPECT_RATIO`（20）、`MARKING_MAX_FILL_RATIO`（0.95）、`MARKING_IOU_THRESHOLD`（0.5）、`MARKING_TILT_THRESHOLD`（0.5）、`MARKING_MERGE_GAP`（12）、`MARKING_MIN_SATURATION`（70）、`MARKING_MIN_VALUE`（50）、`MARKING_HUE_LOW`（10）、`MARKING_HUE_HIGH`（170）、`MARKING_CLOSE_KERNEL` / `_ITERATIONS`（5 / 2）、`MARKING_OPEN_KERNEL` / `_ITERATIONS`（3 / 1）。縮小・上限: `MARKING_MAX_LONG_SIDE`（1600）、`MARKING_MAX_BYTES`（5242880）、`MARKING_MAX_REGIONS`（100）、`MARKING_CROP_PADDING`（8）、`MARKING_JPEG_QUALITY`（0.85）。
+- 同じ画像（sha256 が同じ）は取り込み直さず、既存の upload を返す。
