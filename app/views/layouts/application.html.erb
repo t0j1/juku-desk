@@ -26,7 +26,7 @@
 
   <body class="min-h-screen bg-gradient-to-b from-console-bg-from to-console-bg-to text-ink font-sans text-[15px]">
     <% if authenticated? %>
-      <div class="flex min-h-screen flex-col gap-3 p-3 md:flex-row md:gap-4 md:p-4 lg:gap-6 lg:p-6 print:block print:p-0 print:min-h-0" data-controller="sidebar">
+      <div class="flex <%= content_for?(:embed) ? "h-dvh" : "min-h-screen" %> flex-col gap-3 p-3 md:flex-row md:gap-4 md:p-4 lg:gap-6 lg:p-6 print:block print:p-0 print:min-h-0" data-controller="sidebar">
         <%# 768px 未満：ヘッダーの ☰ でサイドバーを開閉する %>
         <header class="md:hidden flex items-center gap-3 print:hidden">
           <button type="button" id="sidebar-toggle" data-sidebar-target="button" data-action="sidebar#toggle" aria-controls="app-sidebar" aria-expanded="false"
@@ -37,7 +37,7 @@
         </header>
         <div data-sidebar-target="scrim" data-action="click->sidebar#close" class="hidden fixed inset-0 z-30 bg-black/40 md:hidden print:hidden" aria-hidden="true"></div>
         <%= render "shared/sidebar" %>
-        <main class="flex-1 min-w-0 bg-white rounded-[20px] shadow-card p-4 md:p-6 lg:p-8 print:p-0 print:shadow-none print:rounded-none">
+        <main class="flex-1 min-w-0 bg-white rounded-[20px] shadow-card <%= content_for?(:embed) ? "flex flex-col min-h-0 overflow-hidden" : "p-4 md:p-6 lg:p-8" %> print:p-0 print:shadow-none print:rounded-none">
           <%= render "shared/flash" %>
           <%= yield %>
         </main>

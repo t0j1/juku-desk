@@ -33,4 +33,4 @@ test-rails:
 	bin/rails test
 
 test-web:
-	cd apps/schedule-web && node --test scripts/backup.test.mjs scripts/pickup-api.test.mjs scripts/pickup-common.test.mjs scripts/nav.test.mjs
+	cd apps/schedule-web && node --test scripts/backup.test.mjs scripts/pickup-api.test.mjs scripts/pickup-common.test.mjs scripts/nav.test.mjs scripts/headers.test.mjs
