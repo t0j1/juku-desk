@@ -1,3 +1,4 @@
 [tools]
 ruby = "3.4.5"
-node = "20.18.0"
+# apps/schedule-web のテストが Node 23.6 以降（TypeScript をそのまま読む）を要求する。CI の backup と同じ 24 に揃える
+node = "24"
