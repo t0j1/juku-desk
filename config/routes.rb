@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   resource :session, only: %i[ new create destroy ]
+  resources :invitations, param: :token, only: %i[ edit update ]
   resources :passwords, param: :token, only: %i[ new create edit update ]
 
   resource :two_factor, only: %i[ show new create destroy ]
@@ -10,11 +11,20 @@ Rails.application.routes.draw do
   end
 
   namespace :admin do
-    resources :users, only: %i[ index update ] do
+    resources :users, only: %i[ index new create update ] do
       post :unlock, on: :member
+      post :suspend, on: :member
+      post :activate, on: :member
+      post :resend_invitation, on: :member
       post :reset_two_factor, on: :member
     end
     resources :login_events, only: :index
+    resource :user_import, only: %i[ new create ] do
+      post :confirm
+    end
+    resource :user_suspension, only: %i[ new create ] do
+      post :confirm
+    end
   end
 
   resources :students do
@@ -52,6 +62,7 @@ Rails.application.routes.draw do
   get "schedule" => "schedule#index", as: :schedule
   get "schedule/admin" => "schedule#admin", as: :schedule_admin
   get "schedule/pickup" => "schedule#pickup", as: :schedule_pickup
+  post "schedule/token" => "schedule_tokens#create", as: :schedule_token
 
   # 印刷（講師ログイン）
   get  "print" => "print_library#index", as: :print_library

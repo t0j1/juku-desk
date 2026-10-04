@@ -28,7 +28,7 @@ class SessionsController < ApplicationController
       end
     else
       became_locked = user&.register_failed_login!
-      log_attempt(email, user, success: false, reason: user && !user.active? ? "inactive" : "invalid_credentials")
+      log_attempt(email, user, success: false, reason: user && !user.active? ? user.status : "invalid_credentials")
       AuditLog.record!(:lock, user, user: user, metadata: { failed_attempts: user.failed_attempts, locked_until: user.locked_until }) if became_locked
       reject_login
     end
