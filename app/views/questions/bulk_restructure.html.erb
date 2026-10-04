@@ -1,0 +1,29 @@
+<% content_for :title, "再構造化の確認" %>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="page-title mr-auto">再構造化の確認</h1>
+  <%= link_to "一覧に戻る", questions_path, class: "btn-secondary" %>
+</div>
+<div id="bulk-restructure-confirm" class="card max-w-3xl text-lg">
+  <p><strong><%= @region_count %> 件の画像</strong>（問題 <%= @question_count %> 問）を、今の形式（問題形式・数式の LaTeX）で構造化し直します。</p>
+  <p class="mt-2">作り直すと、その画像の問題はすべて置き換わります。手で直した内容も消えます。Gemini には 1 件ずつ順番に送るので、終わるまで時間がかかります。1 日の上限に達したときは、残りは保留になり、翌日に自動で再開します。</p>
+  <p class="mt-2 text-text-sub">小テストで使っている問題がある画像は、対象に入っていません。</p>
+  <% if @approved_count.positive? %>
+    <div id="approved-warning" role="alert" class="mt-4 rounded-xl border-2 border-err-fg bg-err-bg p-3 text-err-fg">
+      <p class="font-bold">承認済みの問題が <%= @approved_count %> 問あります。再構造化すると承認が外れ、もう一度確認して承認するまで小テストに出題されません。</p>
+    </div>
+  <% end %>
+  <% hidden = ->(f) { safe_join([ (f.hidden_field(:target, value: "outdated") if @all_outdated), *(@all_outdated ? [] : @question_ids.map { |id| hidden_field_tag("question_ids[]", id, id: nil) }), f.hidden_field(:confirmed, value: "1") ].compact) } %>
+  <div class="mt-6 flex flex-wrap items-center gap-3">
+    <%= form_with url: bulk_restructure_questions_path, method: :post do |f| %>
+      <%= hidden.call(f) %>
+      <%= f.submit(@approved_count.positive? ? "はい、承認が外れても再構造化する" : "はい、再構造化する", id: "confirm-bulk-restructure", class: "btn-primary cursor-pointer") %>
+    <% end %>
+    <% if @approved_count.positive? %>
+      <%= form_with url: bulk_restructure_questions_path, method: :post do |f| %>
+        <%= hidden.call(f) %><%= f.hidden_field :skip_approved, value: "1" %>
+        <%= f.submit "承認済みの問題がある画像は除いて再構造化する", id: "confirm-bulk-restructure-skip-approved", class: "btn-secondary cursor-pointer" %>
+      <% end %>
+    <% end %>
+    <%= link_to "いいえ（やめる）", questions_path, class: "btn-secondary" %>
+  </div>
+</div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -234,6 +234,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_130000) do
     t.index ["user_id"], name: "index_recovery_codes_on_user_id"
   end
 
+  create_table "restructure_batches", force: :cascade do |t|
+    t.bigint "user_id"
+    t.bigint "region_ids", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_restructure_batches_on_user_id"
+  end
+
   create_table "section_templates", force: :cascade do |t|
     t.string "question_type", null: false
     t.text "instruction", null: false
@@ -378,6 +386,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_130000) do
   add_foreign_key "questions", "crop_regions", column: "region_id", on_delete: :cascade
   add_foreign_key "questions", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "recovery_codes", "users"
+  add_foreign_key "restructure_batches", "users", on_delete: :nullify
   add_foreign_key "section_templates", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "sessions", "users"
   add_foreign_key "sessions", "users", column: "impersonator_id", on_delete: :cascade

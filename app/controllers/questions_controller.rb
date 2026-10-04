@@ -15,6 +15,36 @@ class QuestionsController < ApplicationController
     @failed_regions = CropRegion.where(status: "failed").includes(:upload).order(id: :desc).limit(20)
     @model_unavailable_count = CropRegion.where(status: "model_unavailable").count
     @waiting_count = CropRegion.waiting.count
+    @outdated_count = Marking::BulkRestructure.outdated_questions.count
+    @restructure_batch = RestructureBatch.recent.first
+  end
+
+  # 一覧の進み具合（n 件中 m 件）だけを返す。処理中は画面が数秒ごとに読み直す
+  def restructure_progress
+    @restructure_batch = RestructureBatch.recent.first
+    render partial: "restructure_progress", locals: { batch: @restructure_batch }
+  end
+
+  # 「選択した画像を再構造化」「未対応の問題をすべて再構造化」。まず確認画面を出し、「はい」（confirmed）を押したときだけ積む。
+  # 承認済みの問題がある領域は、確認画面で「承認が外れる」ことを示す。「承認済みは除く」を選ぶと、その領域は積まない
+  def bulk_restructure
+    return redirect_to questions_path, alert: "GEMINI_API_KEY が設定されていません。", status: :see_other unless GeminiConfig.configured?
+
+    @all_outdated = params[:target] == "outdated"
+    questions = @all_outdated ? Marking::BulkRestructure.outdated_questions : Question.reviewable.where(id: Array(params[:question_ids]))
+    regions = Marking::BulkRestructure.regions_for(questions)
+    regions = regions.where.not(id: Question.approved.select(:region_id)) if params[:skip_approved].present?
+    @question_ids = Array(params[:question_ids])
+    @region_count = regions.count
+    return redirect_to questions_path, alert: "再構造化できる問題がありません（小テストで使っている問題の画像は対象外です）。", status: :see_other if @region_count.zero?
+
+    @approved_count = Marking::BulkRestructure.approved_in(regions).count
+    @question_count = Question.where(region_id: regions.select(:id)).count
+    return render :bulk_restructure unless params[:confirmed].present?
+
+    batch = Marking::BulkRestructure.enqueue!(regions, user: current_user)
+    AuditLog.record!(:update, batch, metadata: { bulk_restructure: true, region_ids: batch.region_ids, approved_dropped: @approved_count })
+    redirect_to questions_path, notice: "#{batch.total} 件の画像を構造化の順番待ちに入れました。1 件ずつ順番に処理します。", status: :see_other
   end
 
   def edit

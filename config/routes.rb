@@ -53,6 +53,8 @@ Rails.application.routes.draw do
       post :restructure
     end
     post :bulk_approve, on: :collection
+    post :bulk_restructure, on: :collection
+    get :restructure_progress, on: :collection
   end
   resources :section_templates, path: "marking/section_templates", only: %i[ index edit update ], param: :question_type do
     post :reset, on: :member
