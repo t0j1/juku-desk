@@ -28,7 +28,7 @@
         <p class="text-lg text-text-sub" data-state></p>
       </div>
       <div class="flex flex-col gap-4 lg:flex-row">
-        <div class="relative self-start select-none touch-none max-w-full lg:basis-2/3">
+        <div class="relative self-start mt-7 select-none touch-none max-w-full lg:basis-2/3">
           <img data-image alt="取り込む画像のプレビュー" class="block max-w-full h-auto" draggable="false">
           <div data-overlay class="absolute inset-0 cursor-crosshair"></div>
         </div>
@@ -48,7 +48,7 @@
         <span class="text-base text-text-sub" data-source></span>
         <button type="button" class="btn-danger ml-auto" data-delete>削除</button>
       </div>
-      <div class="grid grid-cols-4 gap-2 text-base text-text-sub">
+      <div class="grid grid-cols-2 gap-2 text-base text-text-sub">
         <% { "x" => "左", "y" => "上", "w" => "幅", "h" => "高さ" }.each do |key, label| %>
           <label class="block"><%= label %><input type="number" min="0" class="input !h-9 !px-2 mt-1 tnum" data-field="<%= key %>"></label>
         <% end %>
