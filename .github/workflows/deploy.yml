@@ -19,8 +19,31 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      # モノレポ: apps/schedule-web と docs/ のみの変更では Rails を再デプロイしない（Render の Free は再起動で数分止まる）。
+      # 比較の起点は「直近に成功した Deploy 実行の head_sha」。複数コミットを一度に push しても取りこぼさない。
+      # 起点が取れない・差分が出せないときは、迷わずデプロイする。
+      - name: Check whether Rails changed
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          rails=true
+          base=$(gh api "repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?branch=main&status=success&per_page=1" --jq '.workflow_runs[0].head_sha' 2>/dev/null || true)
+          if [ -n "$base" ] && [ "$base" != "null" ] && git cat-file -e "$base^{commit}" 2>/dev/null && git merge-base --is-ancestor "$base" "$HEAD_SHA" 2>/dev/null; then
+            files=$(git diff --name-only "$base" "$HEAD_SHA")
+            echo "base=$base"; echo "$files"
+            if [ -n "$files" ] && ! echo "$files" | grep -qvE '^(apps/schedule-web/|docs/|.*\.md$)'; then
+              rails=false
+            fi
+          fi
+          [ "$rails" = false ] && echo "::notice::Rails に関係する変更がないため、デプロイをスキップします"
+          echo "rails=$rails" >> "$GITHUB_OUTPUT"
 
       - name: Check Ruby version consistency
+        if: steps.scope.outputs.rails == 'true'
         run: |
           a=$(grep -oP 'ARG RUBY_VERSION=\K[0-9.]+' Dockerfile | head -1)
           b=$(tr -d '\n' < .ruby-version)
@@ -29,6 +52,7 @@ jobs:
           [ "$a" = "$b" ] && [ "$b" = "$c" ] || { echo "::error::Ruby version mismatch"; exit 1; }
 
       - name: Trigger Render deploy
+        if: steps.scope.outputs.rails == 'true'
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
