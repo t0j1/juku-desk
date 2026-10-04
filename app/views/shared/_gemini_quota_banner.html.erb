@@ -1,0 +1,6 @@
+<%# Gemini の日次上限で構造化を保留しているときだけ出す。エラー（failed）とは別の、目立つバナー %>
+<% if (quota = Marking::Quota.banner) %>
+  <div id="gemini-quota-banner" role="alert" class="mb-4 rounded-xl border-2 border-warn-line bg-warn-bg px-4 py-3 text-warn-ink print:hidden">
+    <p class="font-bold">Gemini の 1 日の上限に達しました。残り <%= quota[:remaining] %> 件は <%= l quota[:resume_at], format: "%-m月%-d日 %H:%M" %>（JST）以降に自動で再開します。</p>
+  </div>
+<% end %>

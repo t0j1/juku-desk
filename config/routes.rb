@@ -43,9 +43,20 @@ Rails.application.routes.draw do
 
   resources :wordbooks, only: %i[ index create ]
 
-  # マーキング検出：赤枠で囲んだ教材画像の取り込み
+  # マーキング検出：赤枠で囲んだ教材画像の取り込みと、Gemini が作った問題のレビュー
+  # （/marking/:id より先に書く。"questions" を uploads#show の id として拾わせない）
+  resources :questions, path: "marking/questions", only: %i[ index edit update ] do
+    member do
+      post :approve
+      post :unapprove
+    end
+  end
+  resources :marking_tests, path: "marking/tests", only: %i[ index new create show ] do
+    get :print, on: :member
+  end
   resources :uploads, path: "marking", only: %i[ index new create show ] do
     get :image, on: :member
+    post :extract, on: :member
   end
   resources :crop_regions, path: "marking/regions", only: [] do
     get :image, on: :member

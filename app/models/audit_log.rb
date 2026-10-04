@@ -1,5 +1,5 @@
 class AuditLog < ApplicationRecord
-  ACTIONS = %w[view create update delete export send print login logout unlock lock role_change revoke_session password_change user_invite user_suspend user_activate user_import invitation_accept mail_template_update mail_template_reset two_factor_enable two_factor_disable two_factor_reset recovery_code_used impersonation_start impersonation_end impersonated_request].freeze
+  ACTIONS = %w[view create update delete export send print login logout unlock lock role_change revoke_session password_change user_invite user_suspend user_activate user_import invitation_accept gemini_daily_quota_exceeded mail_template_update mail_template_reset two_factor_enable two_factor_disable two_factor_reset recovery_code_used impersonation_start impersonation_end impersonated_request].freeze
 
   belongs_to :user, optional: true
   belongs_to :impersonator, class_name: "User", optional: true

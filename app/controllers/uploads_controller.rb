@@ -2,8 +2,9 @@
 # サーバーでは画像をデコードしない（種類は先頭バイト、寸法はブラウザの申告、sha256 はストリーミングで計算）。
 class UploadsController < ApplicationController
   before_action :require_writer!, only: :new
+
   def index
-    @uploads = Upload.includes(:user).left_joins(:crop_regions).group("uploads.id").select("uploads.*, COUNT(crop_regions.id) AS regions_count").order(created_at: :desc).limit(100)
+    @uploads = Upload.includes(:user, :crop_regions).order(created_at: :desc).limit(100)
   end
 
   def new
@@ -13,6 +14,16 @@ class UploadsController < ApplicationController
   def show
     @upload = Upload.find(params[:id])
     @regions = @upload.crop_regions.order(:id)
+  end
+
+  # 構造化の開始・やり直し（confirmed / failed と、処理中のまま止まった領域を順番待ちに積む）。API キー設定前に取り込んだ画像用
+  def extract
+    upload = Upload.find(params[:id])
+    return redirect_to upload_path(upload), alert: "GEMINI_API_KEY が設定されていません。" unless GeminiConfig.configured?
+
+    regions = upload.crop_regions
+    count = Marking::Enqueuer.call(regions.where(status: %w[confirmed failed]).or(regions.stale_processing))
+    redirect_to upload_path(upload), notice: "#{count} 件を構造化の順番待ちに入れました。", status: :see_other
   end
 
   def image
@@ -39,6 +50,7 @@ class UploadsController < ApplicationController
     return render_error(error) if error
 
     upload = save_upload(file, content_type, sha256, regions)
+    Marking::Enqueuer.call(upload.crop_regions) # 構造化は順番待ちに積むだけ（すぐ返す）
     render json: { id: upload.id, duplicate: false, regions: upload.crop_regions.size, url: upload_path(upload) }, status: :created
   rescue ActiveRecord::RecordNotUnique
     existing = Upload.find_by!(sha256:)
