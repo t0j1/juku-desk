@@ -49,6 +49,15 @@ Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を�
 - HTTPS 強制（`force_ssl`）。`/up` だけはリダイレクト対象外。
 - マイグレーションはコンテナ起動時に `bin/docker-entrypoint` の `db:prepare` が実行する。
 
+## 単語帳（小テスト用）の投入
+- 単語帳 CSV は著作権のためリポジトリに含めない。本番にすでに「LEAP 改訂版」があれば何もしなくてよい（seed は登録済みなら何もしない）。
+- 新しい環境に入れるとき: CSV を非公開ストレージ（R2 の非公開バケットなど）に置き、期限付きの署名付き URL を発行して、Render の Shell で一度だけ実行する:
+  ```
+  WORDBOOK_SEED_URL='<署名付き URL>' bin/rails wordbook:seed
+  ```
+  URL は Render の環境変数に常設しない（使い終わったら期限切れにする）。代わりに管理画面の CSV 取り込みからアップロードしてもよい。
+- 環境変数が無い場合、`db:seed` は単語帳をスキップする（エラーにならない）。
+
 ## Neon compute の予算
 Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が停止する。**消費量 ≒ compute サイズ × Neon が起きている時間**。
 

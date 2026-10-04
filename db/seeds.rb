@@ -23,8 +23,6 @@ elsif ENV["SEED_ADMIN_EMAIL"].present? && ENV["SEED_ADMIN_PASSWORD"].present?
   end
 end
 
-# 小テスト用の単語帳（登録済みなら何もしない）
-unless Wordbook.exists?(name: "LEAP 改訂版")
-  result = WordbookImporter.new(name: "LEAP 改訂版", data: File.binread(Rails.root.join("db/seeds/leap_modified_list.csv"))).call
-  raise "LEAP 改訂版の取り込みに失敗しました: #{result.errors.join(' / ')}" unless result.success?
-end
+# 小テスト用の単語帳（CSV は WORDBOOK_SEED_PATH / WORDBOOK_SEED_URL で渡す。無ければスキップ、登録済みなら何もしない）
+require Rails.root.join("db/seeds/wordbook_seed")
+WordbookSeed.run
