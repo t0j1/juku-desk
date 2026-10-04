@@ -42,6 +42,8 @@ class TwoFactorTest < ActionDispatch::IntegrationTest
   end
 
   test "correct code logs in, and the same code cannot be replayed" do
+    # 2 回の current_totp が 30 秒の境目をまたぐと別コードになり再利用にならないので、時刻を止める
+    freeze_time
     password_login
     submit_code(current_totp)
     assert_redirected_to root_path
