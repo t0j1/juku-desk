@@ -2,11 +2,13 @@
 // schema.sql → pickup.sql（2回）を流してから、予約・承認・相乗り・取り消し・期限切れを確かめる。
 // 実行: npm i --no-save @electric-sql/pglite && node scripts/pickup-db.test.mjs
 import { PGlite } from "@electric-sql/pglite";
+import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 
 const REPO = new URL("../supabase/", import.meta.url).pathname;
-const db = new PGlite();
+const db = new PGlite({ extensions: { pgcrypto } });
 const ADMIN = "11111111-1111-1111-1111-111111111111";
 const OTHER = "22222222-2222-2222-2222-222222222222";
 
@@ -19,6 +21,12 @@ await db.exec(`
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   grant execute on function auth.uid() to anon, authenticated, service_role;
   insert into auth.users values ('${ADMIN}'), ('${OTHER}');
+  -- pg_net の模擬：送ろうとしたリクエストを記録するだけ（実際の送信は Supabase の pg_net が行う）
+  create schema net;
+  create table net.calls (id serial primary key, url text, body jsonb, headers jsonb);
+  create function net.http_post(url text, body jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000)
+    returns bigint language sql as $$ insert into net.calls (url, body, headers) values (url, body, headers) returning id::bigint $$;
+  create schema extensions; create extension pgcrypto schema extensions;
 `);
 await db.exec(readFileSync(REPO + "schema.sql", "utf8"));
 await db.exec(`insert into public.admins values ('${ADMIN}')`);
@@ -41,7 +49,7 @@ let passed = 0;
 const ok = label => { passed++; console.log("  ✔", label); };
 
 // 日本時間の明日・明後日
-const [{ d1, d2, d3 }] = (await db.query(`select (pickup_now()::date + 1)::text d1, (pickup_now()::date + 2)::text d2, (pickup_now()::date + 3)::text d3`)).rows;
+const [{ d1, d2, d3, n1, n2 }] = (await db.query(`select (pickup_now()::date + 1)::text d1, (pickup_now()::date + 2)::text d2, (pickup_now()::date + 3)::text d3, (pickup_now()::date + 40)::text n1, (pickup_now()::date + 41)::text n2`)).rows;
 
 // ---- 権限 ----
 await fails(as("anon", "", "select * from pickup_reservations"), /permission denied/, "anon は予約を読めない");
@@ -248,6 +256,48 @@ assert.equal(s8.find(x => x.slot === "17:15").remaining, 2, "調整中に入っ�
 assert.equal((await admin(`select count(*)::int c from pickup_date_overrides where pickup_date = $1`, [d8]))[0].c, 0);
 await svc(`select cancel_pickup_reservation($1, $2)`, [cid.F, o1]);
 ok("日付ごとの調整：その日だけの時間帯・定員・送迎なし・通常に戻す");
+
+// ---- juku-desk への通知（L-4 / R2） ----
+const SECRET = randomBytes(16).toString("hex");
+const calls = async () => (await db.query(`select url, body, headers from net.calls order by id`)).rows;
+await db.exec(`delete from net.calls`);
+// 宛先が未設定のあいだは、承認しても何も送らない
+const hook = await submit("H", n1, "17:00");
+await admin(`select admin_approve_reservation($1)`, [hook]);
+assert.equal((await calls()).length, 0, "宛先未設定では送らない");
+await fails(db.query(`insert into rails_webhook (id, url, secret) values (1, 'http://x', 'short')`), /check/, "http と短い秘密は拒否");
+await fails(as("authenticated", ADMIN, `select * from rails_webhook`), /permission denied/, "管理者のブラウザからも宛先・秘密は読めない");
+await db.query(`insert into rails_webhook (id, url, secret) values (1, 'https://juku.example/internal/schedule_events', $1)`, [SECRET]);
+
+// LIFF から入った予約（pending）を管理者が承認 → 通知が1件
+const liff = await submit("G", n1, "18:00");
+assert.equal((await admin(`select status from pickup_reservations where id = $1`, [liff]))[0].status, "pending");
+await admin(`select admin_approve_reservation($1)`, [liff]);
+let sent = await calls();
+assert.equal(sent.length, 1);
+assert.equal(sent[0].url, "https://juku.example/internal/schedule_events");
+assert.deepEqual({ ...sent[0].body, student_id: undefined }, { event: "reservation_approved", reservation_id: liff, actor_id: ADMIN, pickup_date: n1, party_size: 1, student_id: undefined });
+const h = sent[0].headers;
+const expected = createHmac("sha256", SECRET).update(`${h["X-Schedule-Timestamp"]}.reservation_approved.${liff}.${ADMIN}`).digest("hex");
+assert.equal(h["X-Schedule-Signature"], "sha256=" + expected, "Rails の ScheduleEventSignature と同じ署名");
+
+// 却下は理由つき。承認済みの取り消しや、期限切れの自動却下（auth.uid なし）は送らない
+const rej = await submit("F", n1, "19:00");
+await admin(`select admin_reject_reservation($1, '定員超過')`, [rej]);
+sent = await calls();
+assert.equal(sent.length, 2);
+assert.equal(sent[1].body.event, "reservation_rejected");
+assert.equal(sent[1].body.reject_reason, "定員超過");
+await svc(`select cancel_pickup_reservation($1, $2)`, [cid.G, liff]);
+const expiring = await submit("E", n1, "19:30");
+await db.exec(`reset role; update pickup_reservations set status = 'rejected', reject_reason = '期限切れ' where id = '${expiring}'`);
+assert.equal((await calls()).length, 2, "取り消し・自動却下では送らない");
+// 送信に失敗しても承認は成功する
+await db.exec(`reset role; create or replace function net.http_post(url text, body jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000) returns bigint language plpgsql as $$ begin raise exception 'net down'; end $$;`);
+const down = await submit("D", n2, "17:00");
+await admin(`select admin_approve_reservation($1)`, [down]);
+assert.equal((await admin(`select status from pickup_reservations where id = $1`, [down]))[0].status, "approved");
+ok("juku-desk への通知：承認・却下で1件ずつ、署名つき。未設定・自動却下・送信失敗では承認を邪魔しない");
 
 // ---- 変更履歴 ----
 const logs = (await admin(`select table_name, count(*)::int c from audit_log group by 1 order by 1`));
