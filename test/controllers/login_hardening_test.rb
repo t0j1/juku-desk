@@ -7,6 +7,29 @@ class LoginHardeningTest < ActionDispatch::IntegrationTest
     post session_path, params: { email_address: @user.email_address, password: password }
   end
 
+  module HashCounter
+    cattr_accessor :count, default: 0
+    def hash_secret(*)
+      HashCounter.count += 1
+      super
+    end
+  end
+  BCrypt::Engine.singleton_class.prepend(HashCounter)
+
+  test "bcrypt runs once whether the email is unknown, locked or valid" do
+    5.times { login("wrong-password") } # staff is now locked
+    counts = [
+      -> { post session_path, params: { email_address: "nobody@example.com", password: "x" } },
+      -> { login("password") },
+      -> { post session_path, params: { email_address: users(:viewer).email_address, password: "password" } }
+    ].map do |request|
+      before = HashCounter.count
+      request.call
+      HashCounter.count - before
+    end
+    assert_equal [ 1, 1, 1 ], counts
+  end
+
   test "sixth attempt is refused even with the correct password" do
     5.times { login("wrong-password") }
     assert @user.reload.locked?
