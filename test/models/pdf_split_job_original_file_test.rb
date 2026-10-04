@@ -20,7 +20,8 @@ class PdfSplitJobOriginalFileTest < ActiveSupport::TestCase
     calls = 0
     orig = PdfSplitJob.instance_method(:with_original_file)
     PdfSplitJob.define_method(:with_original_file) { |&b| calls += 1; orig.bind(self).call(&b) }
-    PdfSplitter::SplitJob.perform_now(job.id)
+    progress = JobProgress.create!(user: job.user, kind: "pdf_split", title: "分割", subject: job, total: job.page_count)
+    PdfSplitter::SplitJob.perform_now(progress.id)
     assert_equal 1, calls
     assert job.reload.done?, job.error_message
     assert_equal 3, job.pdf_blobs.where(kind: "output").count

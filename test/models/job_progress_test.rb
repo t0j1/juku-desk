@@ -92,4 +92,17 @@ class JobProgressTest < ActiveSupport::TestCase
     assert progress.succeeded?
     assert_equal 100, progress.percent
   end
+
+  test "a running job whose updated_at stalled for minutes is treated as failed" do
+    progress = JobProgress.create!(user: @user, kind: "dummy", title: "x", status: :running, started_at: 10.minutes.ago)
+    progress.update_columns(updated_at: 6.minutes.ago)
+    progress.fail_if_stale!
+    assert progress.failed?
+    assert progress.finished?
+
+    fresh = JobProgress.create!(user: @user, kind: "dummy", title: "y", status: :running, started_at: 1.minute.ago)
+    fresh.update_columns(updated_at: 30.seconds.ago)
+    fresh.fail_if_stale!
+    assert fresh.running?
+  end
 end

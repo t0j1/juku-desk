@@ -21,6 +21,16 @@ class JobProgress < ApplicationRecord
     progress
   end
 
+  # ワーカーごと落ちると run の rescue が走らず running のまま残る。進捗は数秒おきに updated_at が進むので、
+  # しばらく止まったものは failed に倒す（モーダルが「処理中」のまま永久に残らないように）
+  STALE_AFTER = 5.minutes # 1 チャンク（25ページの抽出など）が重くても、生きているジョブを止まったと見なさない長さ
+
+  def fail_if_stale!
+    return unless running? && updated_at < STALE_AFTER.ago
+    update!(status: :failed, finished_at: Time.current, message: "処理が途中で止まりました。もう一度お試しください。")
+    subject.try(:progress_failed!, self) # 対象が処理中のまま取り残されないようにする
+  end
+
   def finished? = succeeded? || failed? || cancelled?
 
   def cancel_requested? = cancel_requested_at.present?
@@ -52,11 +62,12 @@ class JobProgress < ApplicationRecord
 
     if JobProgress::Queue.remove(active_job_id)
       update!(status: :cancelled, finished_at: Time.current, message: "キャンセルしました")
+      subject.try(:progress_cancelled!, self) # ジョブが動かないので、対象の後始末はここで行う
     end
   end
 
   def as_progress_json
-    { id: id, kind: kind, title: title, status: status, total: total, done: done, percent: percent, message: message,
+    { id: id, kind: kind, subject_type: subject_type, subject_id: subject_id, title: title, status: status, total: total, done: done, percent: percent, message: message,
       elapsed_seconds: elapsed_seconds, eta_seconds: eta_seconds, cancel_requested: cancel_requested?, finished: finished? }
   end
 end

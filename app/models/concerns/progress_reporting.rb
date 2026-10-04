@@ -43,6 +43,12 @@ module ProgressReporting
     raise Cancelled if cancel_requested?
   end
 
+  # 区切りの良いところ（結果を確定する直前など）で、間引きを待たずにキャンセル要求を確かめる
+  def check_cancel!
+    flush!
+    raise Cancelled if cancel_requested?
+  end
+
   # 間引きを待たずにすぐ保存する（区切りの良いところで）
   def flush!
     @saved_at = monotonic_now

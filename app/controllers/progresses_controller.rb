@@ -2,11 +2,14 @@
 class ProgressesController < ApplicationController
   # 処理中＋終わって間もないもの（バッジとモーダルの一覧）
   def index
-    render json: { progresses: scope.recent.order(:id).map(&:as_progress_json) }
+    progresses = scope.recent.order(:id).to_a.each(&:fail_if_stale!)
+    render json: { progresses: progresses.map(&:as_progress_json) }
   end
 
   def show
-    render json: scope.find(params[:id]).as_progress_json
+    progress = scope.find(params[:id])
+    progress.fail_if_stale!
+    render json: progress.as_progress_json
   end
 
   def cancel
