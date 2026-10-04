@@ -32,10 +32,10 @@
     <div class="rounded-card bg-bg shadow-raise-sm p-4">
       <p class="font-bold text-lg text-text"><%= current_user.name %></p>
       <p class="text-base text-text-sub mb-3"><%= t("roles.#{current_user.role}") %></p>
-      <%= link_to "2段階認証", two_factor_path, class: "block mb-1 text-lg text-text-sub hover:text-text underline" %>
-      <%= link_to "ログイン中の端末", user_sessions_path, class: "block mb-2 text-lg text-text-sub hover:text-text underline" %>
-      <%= button_to session_path, method: :delete, class: "inline-flex items-center gap-2 text-lg text-text-sub hover:text-text cursor-pointer" do %>
-        <%= console_icon(:logout, size: 16) %>ログアウト
+      <%= link_to two_factor_path, class: "flex items-center gap-3 h-12 mb-1 text-lg text-text hover:text-primary" do %><%= console_icon(:shield, size: 18) %>2段階認証<% end %>
+      <%= link_to user_sessions_path, class: "flex items-center gap-3 h-12 mb-1 text-lg text-text hover:text-primary" do %><%= console_icon(:devices, size: 18) %>ログイン中の端末<% end %>
+      <%= button_to session_path, method: :delete, class: "flex items-center gap-3 h-12 w-full text-lg text-text hover:text-primary cursor-pointer" do %>
+        <%= console_icon(:logout, size: 18) %>ログアウト
       <% end %>
     </div>
   </div>

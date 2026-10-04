@@ -57,8 +57,8 @@
 
   /* ボタン：押せるもの＝浮き出し、押している間はへこむ。primary は 1 画面 1 つ */
   .btn-primary, .btn-secondary, .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 h-[52px] px-6 rounded-button text-[19px] font-bold cursor-pointer select-none
-           disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 h-[52px] px-6 rounded-button text-[19px] font-bold whitespace-nowrap cursor-pointer select-none
+           disabled:opacity-[.55] disabled:cursor-not-allowed;
   }
   .btn-primary { background-image: var(--primary-grad); @apply text-white shadow-primary; }
   .btn-primary:hover:not(:disabled) { background-image: none; background-color: var(--color-primary-hover); }
