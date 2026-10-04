@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -234,6 +234,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_110000) do
     t.index ["user_id"], name: "index_recovery_codes_on_user_id"
   end
 
+  create_table "section_templates", force: :cascade do |t|
+    t.string "question_type", null: false
+    t.text "instruction", null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["question_type"], name: "index_section_templates_on_question_type", unique: true
+    t.index ["updated_by_id"], name: "index_section_templates_on_updated_by_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "ip_address"
@@ -275,9 +285,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_110000) do
     t.integer "position", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "section"
+    t.integer "sub_position"
+    t.string "question_type"
     t.index ["question_id"], name: "index_test_items_on_question_id"
     t.index ["test_id", "position"], name: "index_test_items_on_test_id_and_position", unique: true
     t.index ["test_id", "question_id"], name: "index_test_items_on_test_id_and_question_id", unique: true
+    t.index ["test_id", "section", "sub_position"], name: "index_test_items_on_test_id_and_section_and_sub_position", unique: true, where: "(section IS NOT NULL)"
+    t.check_constraint "(section IS NULL) = (sub_position IS NULL)", name: "test_items_section_pair"
   end
 
   create_table "tests", force: :cascade do |t|
@@ -362,6 +377,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_110000) do
   add_foreign_key "questions", "crop_regions", column: "region_id", on_delete: :cascade
   add_foreign_key "questions", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "recovery_codes", "users"
+  add_foreign_key "section_templates", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "sessions", "users"
   add_foreign_key "sessions", "users", column: "impersonator_id", on_delete: :cascade
   add_foreign_key "student_weekdays", "students"

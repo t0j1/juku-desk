@@ -25,6 +25,25 @@
     <div><%= f.label :difficulty_min, "難易度（下限）", class: "label" %><%= f.select :difficulty_min, (1..5).to_a, { include_blank: "指定なし" }, class: "input mt-1 !w-32" %></div>
     <div><%= f.label :difficulty_max, "難易度（上限）", class: "label" %><%= f.select :difficulty_max, (1..5).to_a, { include_blank: "指定なし" }, class: "input mt-1 !w-32" %></div>
   </div>
+  <fieldset id="group-by-type" class="rounded-xl border border-row-line p-3" data-controller="type-order">
+    <label class="flex items-center gap-2 text-lg font-bold">
+      <%= f.check_box :group_by_type, data: { type_order_target: "toggle", action: "type-order#toggled" } %>形式ごとに並べる（大問【1】・小問(1)の番号を振る）
+    </label>
+    <div data-type-order-target="panel" class="mt-3">
+      <p class="text-base text-text-sub mb-2">大問の順番（上から【1】【2】…。選んだ問題に無い形式は飛ばします）。指示文は<%= link_to "大問の指示文", section_templates_path, class: "underline" %>で編集できます。</p>
+      <%= f.hidden_field :type_order, data: { type_order_target: "input" } %>
+      <ol id="type-order" data-type-order-target="list" class="space-y-1">
+        <% @builder.type_order_list.each do |t| %>
+          <li data-type="<%= t %>" id="type_order_<%= t %>" class="flex items-center gap-2">
+            <span class="tnum w-6 text-right" data-order-no></span>
+            <span class="w-28 font-bold"><%= Question::TYPE_LABELS[t] %></span>
+            <button type="button" class="btn-secondary !h-9 !px-3" data-action="type-order#up" aria-label="<%= Question::TYPE_LABELS[t] %>を上へ">上へ</button>
+            <button type="button" class="btn-secondary !h-9 !px-3" data-action="type-order#down" aria-label="<%= Question::TYPE_LABELS[t] %>を下へ">下へ</button>
+          </li>
+        <% end %>
+      </ol>
+    </div>
+  </fieldset>
   <p class="text-base text-text-sub">条件に合う問題が足りないときは、ある分だけで作成します（別の条件の問題では補いません）。</p>
   <% if current_user.can_write? %><%= f.submit "小テストを作成", class: "btn-primary cursor-pointer" %><% end %>
 <% end %>

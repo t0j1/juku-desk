@@ -12,6 +12,22 @@
   </div>
 <% end %>
 <p class="mb-4 text-lg text-text-sub">印刷画面でブラウザの印刷を開き、「PDF として保存」もできます（用紙は A4、余白 15mm）。</p>
+<% if @test.sectioned? %>
+  <div id="test-sections" class="space-y-5">
+    <% @items.chunk_while { |a, b| a.section == b.section }.each do |group| %>
+      <section id="test_section_<%= group.first.section %>" class="test-section">
+        <h2 class="text-lg font-bold mb-2"><span class="section-no">【<%= group.first.section %>】</span><%= @instructions[group.first.question_type] %></h2>
+        <ol class="space-y-3">
+          <% group.each do |item| %>
+            <li id="test_item_<%= item.position %>" class="rounded-xl border border-row-line bg-bg p-3">
+              <span class="tnum font-bold mr-2"><%= item.number_label %></span><span class="whitespace-pre-wrap" data-controller="math"><%= item.question.question_text %></span>
+            </li>
+          <% end %>
+        </ol>
+      </section>
+    <% end %>
+  </div>
+<% else %>
 <ol id="test-items" class="space-y-3">
   <% @items.each do |item| %>
     <li id="test_item_<%= item.position %>" class="rounded-xl border border-row-line bg-bg p-3">
@@ -19,3 +35,4 @@
     </li>
   <% end %>
 </ol>
+<% end %>
