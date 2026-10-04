@@ -35,15 +35,10 @@ module Admin
         body = CSV.generate do |csv|
           csv << CSV_HEADER
           scope.find_each(order: :desc) do |e|
-            csv << [ e.created_at.in_time_zone.strftime("%Y-%m-%d %H:%M:%S"), e.email_address, e.success ? "成功" : "失敗", e.reason, e.ip_address, e.user_agent ].map { |v| safe_cell(v) }
+            csv << [ e.created_at.in_time_zone.strftime("%Y-%m-%d %H:%M:%S"), e.email_address, e.success ? "成功" : "失敗", e.reason, e.ip_address, e.user_agent ].map { |v| CsvSafety.cell(v) }
           end
         end
         "﻿#{body}"
-      end
-
-      def safe_cell(value)
-        value = value.to_s
-        value.match?(/\A[=+\-@\t\r]/) ? "'#{value}" : value
       end
   end
 end

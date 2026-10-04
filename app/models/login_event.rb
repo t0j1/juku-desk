@@ -1,6 +1,6 @@
 # ログインの試行記録（成功・失敗とも）。管理画面で検索・CSV 出力する。
 class LoginEvent < ApplicationRecord
-  REASONS = %w[invalid_credentials locked inactive].freeze
+  REASONS = %w[invalid_credentials locked suspended invited].freeze
 
   belongs_to :user, optional: true
 

@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   resource :session, only: %i[ new create destroy ]
+  resources :invitations, param: :token, only: %i[ edit update ]
   resources :passwords, param: :token, only: %i[ new create edit update ]
 
   resources :announcements, only: [] do
@@ -11,10 +12,19 @@ Rails.application.routes.draw do
   end
 
   namespace :admin do
-    resources :users, only: %i[ index update ] do
+    resources :users, only: %i[ index new create update ] do
       post :unlock, on: :member
+      post :suspend, on: :member
+      post :activate, on: :member
+      post :resend_invitation, on: :member
     end
     resources :login_events, only: :index
+    resource :user_import, only: %i[ new create ] do
+      post :confirm
+    end
+    resource :user_suspension, only: %i[ new create ] do
+      post :confirm
+    end
     resources :announcements, except: :show
   end
 

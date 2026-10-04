@@ -23,4 +23,11 @@ inactive:
   password_digest: <%= password_digest %>
   name: 退職 三郎
   role: staff
-  active: false
+  status: suspended
+
+invited:
+  email_address: invited@example.com
+  password_digest: <%= password_digest %>
+  name: 招待 四郎
+  role: staff
+  status: invited
