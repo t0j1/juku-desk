@@ -51,6 +51,8 @@ Rails.application.routes.draw do
     resources :print_stations, only: %i[ index new create ] do
       post :revoke, on: :member
       post :reissue, on: :member
+      post :test_print, on: :member
+      patch :test_result, on: :member
     end
     resources :print_schedules, only: %i[ index new create destroy ] do
       post :toggle, on: :member

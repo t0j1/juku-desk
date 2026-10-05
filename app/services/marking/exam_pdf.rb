@@ -2,14 +2,13 @@ require "prawn"
 
 # 小テスト（Exam）の問題用・解答用を、サーバー側で PDF にする（Prawn。印刷画面の HTML とは別の、文字だけのレイアウト）。
 # 一時ファイルに書いて、そのパスをブロックに渡す（大きな String に載せない）。PrintJob.create_with_pdf!(path:) にそのまま渡せる。
-# 数式（$...$）は描けないので、含む小テストは Unsupported にする（印刷画面からブラウザで刷る）。
+# 数式（$...$ / $$...$$）は Marking::LatexText で √・分数 a/b・冪（上付き）・ギリシャ文字などに直して描く。直せない数式（行列・場合分けなど）は Unsupported にして、生の LaTeX を紙に出さない。
 class Marking::ExamPdf
   include PrintLayoutHelper # 形式ごとのレイアウト判定を印刷画面と揃える
 
   class Unsupported < StandardError; end
 
   FONT_PATH = Rails.root.join("vendor/fonts/NotoSansJP.ttf")
-  MATH = /\$[^$\n]+\$/
   MARGIN = 15 * 72 / 25.4 # 15mm（pt）
   MIN_ROOM = 90 # この高さ（pt）より下に来たら、次の問題は次のページから
 
@@ -28,7 +27,6 @@ class Marking::ExamPdf
   def render_to(path)
     items = @exam.items.includes(:question).to_a
     raise Unsupported, "問題がありません" if items.empty?
-    raise Unsupported, "数式を含む問題があるため、PDF を自動で作れません。印刷画面から印刷してください。" if items.any? { |i| math?(i.question) }
 
     @pdf = Prawn::Document.new(page_size: "A4", margin: MARGIN, info: { Title: @exam.title.to_s })
     @pdf.font_families.update("J" => { normal: FONT_PATH.to_s, bold: FONT_PATH.to_s })
@@ -48,10 +46,6 @@ class Marking::ExamPdf
   end
 
   private
-    def math?(question)
-      [ question.question_text, question.answer_text, question.explanation, question.options, question.payload ].to_json.match?(MATH)
-    end
-
     def header
       subjects = @exam.subject || @exam.items.map { |i| i.question.subject }.compact.uniq.join("・")
       @pdf.text "#{@exam.title}#{"【解答】" if @kind == :answer}", size: 16, style: :bold
@@ -128,8 +122,14 @@ class Marking::ExamPdf
 
     def para(text, **opts)
       return if text.blank?
-      @pdf.text text.to_s, leading: 3, **opts
+      @pdf.text inline(text), leading: 3, inline_format: true, **opts
       @pdf.move_down 3
+    end
+
+    def inline(text)
+      Marking::LatexText.inline(text)
+    rescue Marking::LatexText::Unsupported => e
+      raise Unsupported, "数式を PDF にできません（#{e.message}）。印刷画面から印刷してください。"
     end
 
     def ruled(lines)

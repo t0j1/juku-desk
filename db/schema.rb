@@ -281,6 +281,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_190000) do
     t.bigint "created_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "test_print_job_id"
+    t.jsonb "test_print_result", default: {}, null: false
     t.index ["created_by_id"], name: "index_print_stations_on_created_by_id"
     t.index ["name"], name: "index_print_stations_on_name", unique: true
     t.index ["token_digest"], name: "index_print_stations_on_token_digest", unique: true
