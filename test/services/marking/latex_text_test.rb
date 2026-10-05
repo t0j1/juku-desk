@@ -13,8 +13,8 @@ class Marking::LatexTextTest < ActiveSupport::TestCase
 
   test "powers and subscripts become sup and sub" do
     assert_equal "cos<sup>2</sup>x", inline('$\cos^2 x$')
-    assert_equal "x<sup>2</sup>+y<sub>1</sub>", inline('$x^2+y_1$')
-    assert_equal "a<sup>n+1</sup>", inline('$a^{n+1}$')
+    assert_equal "x<sup>2</sup>+y<sub>1</sub>", inline("$x^2+y_1$")
+    assert_equal "a<sup>n+1</sup>", inline("$a^{n+1}$")
     assert_equal "<sup>3</sup>√8", inline('$\sqrt[3]{8}$')
   end
 
@@ -38,6 +38,6 @@ class Marking::LatexTextTest < ActiveSupport::TestCase
   test "an unknown command is refused instead of printed raw" do
     assert_raises(Marking::LatexText::Unsupported) { inline('$\begin{cases} x \end{cases}$') }
     assert_raises(Marking::LatexText::Unsupported) { inline('$\frac{1}$') }
-    assert_raises(Marking::LatexText::Unsupported) { inline('$a}$') }
+    assert_raises(Marking::LatexText::Unsupported) { inline("$a}$") }
   end
 end
