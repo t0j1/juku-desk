@@ -1,33 +1,44 @@
 module PdfSplitter
+  # ページのテキストを TextExtractor::CHUNK ページずつ読み、見出しを判定して DB に入れたらすぐ捨てる。
+  # 全ページ分のテキストを配列に持たない（255ページの模試で 512MB を超えて落ちたため）。
+  # 区切りごとに updated_at を進めるので、進まなくなった解析は PdfSplitJob#fail_if_stale! で見分けられる
   class Analyzer
-    # progress があれば、ページ単位で進み具合を知らせる。キャンセルされたら ProgressReporting::Cancelled を投げ、
-    # 結果は最後の 1 トランザクションでしか書かないので、途中までの解析結果は残らない
+    # progress があれば、チャンクごとに進み具合を知らせる。キャンセルされたら ProgressReporting::Cancelled を投げる。
+    # 途中までの解析結果は DB に残さない（キャンセルや失敗のときは page_analyses を消す）
     def self.call(job, progress: nil)
-      texts = job.with_original_file do |path|
-        count = job.page_count.presence || Splitter.page_count(path)
-        TextExtractor.pages_from_path(path, count) do |done|
-          progress&.step!(done, "解析中 #{done}/#{count}ページ（#{done * 100 / count}%）")
+      detector = HeadingDetector.new
+      headings = []
+      rows = []
+
+      job.with_original_file do |path|
+        page_count = job.page_count.presence || Splitter.page_count(path)
+        job.page_analyses.delete_all
+        TextExtractor.each_chunk(path, page_count) do |texts, first_page|
+          done = first_page + texts.size - 1
+          texts.each_with_index do |text, i|
+            page = first_page + i
+            h = detector.detect(text)
+            headings << { page:, round: h[:round], kind: h[:kind] } if h
+            now = Time.current
+            rows << { pdf_split_job_id: job.id, page:, raw_text: text.to_s.strip[0, 200],
+                      round_label: h&.dig(:round), section_kind: h&.dig(:kind), is_heading: h.present?,
+                      score: h&.dig(:score), created_at: now, updated_at: now }
+          end
+          texts = nil
+          PdfSplitPageAnalysis.insert_all!(rows) if rows.any?
+          rows.clear
+          job.touch
+          GC.start
+          progress&.step!(done, "解析中 #{done}/#{page_count}ページ（#{done * 100 / page_count}%）")
         end
       end
       progress&.check_cancel!
-      detector = HeadingDetector.new
-      headings = []
-      rows = texts.each_with_index.map do |text, i|
-        h = detector.detect(text)
-        headings << { page: i + 1, round: h[:round], kind: h[:kind] } if h
-        now = Time.current
-        { pdf_split_job_id: job.id, page: i + 1, raw_text: text.to_s.strip[0, 200],
-          round_label: h&.dig(:round), section_kind: h&.dig(:kind), is_heading: h.present?,
-          score: h&.dig(:score), created_at: now, updated_at: now }
-      end
       guess = PatternGuesser.new.guess(headings, page_count: job.page_count)
-
-      PdfSplitJob.transaction do
-        job.page_analyses.delete_all
-        PdfSplitPageAnalysis.insert_all!(rows) if rows.any?
-        job.update!(status: :analyzed, pattern: guess[:pattern], confidence: guess[:confidence], boundaries: guess[:boundaries])
-      end
+      job.update!(status: :analyzed, pattern: guess[:pattern], confidence: guess[:confidence], boundaries: guess[:boundaries])
       job
+    rescue Exception # キャンセルを含む。途中までの行は残さない
+      job.page_analyses.delete_all
+      raise
     end
   end
 end

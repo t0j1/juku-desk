@@ -24,18 +24,20 @@ class PdfSplitter::ProgressTest < ActiveJob::TestCase
     JobProgress.enqueue(klass, user: @user, kind: kind, title: kind, subject: @job, total: total)
   end
 
-  # 25 ページずつ「済んだ」と知らせる TextExtractor の代わり。呼ぶたびに block（あれば）を実行
+  # 25 ページずつ (texts, 先頭ページ) を渡す TextExtractor.each_chunk の代わり。チャンクを渡す前に block（あれば）を実行
   def fake_extractor(&each_chunk)
-    ->(_path, count, &on_pages) do
-      (25..count).step(25).to_a.push(count).uniq.each { |done| each_chunk&.call(done); on_pages.call(done) }
-      Array.new(count, "")
+    ->(_path, count, &blk) do
+      (1..count).each_slice(25) do |c|
+        each_chunk&.call(c.last)
+        blk.call(Array.new(c.size, ""), c.first)
+      end
     end
   end
 
   test "analysis percent rises monotonically up to 100 on a 255-page PDF" do
     progress = enqueue(PdfSplitter::AnalyzeJob, "pdf_analyze", 255)
     seen = []
-    stub_class_method(PdfSplitter::TextExtractor, :pages_from_path, fake_extractor { seen << JobProgress.find(progress.id).percent }) do
+    stub_class_method(PdfSplitter::TextExtractor, :each_chunk, fake_extractor { seen << JobProgress.find(progress.id).percent }) do
       perform_enqueued_jobs
     end
 
@@ -50,9 +52,8 @@ class PdfSplitter::ProgressTest < ActiveJob::TestCase
   end
 
   test "cancelling an analysis stops it, leaves no partial result and keeps the original" do
-    @job.page_analyses.create!(page: 1, raw_text: "古い結果")
     progress = enqueue(PdfSplitter::AnalyzeJob, "pdf_analyze", 255)
-    stub_class_method(PdfSplitter::TextExtractor, :pages_from_path, fake_extractor { |done| progress.reload.request_cancel! if done == 100 }) do
+    stub_class_method(PdfSplitter::TextExtractor, :each_chunk, fake_extractor { |done| progress.reload.request_cancel! if done == 100 }) do
       perform_enqueued_jobs
     end
 
@@ -60,13 +61,13 @@ class PdfSplitter::ProgressTest < ActiveJob::TestCase
     assert_operator progress.done, :<, 255
     assert @job.reload.uploaded? # 「解析をやり直す」が出せる状態
     assert_nil @job.error_message
-    assert_equal [ "古い結果" ], @job.page_analyses.pluck(:raw_text) # 今回の途中結果は書かれていない
+    assert_equal 0, @job.page_analyses.count # 途中までの結果は残さない
     assert @job.original_blob, "PDF 本体は残る"
   end
 
   test "analysis failure shows the reason" do
     progress = enqueue(PdfSplitter::AnalyzeJob, "pdf_analyze", 255)
-    stub_class_method(PdfSplitter::TextExtractor, :pages_from_path, ->(*) { raise PdfSplitter::Error, "ページ数が上限を超えています" }) do
+    stub_class_method(PdfSplitter::TextExtractor, :each_chunk, ->(*) { raise PdfSplitter::Error, "ページ数が上限を超えています" }) do
       perform_enqueued_jobs
     end
     assert progress.reload.failed?

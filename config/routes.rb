@@ -88,6 +88,7 @@ Rails.application.routes.draw do
           get   :print_queue
           get   :download_zip
           get   :thumbnail
+          get   :status
         end
         resources :outputs, only: [] do
           member do

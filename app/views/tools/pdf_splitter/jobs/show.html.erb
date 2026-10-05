@@ -1,14 +1,19 @@
 <% content_for :title, @job.original_filename %>
 <% progress = @job.active_progress %>
-<%# 進捗モーダルが無い古い行（進捗の行がない処理中）だけ、従来どおり自動更新する %>
-<% if progress.nil? && (@job.uploaded? || @job.analyzing? || @job.splitting?) && @job.job_progresses.none? %><meta http-equiv="refresh" content="2"><% end %>
-<div>
+<%# 進捗モーダルが無い古い行（進捗の行がない処理中）だけ、軽い状態 JSON を見て自動更新する。進捗のある処理は進捗モーダルが更新する %>
+<% legacy_poll = progress.nil? && (@job.uploaded? || @job.analyzing? || @job.splitting?) && @job.job_progresses.none? %>
+<div<% if legacy_poll %> data-controller="job-status" data-job-status-url-value="<%= status_tools_pdf_splitter_job_path(@job) %>" data-job-status-current-value="<%= @job.status %>"<% end %>>
   <h1 class="page-title"><%= @job.original_filename %></h1>
   <p class="text-lg text-text-sub mt-1 tnum"><%= @job.page_count %>ページ ・ 状態: <span id="status"><%= t("pdf_splitter.status.#{@job.status}") %></span>
     <% if @job.expires_at %> ・ <%= l @job.expires_at, format: :short %> に自動削除<% end %></p>
 </div>
 
-<% if @job.failed? %><p class="alert-err">✕ 処理に失敗しました: <%= @job.error_message %></p><% end %>
+<% if @job.failed? %>
+  <div class="alert-err flex flex-wrap items-center gap-3">
+    <span>✕ 処理に失敗しました: <%= @job.error_message %></span>
+    <%= button_to "再試行", analyze_tools_pdf_splitter_job_path(@job), class: "btn-secondary btn-sm", form_class: "inline" %>
+  </div>
+<% end %>
 
 <% if @job.splitting? && progress %>
   <%# 分割は出力の一覧を見せたまま、進み具合は共通の進捗モーダルに任せる。終わったら自動でこの画面を読み直す %>
