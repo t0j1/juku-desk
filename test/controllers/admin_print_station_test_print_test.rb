@@ -30,7 +30,7 @@ class AdminPrintStationTestPrintTest < ActionDispatch::IntegrationTest
     assert_equal "左上", job.staple
     assert job.pending?
     reader = PDF::Reader.new(StringIO.new(job.pdf_bytes))
-    assert_equal 2, reader.page_count
+    assert_equal 4, reader.page_count # 既定は 2 枚（表裏で 4 ページ）。ホチキスの確認に 2 枚以上が要る
     assert_includes reader.pages.first.text, "教室A"
   end
 
@@ -94,5 +94,47 @@ class AdminPrintStationTestPrintTest < ActionDispatch::IntegrationTest
       start
     end
     assert_redirected_to root_path
+  end
+
+  test "sheets and duplex go into the job and the sample has that many sheets" do
+    start(sheets: "3", duplex: "long")
+    job = @station.reload.test_print_job
+    assert_equal "long", job.duplex
+    reader = PDF::Reader.new(StringIO.new(job.pdf_bytes))
+    assert_equal 6, reader.page_count
+    assert_includes reader.pages[0].text, "1 / 3 枚目"
+    assert_includes reader.pages[4].text, "3 / 3 枚目"
+    assert_includes reader.pages[5].text, "裏面"
+    assert_equal "long", job.as_agent_json(base_url: "http://x")[:duplex]
+  end
+
+  test "no duplex choice means nil in the agent json (driver default)" do
+    start(sheets: "1", duplex: "")
+    job = @station.reload.test_print_job
+    assert_nil job.duplex
+    assert_nil job.as_agent_json(base_url: "http://x")[:duplex]
+    assert_equal 2, PDF::Reader.new(StringIO.new(job.pdf_bytes)).page_count
+  end
+
+  test "sheets must be 1 to 20 and duplex long or short" do
+    [ "0", "21", "abc" ].each do |bad|
+      assert_no_difference -> { PrintJob.count } do
+        start(sheets: bad)
+      end
+      assert_redirected_to admin_print_stations_path
+      follow_redirect!
+      assert_select "#alert", /枚数は 1〜20/
+    end
+    assert_no_difference -> { PrintJob.count } do
+      start(duplex: "both")
+    end
+    start(sheets: "20")
+    assert_equal 40, PDF::Reader.new(StringIO.new(@station.reload.test_print_job.pdf_bytes)).page_count
+  end
+
+  test "the form offers sheets (default 2) and duplex" do
+    get admin_print_stations_path
+    assert_select "input[name='test_print[sheets]'][value='2'][min='1'][max='20']"
+    assert_select "select[name='test_print[duplex]'] option", count: 3
   end
 end

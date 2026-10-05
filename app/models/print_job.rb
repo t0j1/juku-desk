@@ -10,6 +10,7 @@ class PrintJob < ApplicationRecord
   # 終わったジョブの PDF を残す期間（環境変数で変えられる）。生徒名が入るので長くは置かない。
   # 短くしすぎると、再印刷の依頼や「何を刷ったか」の確認に間に合わない。
   PDF_RETENTION = ENV.fetch("PRINT_PDF_RETENTION_DAYS", 30).to_i.days
+  DUPLEX_VALUES = %w[ long short ].freeze # 長辺とじ / 短辺とじ。NULL は指定なし（ドライバーの既定）
   TITLE_MAX = 100 # ファイル名や出力名がそのまま入るので、長すぎるものは切り詰める
 
   belongs_to :print_station
@@ -19,6 +20,7 @@ class PrintJob < ApplicationRecord
   enum :status, { pending: 0, leased: 1, acknowledged: 2, failed: 3, expired: 4, cancelled: 5 }, default: :pending
 
   validates :title, presence: true, length: { maximum: TITLE_MAX }
+  validates :duplex, inclusion: { in: DUPLEX_VALUES }, allow_nil: true
   validates :copies, numericality: { only_integer: true, in: 1..99 }
   validates :scheduled_at, :expires_at, :sha256, :byte_size, presence: true
   validate :deadline_after_schedule
@@ -27,6 +29,7 @@ class PrintJob < ApplicationRecord
   scope :with_pdf, -> { where.not(pdf_data: nil).or(where.not(r2_key: nil)) }
 
   before_validation :default_deadline
+  before_validation { self.duplex = duplex.presence }
 
   # PDF を保存してジョブを作る。data か path のどちらかを渡す。R2 モードでは R2 に置き、DB には入れない
   def self.create_with_pdf!(station:, title:, data: nil, path: nil, **attrs)
@@ -123,7 +126,7 @@ class PrintJob < ApplicationRecord
   def as_agent_json(base_url:)
     { id: id.to_s, title: title, scheduled_at: scheduled_at.utc.iso8601, expires_at: expires_at.utc.iso8601,
       lease_until: lease_until&.utc&.iso8601, file_url: file_url(base_url: base_url), sha256: sha256, byte_size: byte_size,
-      copies: copies, collate: collate, staple: staple, driver_preset: driver_preset }
+      copies: copies, collate: collate, staple: staple, duplex: duplex, driver_preset: driver_preset }
   end
 
   private

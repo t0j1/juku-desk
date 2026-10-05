@@ -31,6 +31,30 @@ class AdminPrintJobsTest < ActionDispatch::IntegrationTest
     assert_select "#print-help", text: /印刷プレビューで「PDF として保存」.*アップロード.*印刷ジョブを作成・実行.*自動生成.*当面/m
   end
 
+  test "create takes the duplex choice; blank means driver default; the new form offers it" do
+    get new_admin_print_job_path
+    assert_select "select[name='print_job[duplex]'] option", count: 3
+    with_fake_builder do
+      post admin_print_jobs_path, params: { print_job: { output_id: @output.id, print_station_id: @station.id, scheduled_at: "2026-10-06T07:30", copies: "1", duplex: "short" } }
+      assert_equal "short", PrintJob.last.duplex
+      post admin_print_jobs_path, params: { print_job: { output_id: @output.id, print_station_id: @station.id, scheduled_at: "2026-10-06T07:30", copies: "1", duplex: "" } }
+      assert_nil PrintJob.last.duplex
+    end
+  end
+
+  test "an invalid duplex value is refused by the model" do
+    job = PrintJob.new(station: @station, title: "x", duplex: "both")
+    assert_not job.valid?
+    assert_includes job.errors[:duplex].first, "含まれていません"
+    assert_nil new_job(duplex: "").duplex
+  end
+
+  test "the agent job json carries duplex (null when unspecified)" do
+    assert_equal "long", new_job(duplex: "long").as_agent_json(base_url: "http://x")[:duplex]
+    json = new_job.as_agent_json(base_url: "http://x")
+    assert json.key?(:duplex) && json[:duplex].nil?
+  end
+
   test "only system_admin can use it" do
     [ users(:staff), users(:viewer) ].each do |u|
       sign_in_as u

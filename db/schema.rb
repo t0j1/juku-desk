@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_06_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -230,6 +230,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_200000) do
     t.datetime "updated_at", null: false
     t.bigint "print_schedule_id"
     t.date "scheduled_for"
+    t.string "duplex"
     t.index ["created_by_id"], name: "index_print_jobs_on_created_by_id"
     t.index ["print_schedule_id", "scheduled_for"], name: "index_print_jobs_on_schedule_and_day", unique: true, where: "(print_schedule_id IS NOT NULL)"
     t.index ["print_schedule_id"], name: "index_print_jobs_on_print_schedule_id"
