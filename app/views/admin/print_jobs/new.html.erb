@@ -7,7 +7,7 @@
     <% if @error %><div id="error_explanation" class="alert-err" role="alert"><%= @error %></div><% end %>
     <div><%= f.label :output_id, "印刷する PDF（PDF 分割の出力から）", class: "label" %>
       <%= select_tag "print_job[output_id]", options_for_select(@outputs.map { |o| [ "#{o.display_name}（#{o.pdf_split_job.original_filename} #{o.pages_label}）", o.id ] }), include_blank: "選んでください", id: "print_job_output_id", class: "input mt-1 !w-auto" %></div>
-    <div><%= f.label :pdf, "または PDF ファイルをアップロード（30MBまで）", class: "label" %><%= file_field_tag "print_job[pdf]", id: "print_job_pdf", accept: "application/pdf", class: "block mt-1" %>
+    <div><%= f.label :pdf, "または PDF ファイルをアップロード（30MBまで）", class: "label" %><span class="flex items-center min-h-11 mt-1"><%= file_field_tag "print_job[pdf]", id: "print_job_pdf", accept: "application/pdf", class: "block" %></span>
       <p class="caption mt-1">小テストの印刷プレビューで「PDF として保存」したファイルも、ここから印刷できます。</p></div>
     <div><%= f.label :print_station_id, "ステーション", class: "label" %>
       <%= f.select :print_station_id, @stations.map { |s| [ s.name, s.id ] }, {}, class: "input mt-1 !w-auto" %></div>
