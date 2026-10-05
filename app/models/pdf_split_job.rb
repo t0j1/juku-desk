@@ -98,6 +98,28 @@ class PdfSplitJob < ApplicationRecord
     Dir.glob(CACHE_DIR.join("*")).each { |p| File.delete(p) if File.mtime(p) < older_than rescue nil }
   end
 
+  # 元 PDF の保存期限が切れた（または、ジョブごと消えた）ものの一時ファイルを消す。途中で止まった .part も、書き込み中でなければ消す。
+  # 1 回に消す数は limit まで。消した数を返す
+  def self.prune_expired_cache(limit: 500)
+    live = pdf_cache_live_ids
+    removed = 0
+    Dir.glob(CACHE_DIR.join("*")).each do |p|
+      break if removed >= limit
+      name = File.basename(p)
+      stale = name.end_with?(".part") ? File.mtime(p) < 1.hour.ago : !live.include?(name[/\A(\d+)-/, 1].to_i)
+      next unless stale
+      File.delete(p)
+      removed += 1
+    rescue SystemCallError
+      next
+    end
+    removed
+  end
+
+  def self.pdf_cache_live_ids
+    PdfBlob.where(kind: "original").where("expires_at > ?", Time.current).distinct.pluck(:pdf_split_job_id).to_set
+  end
+
   def expires_at
     pdf_blobs.where(kind: "original").where("expires_at > ?", Time.current).pick(:expires_at)
   end
