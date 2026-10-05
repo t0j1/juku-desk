@@ -5,7 +5,9 @@ module Admin
 
 
     def index
+      @only_problems = params[:problems].present?
       @jobs = PrintJob.includes(:print_station).order(id: :desc).limit(100)
+      @jobs = @jobs.where(status: %i[ failed expired ]) if @only_problems
       @problems = PrintJob.where(status: %i[ failed expired ], finished_at: 1.day.ago..).count
       @offline_stations = PrintStation.active.reject(&:online?)
       @waiting = PrintJob.pending.where(scheduled_at: ..Time.current).count

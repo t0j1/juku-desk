@@ -81,7 +81,7 @@ class AdminPrintJobsTest < ActionDispatch::IntegrationTest
     failed = new_job(scheduled_at: 1.hour.ago).tap { |j| j.update_columns(status: PrintJob.statuses[:failed], result_message: "用紙切れ", finished_at: Time.current) }
     waiting = new_job(scheduled_at: 1.minute.ago)
     get admin_print_jobs_path
-    assert_select "#print_job_#{ok.id}", /印刷しました/
+    assert_select "#print_job_#{ok.id}", /印刷済み/
     assert_select "#print_job_#{failed.id}", /失敗.*用紙切れ/m
     assert_select "#print_job_#{waiting.id}", /待機中/
     assert_select "#problem-banner", /1 件/
@@ -140,5 +140,21 @@ class AdminPrintJobsTest < ActionDispatch::IntegrationTest
     end
     assert_response :unprocessable_entity
     assert_select "#error_explanation", /PDF/
+  end
+
+  test "the red banner links to a failures-only view" do
+    ok = new_job(scheduled_at: 1.hour.ago).tap { |j| j.update_columns(status: PrintJob.statuses[:acknowledged], finished_at: Time.current) }
+    bad = new_job(scheduled_at: 1.hour.ago).tap { |j| j.update_columns(status: PrintJob.statuses[:failed], finished_at: Time.current) }
+    get admin_print_jobs_path
+    assert_select "#problem-banner a[href=?]", admin_print_jobs_path(problems: 1)
+    get admin_print_jobs_path(problems: 1)
+    assert_select "#print_job_#{bad.id}"
+    assert_select "#print_job_#{ok.id}", false
+  end
+
+  test "cancel needs a confirmation" do
+    new_job(scheduled_at: 1.minute.ago)
+    get admin_print_jobs_path
+    assert_select "form[action$='/cancel'] [data-turbo-confirm]", minimum: 1
   end
 end
