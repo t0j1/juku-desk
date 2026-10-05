@@ -51,7 +51,7 @@ class JobProgress::CleanupJobTest < ActiveJob::TestCase
     old_part = File.join(@dir, "#{live.id}-1-9.pdf.1.part")
     new_part = File.join(@dir, "#{live.id}-1-8.pdf.2.part")
     [ old_part, new_part ].each { |p| File.write(p, "x") }
-    File.utime(2.hours.ago, 2.hours.ago, old_part)
+    File.utime(2.hours.ago.to_time, 2.hours.ago.to_time, old_part)
 
     JobProgress::CleanupJob.perform_now
 
