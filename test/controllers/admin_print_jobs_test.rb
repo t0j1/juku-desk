@@ -157,4 +157,21 @@ class AdminPrintJobsTest < ActionDispatch::IntegrationTest
     get admin_print_jobs_path
     assert_select "form[action$='/cancel'] [data-turbo-confirm]", minimum: 1
   end
+
+  test "an uploaded pdf over 30MB is refused and creates no job" do
+    big = "%PDF-1.4\n" + ("x" * 31.megabytes)
+    file = Rack::Test::UploadedFile.new(StringIO.new(big), "application/pdf", original_filename: "big.pdf")
+    assert_no_difference -> { PrintJob.count } do
+      post admin_print_jobs_path, params: { print_job: { pdf: file, print_station_id: @station.id } }
+    end
+    assert_response :unprocessable_entity
+    assert_select "#error_explanation", /大きすぎ/
+  end
+
+  test "a very long title (file name) is truncated to the limit" do
+    file = Rack::Test::UploadedFile.new(StringIO.new(PDF_BYTES), "application/pdf", original_filename: "#{'a' * 200}.pdf")
+    post admin_print_jobs_path, params: { print_job: { pdf: file, print_station_id: @station.id } }
+    assert_redirected_to admin_print_jobs_path
+    assert_equal PrintJob::TITLE_MAX, PrintJob.last.title.length
+  end
 end

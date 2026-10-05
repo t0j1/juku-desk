@@ -7,13 +7,14 @@ class PrintJob < ApplicationRecord
   FILE_URL_TTL = 10.minutes
   RESULT_STATUSES = { "spooled" => :acknowledged, "failed" => :failed, "expired" => :expired }.freeze
   MAX_PDF_BYTES = 30.megabytes
+  TITLE_MAX = 100 # ファイル名や出力名がそのまま入るので、長すぎるものは切り詰める
 
   belongs_to :print_station
   belongs_to :created_by, class_name: "User", optional: true
 
   enum :status, { pending: 0, leased: 1, acknowledged: 2, failed: 3, expired: 4, cancelled: 5 }, default: :pending
 
-  validates :title, presence: true
+  validates :title, presence: true, length: { maximum: TITLE_MAX }
   validates :copies, numericality: { only_integer: true, in: 1..99 }
   validates :scheduled_at, :expires_at, :sha256, :byte_size, presence: true
   validate :deadline_after_schedule
@@ -29,6 +30,7 @@ class PrintJob < ApplicationRecord
     raise ArgumentError, "PDF が大きすぎます" if data.bytesize > MAX_PDF_BYTES
     raise ArgumentError, "PDF ではありません" unless data.start_with?("%PDF")
 
+    title = title.to_s.truncate(TITLE_MAX)
     attrs = { scheduled_at: Time.current }.merge(attrs)
     if PdfStorage.r2?
       key = "print/#{SecureRandom.hex(16)}.pdf"
