@@ -55,6 +55,18 @@ class PrintSchedule < ApplicationRecord
     result
   end
 
+  # 次に刷る日時（今より後の最初の該当日）。停止中・曜日なしは nil
+  def next_print_at(now = Time.current)
+    return unless active
+
+    (0..7).each do |i|
+      date = now.to_date + i
+      at = scheduled_at_on(date)
+      return at if runs_on?(date) && at > now
+    end
+    nil
+  end
+
   def runs_on?(date) = weekdays.include?(date.wday)
 
   def scheduled_at_on(date)

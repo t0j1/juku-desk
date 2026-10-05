@@ -1,0 +1,10 @@
+<% content_for :title, "定例印刷の雛形を編集" %>
+<h1 class="page-title mb-6">定例印刷の雛形を編集</h1>
+<%= form_with model: [ :admin, @schedule ], class: "card max-w-xl space-y-4" do |f| %>
+  <% if @error %><div id="error_explanation" class="alert-err" role="alert"><%= @error %></div><% end %>
+  <%= render "fields", f: f, schedule: @schedule, stations: @stations, with_pdf: false %>
+  <div><label class="flex items-center gap-2 min-h-11"><%= f.check_box :active, class: "size-5 accent-primary" %>有効（外すと、翌日のジョブを作りません）</label></div>
+  <p class="caption">PDF を差し替えるときは、この雛形を削除して登録し直してください。</p>
+  <%= f.submit "更新する", class: "btn-primary cursor-pointer" %>
+  <%= link_to "戻る", admin_print_schedules_path, class: "btn-secondary" %>
+<% end %>
