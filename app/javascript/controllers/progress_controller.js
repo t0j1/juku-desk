@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 // 閉じても処理は続く。画面を移ってもレイアウトに載っているので、バッジから開き直せる。
 export default class extends Controller {
   static targets = [ "badge", "badgeText", "dialog", "list", "item" ]
-  static values = { url: String, ids: Array, open: Boolean, interval: { type: Number, default: 3000 } }
+  static values = { url: String, ids: Array, openId: Number, interval: { type: Number, default: 3000 } }
 
   connect() {
     this.items = new Map()
@@ -12,7 +12,8 @@ export default class extends Controller {
     this.tick = setInterval(() => this.renderClock(), 1000)
     this.onVisibility = () => { if (!document.hidden) this.poll() }
     document.addEventListener("visibilitychange", this.onVisibility)
-    if (this.idsValue.length) this.poll().then(() => { if (this.openValue && this.running().length) this.open() })
+    // 積んだ直後の処理（openId）がまだ終わっていないときだけ自動で開く。もう終わっていたら開かない（画面をふさがない）
+    if (this.idsValue.length) this.poll().then(() => { if (this.openIdValue && this.isRunning(this.openIdValue)) this.open() })
   }
 
   disconnect() {
@@ -118,6 +119,8 @@ export default class extends Controller {
     this.badgeTarget.hidden = running.length === 0 && !this.dialogTarget.open
     this.badgeTextTarget.textContent = running.length > 1 ? `処理中 ${running.length}件` : "処理中"
   }
+
+  isRunning(id) { const item = this.items.get(id); return !!item && !item.data.finished }
 
   running() { return [ ...this.items.values() ].filter((i) => !i.data.finished) }
 
