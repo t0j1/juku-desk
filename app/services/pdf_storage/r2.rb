@@ -83,6 +83,11 @@ module PdfStorage
       client.get_object(bucket:, key:).body.read
     end
 
+    # 期限付きのダウンロード URL（認証なしで取れる）
+    def presigned_get_url(key, expires_in:)
+      Aws::S3::Presigner.new(client: client).presigned_url(:get_object, bucket:, key:, expires_in: expires_in.to_i)
+    end
+
     def delete(keys)
       keys = Array(keys).compact
       keys.each_slice(1000) do |slice|
