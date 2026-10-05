@@ -54,7 +54,7 @@ Rails.application.routes.draw do
       post :test_print, on: :member
       patch :test_result, on: :member
     end
-    resources :print_schedules, only: %i[ index new create destroy ] do
+    resources :print_schedules, only: %i[ index new create edit update destroy ] do
       post :toggle, on: :member
     end
     resources :print_jobs, only: %i[ index new create ] do

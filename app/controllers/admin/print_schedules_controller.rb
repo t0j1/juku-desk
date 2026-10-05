@@ -1,7 +1,7 @@
 module Admin
   # 定例印刷の雛形（曜日と時刻に、翌日分の印刷ジョブを自動で作る）。作る側は PrintScheduleJob。
   class PrintSchedulesController < BaseController
-    before_action :set_schedule, only: %i[ destroy toggle ]
+    before_action :set_schedule, only: %i[ edit update destroy toggle ]
 
     def index
       @schedules = PrintSchedule.includes(:print_station).order(:id)
@@ -30,6 +30,23 @@ module Admin
       render_new(e.message)
     end
 
+    def edit
+    end
+
+    # PDF は差し替えない（差し替えたいときは、削除して登録し直す）。ステーションは有効なものから選び直せる
+    def update
+      attrs = schedule_params.to_h.symbolize_keys
+      attrs[:weekdays] = Array(attrs[:weekdays]).compact_blank # 全部外したら空にして、検証で止める
+      station = PrintStation.active.find_by(id: attrs.delete(:print_station_id)) || @schedule.print_station
+      @schedule.assign_attributes(attrs.merge(print_station: station))
+      @schedule.save!
+      AuditLog.record!(:print_schedule_update, @schedule, metadata: { name: @schedule.name, station: station.name, weekdays: @schedule.weekdays, time: @schedule.time_of_day, active: @schedule.active })
+      redirect_to admin_print_schedules_path, notice: "「#{@schedule.name}」を更新しました。次の生成（18:00）から反映されます。", status: :see_other
+    rescue ActiveRecord::RecordInvalid => e
+      @error = e.record.errors.full_messages.to_sentence
+      render :edit, status: :unprocessable_entity
+    end
+
     def toggle
       @schedule.update!(active: !@schedule.active)
       AuditLog.record!(:print_schedule_update, @schedule, metadata: { name: @schedule.name, active: @schedule.active })
@@ -45,6 +62,7 @@ module Admin
     private
       def set_schedule
         @schedule = PrintSchedule.find(params[:id])
+        @stations = PrintStation.active.order(:name) if action_name.in?(%w[ edit update ])
       end
 
       def render_new(message)
@@ -53,7 +71,7 @@ module Admin
       end
 
       def schedule_params
-        params.fetch(:print_schedule, {}).permit(:name, :print_station_id, :copies, :collate, :staple, :driver_preset, :time_of_day, weekdays: [])
+        params.fetch(:print_schedule, {}).permit(:name, :print_station_id, :copies, :collate, :staple, :driver_preset, :time_of_day, :active, weekdays: [])
       end
   end
 end

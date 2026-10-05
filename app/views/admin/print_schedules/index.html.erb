@@ -7,7 +7,7 @@
 <% if notice %><p id="notice" class="alert-ok mb-4"><%= notice %></p><% end %>
 <div class="overflow-x-auto">
 <table id="print_schedules" class="table-console whitespace-nowrap">
-  <thead><tr><th>名前</th><th>ステーション</th><th>曜日・時刻</th><th>部数</th><th>状態</th><th></th></tr></thead>
+  <thead><tr><th>名前</th><th>ステーション</th><th>曜日・時刻</th><th>部数</th><th>状態</th><th>次回の印刷</th><th></th></tr></thead>
   <tbody>
     <% @schedules.each do |s| %>
       <tr id="print_schedule_<%= s.id %>">
@@ -16,13 +16,15 @@
         <td><%= s.weekdays_label %>　<%= s.time_of_day %></td>
         <td><%= s.copies %></td>
         <td><%= s.active ? status_pill("有効", :ok) : status_pill("停止中", :neutral) %></td>
+        <td><%= (t = s.next_print_at) ? l(t, format: :short) : "—" %></td>
         <td class="flex flex-nowrap items-center gap-2">
+          <%= link_to "編集", edit_admin_print_schedule_path(s), class: "btn-secondary btn-sm" %>
           <%= button_to (s.active ? "停止" : "再開"), toggle_admin_print_schedule_path(s), class: "btn-secondary btn-sm" %>
           <%= button_to "削除", admin_print_schedule_path(s), method: :delete, class: "btn-danger btn-sm", data: { turbo_confirm: "この雛形を削除します（作成済みのジョブは残ります）。よろしいですか？" } %>
         </td>
       </tr>
     <% end %>
-    <% if @schedules.empty? %><tr><td colspan="6" class="text-center text-text-sub">雛形はまだありません</td></tr><% end %>
+    <% if @schedules.empty? %><tr><td colspan="7" class="text-center text-text-sub">雛形はまだありません</td></tr><% end %>
   </tbody>
 </table>
 </div>
