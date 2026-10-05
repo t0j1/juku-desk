@@ -1,0 +1,63 @@
+require "test_helper"
+
+class PrintJobTest < ActiveSupport::TestCase
+  include PdfStorageTestHelper
+
+  setup do
+    @station, = PrintStation.register!(name: "教室A")
+  end
+
+  def leased_job(**attrs)
+    job = PrintJob.create_with_pdf!(station: @station, title: "小テスト", data: PDF_BYTES, driver_preset: "A4両面", **attrs)
+    job.update!(status: :leased, lease_until: 10.minutes.from_now)
+    job
+  end
+
+  # 別のプロセス（ハートビートの sweep! や管理画面）が先に状態を変えたあと、古い状態を持ったままの
+  # インスタンスで報告・取り消しが来た状況。行をロックして読み直さないと、終わったジョブを上書きしてしまう。
+  test "report! does not overwrite a job that sweep! has just expired" do
+    job = leased_job(scheduled_at: 3.hours.ago, expires_at: 1.hour.ago)
+    stale = PrintJob.find(job.id)
+    assert stale.leased?
+
+    PrintJob.sweep!
+
+    assert_not stale.report!("spooled")
+    assert job.reload.expired?
+    assert_match "締め切り", job.result_message
+  end
+
+  test "report! of the same result as the one already recorded is still accepted" do
+    job = leased_job(scheduled_at: 1.minute.ago)
+    stale = PrintJob.find(job.id)
+    assert job.report!("spooled")
+
+    assert stale.report!("spooled")
+    assert job.reload.acknowledged?
+  end
+
+  test "report! does not overwrite a job that was cancelled meanwhile, but tells the agent it was handled" do
+    job = leased_job(scheduled_at: 1.minute.ago)
+    stale = PrintJob.find(job.id)
+    assert job.cancel!
+
+    assert stale.report!("spooled")
+    assert job.reload.cancelled?
+  end
+
+  test "cancel! does not overwrite a job that was acknowledged meanwhile" do
+    job = leased_job(scheduled_at: 1.minute.ago)
+    stale = PrintJob.find(job.id)
+    assert job.report!("spooled")
+
+    assert_not stale.cancel!
+    assert job.reload.acknowledged?
+  end
+
+  test "cancel! cancels an unfinished job" do
+    job = leased_job(scheduled_at: 1.minute.ago)
+    assert job.cancel!
+    assert job.reload.cancelled?
+    assert_nil job.lease_until
+  end
+end

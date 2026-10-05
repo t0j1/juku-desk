@@ -23,6 +23,10 @@ class PrintStation < ApplicationRecord
     token = station.issue_token
     station.save!
     [ station, token ]
+  rescue ActiveRecord::RecordNotUnique
+    # 同名の同時登録でバリデーションをすり抜けた分は、ユニークインデックスが止める。画面にはふつうの入力エラーとして出す
+    station.errors.add(:name, :taken)
+    raise ActiveRecord::RecordInvalid, station
   end
 
   # 新しいトークンに替える（古いものはその場で使えなくなる）。失効していたステーションは有効に戻る。まだ保存しない
