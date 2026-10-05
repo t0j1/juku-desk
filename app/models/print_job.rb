@@ -27,6 +27,8 @@ class PrintJob < ApplicationRecord
 
   scope :unfinished, -> { where(status: %i[ pending leased ]) }
   scope :with_pdf, -> { where.not(pdf_data: nil).or(where.not(r2_key: nil)) }
+  # 予定時刻を過ぎてもまだ取りに来られていない（pending のままの）ジョブ。ステーション停止の疑いを一覧で目立たせる
+  scope :overdue_pending, ->(now = Time.current) { pending.where(scheduled_at: ..now) }
 
   before_validation :default_deadline
   before_validation { self.duplex = duplex.presence }
@@ -99,6 +101,15 @@ class PrintJob < ApplicationRecord
   end
 
   def finished? = acknowledged? || failed? || expired? || cancelled?
+
+  # 予定時刻を過ぎても、まだ pending（ステーションが取りに来ていない）か
+  def overdue_pending?(now = Time.current) = pending? && scheduled_at <= now
+
+  # 一覧に出す失敗・期限切れの理由。エージェントの報告が無ければ、その旨を出す（それ以外の状態は nil）
+  def last_error
+    return unless failed? || expired?
+    result_message.presence || "理由は記録されていません"
+  end
 
   def cancel!
     with_lock do

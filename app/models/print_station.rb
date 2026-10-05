@@ -1,6 +1,7 @@
 # 教室PCに常駐する自動印刷エージェント 1 台。API のトークンはここで発行する（生のトークンは発行したときに 1 度だけ見せる）。
 class PrintStation < ApplicationRecord
   OFFLINE_AFTER = 3.minutes # ハートビートは数十秒おき。これを過ぎたらオフラインと表示する
+  HEARTBEAT_LOST_AFTER = 10.minutes # これを過ぎても連絡がなければ「途絶」として一覧で警告する（PC の停止・ネット切断の疑い）
 
   belongs_to :created_by, class_name: "User", optional: true
   has_many :print_jobs, dependent: :restrict_with_error
@@ -92,6 +93,16 @@ class PrintStation < ApplicationRecord
 
   def online?
     !revoked? && last_seen_at.present? && last_seen_at > OFFLINE_AFTER.ago
+  end
+
+  # ハートビートが HEARTBEAT_LOST_AFTER 以上途絶えているか（失効したものは対象外。まだ一度も通信していないものも対象外）
+  def heartbeat_lost?(now = Time.current)
+    !revoked? && last_seen_at.present? && last_seen_at <= now - HEARTBEAT_LOST_AFTER
+  end
+
+  # 最後の通信からの経過（分）。まだ通信していなければ nil
+  def minutes_since_seen(now = Time.current)
+    ((now - last_seen_at) / 60).floor if last_seen_at.present?
   end
 
   def test_print_job
