@@ -60,4 +60,39 @@ class PrintJobTest < ActiveSupport::TestCase
     assert job.reload.cancelled?
     assert_nil job.lease_until
   end
+
+  test "revoking a station returns its leased jobs to pending and leaves the others alone" do
+    leased = leased_job
+    pending = PrintJob.create_with_pdf!(station: @station, title: "未実施", data: PDF_BYTES)
+    done = PrintJob.create_with_pdf!(station: @station, title: "済み", data: PDF_BYTES)
+    done.report!("spooled")
+    other, = PrintStation.register!(name: "教室B")
+    other_leased = PrintJob.create_with_pdf!(station: other, title: "B", data: PDF_BYTES)
+    other_leased.update!(status: :leased, lease_until: 10.minutes.from_now)
+
+    @station.revoke!
+
+    assert leased.reload.pending?
+    assert_nil leased.lease_until
+    assert pending.reload.pending?
+    assert done.reload.acknowledged?
+    assert other_leased.reload.leased?
+  end
+
+  test "a job returned by revoke can be leased again after the token is reissued" do
+    job = leased_job(scheduled_at: 1.minute.ago)
+    @station.revoke!
+    @station.reissue_token!
+
+    assert_equal job, PrintJob.lease_next_for!(@station)
+  end
+
+  test "concurrent report! and cancel! settle on one outcome" do
+    job = leased_job
+    a = PrintJob.find(job.id)
+    b = PrintJob.find(job.id)
+    assert a.report!("spooled")
+    assert_not b.cancel!
+    assert job.reload.acknowledged?
+  end
 end
