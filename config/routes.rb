@@ -14,6 +14,19 @@ Rails.application.routes.draw do
     delete :destroy_others, on: :collection
   end
 
+  # 教室PCの自動印刷エージェント（Bearer トークン認証。JSON）
+  namespace :api do
+    namespace :v1 do
+      namespace :print do
+        post "heartbeat" => "heartbeats#create"
+        get "jobs/next" => "jobs#next"
+        get "jobs/:id" => "jobs#show"
+        post "jobs/:id/result" => "jobs#result"
+        get "files/:signed_id" => "files#show", as: :file
+      end
+    end
+  end
+
   namespace :admin do
     resources :users, only: %i[ index new create update ] do
       post :unlock, on: :member
@@ -35,6 +48,10 @@ Rails.application.routes.draw do
       post :confirm
     end
     resources :announcements, except: :show
+    resources :print_stations, only: %i[ index new create ] do
+      post :revoke, on: :member
+      post :reissue, on: :member
+    end
   end
 
   resources :students do

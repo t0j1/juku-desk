@@ -43,6 +43,8 @@ class FakeR2
 
   def read(key) = @objects.fetch(key)
 
+  def presigned_get_url(key, expires_in:) = "https://r2.example.test/#{key}?expires=#{expires_in.to_i}"
+
   # テスト用：オブジェクトの作成時刻を変える（既定は今）
   def age!(key, time) = (@modified[key] = time)
 
