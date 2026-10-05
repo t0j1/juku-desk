@@ -38,6 +38,24 @@ class PrintScheduleTest < ActiveSupport::TestCase
     end
   end
 
+  test "a stopped schedule makes no job, and creates one again once re-enabled" do
+    s = make
+    s.update!(active: false)
+    assert_equal({ created: 0, skipped: 0 }, PrintSchedule.generate_for!(MONDAY))
+    s.update!(active: true)
+    assert_equal({ created: 1, skipped: 0 }, PrintSchedule.generate_for!(MONDAY))
+  end
+
+  test "next_print_at is the next matching weekday and time after now; nil when stopped" do
+    s = make(weekdays: [ 1, 3 ], time: "08:30") # 月・水 08:30
+    zone = Time.zone
+    assert_equal zone.local(2026, 10, 5, 8, 30), s.next_print_at(zone.local(2026, 10, 5, 8, 0))
+    assert_equal zone.local(2026, 10, 7, 8, 30), s.next_print_at(zone.local(2026, 10, 5, 8, 30)) # 同時刻は過ぎた扱い
+    assert_equal zone.local(2026, 10, 12, 8, 30), s.next_print_at(zone.local(2026, 10, 7, 9, 0))
+    s.update!(active: false)
+    assert_nil s.next_print_at(zone.local(2026, 10, 5, 8, 0))
+  end
+
   test "running twice for the same day does not create a second job" do
     make
     PrintSchedule.generate_for!(MONDAY)

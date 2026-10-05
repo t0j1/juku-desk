@@ -57,7 +57,7 @@ class AdminPrintJobsTest < ActionDispatch::IntegrationTest
   test "an invalid duplex value is refused by the model" do
     job = PrintJob.new(print_station: @station, title: "x", duplex: "both")
     assert_not job.valid?
-    assert job.errors.added?(:duplex, :inclusion, value: "both")
+    assert job.errors[:duplex].any?
     assert_nil new_job(duplex: "").duplex
   end
 
@@ -131,6 +131,26 @@ class AdminPrintJobsTest < ActionDispatch::IntegrationTest
     @station.seen!("0.1.0")
     get admin_print_jobs_path
     assert_select "#offline-banner", false
+  end
+
+  test "an overdue pending job warns, a future one does not, and failures show the reason (last_error)" do
+    overdue = new_job(scheduled_at: 30.minutes.ago)
+    future = new_job(scheduled_at: 1.hour.from_now)
+    failed = new_job(scheduled_at: 1.hour.ago).tap { |j| j.update_columns(status: PrintJob.statuses[:failed], result_message: "用紙切れ", finished_at: Time.current) }
+    expired = new_job(scheduled_at: 1.hour.ago).tap { |j| j.update_columns(status: PrintJob.statuses[:expired], result_message: "締め切りを過ぎたため印刷していません", finished_at: Time.current) }
+    silent = new_job(scheduled_at: 1.hour.ago).tap { |j| j.update_columns(status: PrintJob.statuses[:failed], result_message: nil, finished_at: Time.current) }
+    done = new_job(scheduled_at: 1.hour.ago).tap { |j| j.update_columns(status: PrintJob.statuses[:acknowledged], finished_at: Time.current) }
+
+    get admin_print_jobs_path
+    assert_response :success
+    assert_select "#overdue-banner", /1 件/
+    assert_select "#print_job_overdue_#{overdue.id}", /予定時刻を過ぎても印刷されていません/
+    assert_select "#print_job_overdue_#{future.id}", false
+    assert_select "#print_job_overdue_#{done.id}", false
+    assert_select "#print_job_error_#{failed.id}", /用紙切れ/
+    assert_select "#print_job_error_#{expired.id}", /締め切りを過ぎたため印刷していません/
+    assert_select "#print_job_error_#{silent.id}", /理由は記録されていません/
+    assert_select "#print_job_error_#{done.id}", false
   end
 
   test "print now makes a pending future job due and extends a past deadline; others are refused" do

@@ -12,7 +12,9 @@
     <% @stations.each do |s| %>
       <tr id="print_station_<%= s.id %>">
         <td class="font-bold"><%= s.name %></td>
-        <td><%= s.revoked? ? status_pill("失効", :neutral) : (s.online? ? status_pill("オンライン", :ok) : status_pill("オフライン", :ng)) %></td>
+        <td><%= s.revoked? ? status_pill("失効", :neutral) : (s.online? ? status_pill("オンライン", :ok) : status_pill("オフライン", :ng)) %>
+          <% if s.heartbeat_lost? %><p id="heartbeat_lost_<%= s.id %>" class="mt-1 w-40 text-base font-bold text-err-fg">最後の通信から <%= s.minutes_since_seen %> 分。ハートビートが途絶えています。</p><% end %>
+        </td>
         <td class="whitespace-nowrap"><%= s.last_seen_at ? l(s.last_seen_at.in_time_zone, format: :short) : "まだありません" %></td>
         <td><%= s.revoked? ? "—" : supply_pill(s.toner_status) %></td>
         <td><%= s.revoked? ? "—" : supply_pill(s.paper_status) %></td>

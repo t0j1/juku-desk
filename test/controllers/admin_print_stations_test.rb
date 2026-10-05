@@ -141,6 +141,17 @@ class AdminPrintStationsTest < ActionDispatch::IntegrationTest
     assert_select "#alert", /削除できません/
   end
 
+  test "a station whose heartbeat stopped for 10+ minutes is flagged; a recent one is not" do
+    lost, = PrintStation.register!(name: "途絶")
+    lost.update_columns(last_seen_at: 11.minutes.ago)
+    recent, = PrintStation.register!(name: "最近")
+    recent.seen!("0.1.0")
+    get admin_print_stations_path
+    assert_response :success
+    assert_select "#heartbeat_lost_#{lost.id}", /ハートビートが途絶えています/
+    assert_select "#heartbeat_lost_#{recent.id}", false
+  end
+
   test "only system_admin can delete" do
     station, = PrintStation.register!(name: "教室A")
     sign_in_as users(:staff)

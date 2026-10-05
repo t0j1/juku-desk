@@ -30,6 +30,8 @@ class MarkingReviewTest < ApplicationSystemTestCase
     make_question(subject: "数学").approve!(users(:staff))
     visit questions_path
     click_on "数学"
+    # 科目フィルタは Turbo の非同期遷移。遷移の完了を待ってから押す（遷移前のリンクは subject が無い）
+    assert_current_path questions_path(subject: "数学")
     click_on "小テストを作成"
     assert_current_path new_marking_test_path(subject: "数学")
     assert_equal "数学", find_field("科目").value

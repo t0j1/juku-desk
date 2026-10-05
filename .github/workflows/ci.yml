@@ -6,10 +6,13 @@ on:
     branches: [ main ]
 
 jobs:
+  # GitHub Actions 障害時、ジョブが起動後に進まず 15 分でキャンセルされることがある。
+  # 各ジョブに上限を付け、止まったジョブが早く失敗するようにする（通常は数分で終わるため既存の挙動は変わらない）。
   # モノレポ: 変更したパスに応じて Rails 側 / schedule-web 側のジョブだけ走らせる。
   # スキップされたジョブは必須チェックでも成功扱いになる。判定できないとき（新規ブランチなど）は両方走らせる。
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       rails: ${{ steps.filter.outputs.rails }}
       schedule: ${{ steps.filter.outputs.schedule }}
@@ -40,6 +43,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.schedule == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: apps/schedule-web
@@ -62,6 +66,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -82,6 +87,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -99,6 +105,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       RUBOCOP_CACHE_ROOT: tmp/rubocop
     steps:
@@ -127,6 +134,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -177,6 +185,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rails == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       postgres:

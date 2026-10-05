@@ -10,6 +10,9 @@
   <p id="problem-banner" class="alert-err mb-4" role="status">この 24 時間に、印刷できなかったジョブが <%= @problems %> 件あります（失敗または期限切れ）。
     <% if @only_problems %><%= link_to "すべて表示", admin_print_jobs_path, class: "link ml-2" %><% else %><%= link_to "失敗だけ表示", admin_print_jobs_path(problems: 1), class: "link ml-2" %><% end %></p>
 <% end %>
+<% if @waiting.positive? %>
+  <p id="overdue-banner" class="alert-warn mb-4" role="status">予定時刻を過ぎても、まだ印刷されていないジョブが <%= @waiting %> 件あります。</p>
+<% end %>
 <% if @waiting.positive? && @offline_stations.any? %>
   <p id="offline-banner" class="alert-warn mb-4" role="status">
     オフラインのステーションがあります（<%= @offline_stations.map(&:name).join("、") %>）。待機中のジョブ <%= @waiting %> 件は、PC がつながるまで刷られません。
@@ -28,7 +31,8 @@
         <td class="whitespace-nowrap"><%= l j.scheduled_at.in_time_zone, format: :short %><p class="caption">〜 <%= j.expires_at.in_time_zone.to_date == j.scheduled_at.in_time_zone.to_date ? l(j.expires_at.in_time_zone, format: "%H:%M") : l(j.expires_at.in_time_zone, format: :short) %></p></td>
         <td>
           <%= print_job_pill(j) %>
-          <% if j.result_message.present? %><p class="text-base text-text-sub mt-1 w-28"><%= j.result_message %></p><% end %>
+          <% if (error = j.last_error) %><p id="print_job_error_<%= j.id %>" class="mt-1 w-40 text-base font-bold text-err-fg"><%= error %></p><% end %>
+          <% if j.overdue_pending? %><p id="print_job_overdue_<%= j.id %>" class="mt-1 w-40 text-base font-bold text-warn-fg">予定時刻を過ぎても印刷されていません</p><% end %>
         </td>
         <td>
           <div class="flex flex-nowrap items-center gap-1.5">
