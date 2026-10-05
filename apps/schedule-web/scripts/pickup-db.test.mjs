@@ -299,6 +299,18 @@ await admin(`select admin_approve_reservation($1)`, [down]);
 assert.equal((await admin(`select status from pickup_reservations where id = $1`, [down]))[0].status, "approved");
 ok("juku-desk への通知：承認・却下で1件ずつ、署名つき。未設定・自動却下・送信失敗では承認を邪魔しない");
 
+// ---- LINE のイベントの二重処理防止 ----
+assert.equal((await svc(`select pickup_claim_line_event('evt-1') c`))[0].c, true, "初めて");
+assert.equal((await svc(`select pickup_claim_line_event('evt-1') c`))[0].c, false, "2回目は処理しない");
+assert.equal((await svc(`select pickup_claim_line_event('evt-2') c`))[0].c, true, "別のイベントは別");
+await db.exec(`reset role; update pickup_line_events set at = now() - interval '8 days' where event_id = 'evt-1'`);
+assert.equal((await svc(`select pickup_claim_line_event('evt-3') c`))[0].c, true);
+assert.equal((await svc(`select count(*)::int n from pickup_line_events where event_id = 'evt-1'`))[0].n, 0, "7日より古い記録は消える");
+await fails(as("anon", "", `select pickup_claim_line_event('evt-9')`), /permission denied/, "anon は呼べない");
+await fails(admin(`select pickup_claim_line_event('evt-9')`), /permission denied/, "管理者（authenticated）も呼べない");
+await fails(as("anon", "", `select * from pickup_line_events`), /permission denied/, "anon は記録を読めない");
+ok("LINE のイベント：同じ webhookEventId は1回だけ true、古い記録は消え、anon・authenticated は関数を呼べず、anon は記録を読めない");
+
 // ---- 変更履歴 ----
 const logs = (await admin(`select table_name, count(*)::int c from audit_log group by 1 order by 1`));
 assert.ok(logs.some(l => l.table_name === "pickup_reservations") && logs.some(l => l.table_name === "students"));
