@@ -1,0 +1,30 @@
+<%# テスト印刷：サンプルを刷る → 刷れたらトレイ・両面・ホチキスを確認して入力 → 結果を一覧に残す %>
+<% job = station.test_print_job %>
+<% labels = { "tray" => "トレイ", "duplex" => "両面", "staple" => "ホチキス" } %>
+<% if station.revoked? %>
+  <span class="caption">—</span>
+<% else %>
+  <% if station.test_answered? %>
+    <p class="flex flex-wrap gap-2 mb-2" id="test_result_<%= station.id %>">
+      <% labels.each do |key, label| %><%= status_pill("#{label}#{station.test_print_result[key] == "yes" ? "○" : "×"}", station.test_print_result[key] == "yes" ? :ok : :ng) %><% end %>
+    </p>
+    <p class="caption mb-2"><%= l(Time.zone.parse(station.test_print_result["answered_at"]), format: :short) %> に確認</p>
+  <% elsif job&.acknowledged? %>
+    <%= form_with url: test_result_admin_print_station_path(station), method: :patch, scope: :result, class: "space-y-2 mb-2", id: "test_result_form_#{station.id}" do |f| %>
+      <% labels.each do |key, label| %>
+        <div class="flex items-center gap-2"><span class="w-20"><%= label %></span>
+          <%= f.select key, [ [ "選んでください", "" ], [ "はい（正しい）", "yes" ], [ "いいえ（おかしい）", "no" ] ], {}, class: "input !w-auto", "aria-label": "#{label}の結果" %></div>
+      <% end %>
+      <%= f.submit "結果を保存", class: "btn-primary btn-sm cursor-pointer" %>
+    <% end %>
+  <% elsif job&.pending? || job&.leased? %>
+    <p class="caption mb-2">印刷待ちです。刷れたら結果を入力できます。</p>
+  <% elsif job %>
+    <p class="caption mb-2">前回のテスト印刷：<%= print_job_pill(job) %>（もう一度刷れます）</p>
+  <% end %>
+  <%= form_with url: test_print_admin_print_station_path(station), scope: :test_print, class: "flex flex-wrap items-center gap-2" do |f| %>
+    <%= f.text_field :driver_preset, maxlength: 100, placeholder: "ドライバーの設定名", class: "input !w-40", "aria-label": "ドライバーの設定名" %>
+    <%= f.select :staple, PrintJobsHelper::STAPLES, {}, class: "input !w-auto", "aria-label": "ホチキス" %>
+    <%= f.submit "テスト印刷", class: "btn-secondary btn-sm cursor-pointer" %>
+  <% end %>
+<% end %>
