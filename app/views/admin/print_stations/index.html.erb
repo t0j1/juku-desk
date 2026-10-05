@@ -4,7 +4,8 @@
   <%= link_to "ステーションを登録", new_admin_print_station_path, class: "btn-primary ml-auto" %>
 </div>
 <% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
-<table id="print_stations" class="table-console">
+<div class="overflow-x-auto">
+<table id="print_stations" class="table-console whitespace-nowrap">
   <thead><tr><th>名前</th><th>状態</th><th>最後の通信</th><th>バージョン</th><th></th></tr></thead>
   <tbody>
     <% @stations.each do |s| %>
@@ -12,11 +13,11 @@
         <td class="font-bold"><%= s.name %></td>
         <td><%= s.revoked? ? status_pill("失効", :neutral) : (s.online? ? status_pill("オンライン", :ok) : status_pill("オフライン", :ng)) %></td>
         <td class="whitespace-nowrap"><%= s.last_seen_at ? l(s.last_seen_at.in_time_zone, format: :short) : "まだありません" %></td>
-        <td><%= s.agent_version %></td>
-        <td class="flex items-center gap-2">
-          <%= button_to "トークンを再発行", reissue_admin_print_station_path(s), class: "btn-secondary", data: { turbo_confirm: "新しいトークンを発行します。古いトークンはすぐ使えなくなります。よろしいですか？" } %>
+        <td><%= s.agent_version.presence || "—" %></td>
+        <td class="flex flex-nowrap items-center gap-2">
+          <%= button_to "トークンを再発行", reissue_admin_print_station_path(s), class: "btn-secondary btn-sm", data: { turbo_confirm: "新しいトークンを発行します。古いトークンはすぐ使えなくなります。よろしいですか？" } %>
           <% unless s.revoked? %>
-            <%= button_to "失効", revoke_admin_print_station_path(s), class: "btn-danger", data: { turbo_confirm: "トークンを失効します。このステーションは印刷できなくなります。よろしいですか？" } %>
+            <%= button_to "失効", revoke_admin_print_station_path(s), class: "btn-danger btn-sm", data: { turbo_confirm: "トークンを失効します。このステーションは印刷できなくなります。よろしいですか？" } %>
           <% end %>
         </td>
       </tr>
@@ -24,3 +25,4 @@
     <% if @stations.empty? %><tr><td colspan="5" class="text-center text-text-sub">ステーションはまだありません</td></tr><% end %>
   </tbody>
 </table>
+</div>
