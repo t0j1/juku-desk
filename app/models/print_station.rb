@@ -92,7 +92,14 @@ class PrintStation < ApplicationRecord
 
   def test_answered? = test_print_result["answered_at"].present?
 
-  def seen!(agent_version)
-    update_columns(last_seen_at: Time.current, agent_version: agent_version.to_s.first(40).presence)
+  SUPPLY_STATUSES = %w[ok low empty].freeze
+
+  # toner / paper は毎回のハートビートで上書きする。範囲外・未送信は nil（不明）にする
+  def seen!(agent_version, toner: nil, paper: nil)
+    update_columns(last_seen_at: Time.current, agent_version: agent_version.to_s.first(40).presence,
+                   toner_status: supply_status(toner), paper_status: supply_status(paper))
   end
+
+  private
+    def supply_status(value) = SUPPLY_STATUSES.include?(value.to_s) ? value.to_s : nil
 end

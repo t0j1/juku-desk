@@ -7,13 +7,15 @@
 <% if alert %><p id="alert" class="alert-err mb-4" role="alert"><%= alert %></p><% end %>
 <div class="overflow-x-auto">
 <table id="print_stations" class="table-console whitespace-nowrap">
-  <thead><tr><th>名前</th><th>状態</th><th>最後の通信</th><th>バージョン</th><th>テスト印刷</th><th></th></tr></thead>
+  <thead><tr><th>名前</th><th>状態</th><th>最後の通信</th><th>トナー</th><th>用紙</th><th>バージョン</th><th>テスト印刷</th><th></th></tr></thead>
   <tbody>
     <% @stations.each do |s| %>
       <tr id="print_station_<%= s.id %>">
         <td class="font-bold"><%= s.name %></td>
         <td><%= s.revoked? ? status_pill("失効", :neutral) : (s.online? ? status_pill("オンライン", :ok) : status_pill("オフライン", :ng)) %></td>
         <td class="whitespace-nowrap"><%= s.last_seen_at ? l(s.last_seen_at.in_time_zone, format: :short) : "まだありません" %></td>
+        <td><%= s.revoked? ? "—" : supply_pill(s.toner_status) %></td>
+        <td><%= s.revoked? ? "—" : supply_pill(s.paper_status) %></td>
         <td><%= s.agent_version.presence || "—" %></td>
         <td class="whitespace-normal min-w-72"><%= render "test_print", station: s %></td>
         <td class="flex flex-nowrap items-center gap-2">
@@ -24,7 +26,7 @@
         </td>
       </tr>
     <% end %>
-    <% if @stations.empty? %><tr><td colspan="6" class="text-center text-text-sub">ステーションはまだありません</td></tr><% end %>
+    <% if @stations.empty? %><tr><td colspan="8" class="text-center text-text-sub">ステーションはまだありません</td></tr><% end %>
   </tbody>
 </table>
 </div>

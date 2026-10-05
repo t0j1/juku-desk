@@ -25,6 +25,16 @@ class AdminPrintStationsTest < ActionDispatch::IntegrationTest
     assert_no_match token, response.body
   end
 
+  test "the list shows toner and paper status, and unknown as a dash" do
+    known, unknown = PrintStation.register!(name: "A").first, PrintStation.register!(name: "B").first
+    known.update_columns(toner_status: "low", paper_status: "empty")
+    get admin_print_stations_path
+    assert_select "#print_station_#{known.id}", /少ない/
+    assert_select "#print_station_#{known.id}", /なし/
+    assert_select "#print_station_#{unknown.id} td:nth-child(3)", "—"
+    assert_select "#print_station_#{unknown.id} td:nth-child(4)", "—"
+  end
+
   test "a duplicate or blank name is refused" do
     PrintStation.register!(name: "教室A")
     post admin_print_stations_path, params: { print_station: { name: "教室A" } }
