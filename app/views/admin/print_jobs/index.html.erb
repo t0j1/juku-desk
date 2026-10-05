@@ -23,7 +23,7 @@
       <tr id="print_job_<%= j.id %>">
         <td class="min-w-40">
           <span class="font-bold"><%= j.title %></span>
-          <p class="caption"><%= j.print_station.name %>　<%= j.copies %>部<%= j.staple.present? && j.staple != "なし" ? "（ホチキス#{j.staple}）" : "" %></p>
+          <p class="caption"><%= j.print_station.name %>　<%= j.copies %>部<%= j.staple.present? && j.staple != "なし" ? "（ホチキス#{j.staple}）" : "" %><%= j.duplex.present? ? "　#{duplex_label(j.duplex)}" : "" %></p>
         </td>
         <td class="whitespace-nowrap"><%= l j.scheduled_at.in_time_zone, format: :short %><p class="caption">〜 <%= j.expires_at.in_time_zone.to_date == j.scheduled_at.in_time_zone.to_date ? l(j.expires_at.in_time_zone, format: "%H:%M") : l(j.expires_at.in_time_zone, format: :short) %></p></td>
         <td>

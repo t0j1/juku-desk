@@ -99,12 +99,16 @@ class PrintStation < ApplicationRecord
   end
 
   # サンプル（表裏 2 ページ）を刷るジョブを作り、前回の結果は消す。失効・オフラインのときは作らない（ArgumentError）
-  def start_test_print!(created_by: nil, driver_preset: nil, staple: nil)
+  def start_test_print!(created_by: nil, driver_preset: nil, staple: nil, sheets: PrintTestSheet::DEFAULT_SHEETS, duplex: nil)
     raise ArgumentError, "失効したステーションでは印刷できません" if revoked?
     raise ArgumentError, "「#{name}」はオフラインです。起動してから、もう一度お試しください。" unless online?
 
-    job = PrintTestSheet.with_file(station_name: name) do |path|
-      PrintJob.create_with_pdf!(path: path, station: self, title: TEST_PRINT_TITLE, created_by: created_by, driver_preset: driver_preset.presence, staple: staple.presence)
+    sheets = Integer(sheets.presence || PrintTestSheet::DEFAULT_SHEETS, exception: false)
+    raise ArgumentError, "枚数は 1〜#{PrintTestSheet::MAX_SHEETS} で指定してください" unless sheets&.between?(1, PrintTestSheet::MAX_SHEETS)
+    raise ArgumentError, "とじ方が正しくありません" unless duplex.blank? || PrintJob::DUPLEX_VALUES.include?(duplex)
+
+    job = PrintTestSheet.with_file(station_name: name, sheets: sheets) do |path|
+      PrintJob.create_with_pdf!(path: path, station: self, title: TEST_PRINT_TITLE, created_by: created_by, driver_preset: driver_preset.presence, staple: staple.presence, duplex: duplex.presence)
     end
     update!(test_print_job_id: job.id, test_print_result: {})
     job
