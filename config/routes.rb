@@ -82,6 +82,7 @@ Rails.application.routes.draw do
   end
   resources :marking_tests, path: "marking/tests", only: %i[ index new create show ] do
     get :print, on: :member
+    post :print_job, on: :member
   end
   resources :uploads, path: "marking", only: %i[ index new create show ] do
     get :image, on: :member

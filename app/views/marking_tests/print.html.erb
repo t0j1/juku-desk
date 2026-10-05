@@ -12,6 +12,18 @@
     <%= link_to "もう一方（#{@kind == :answer ? "問題用" : "解答用"}）", print_marking_test_path(@test, kind: @kind == :answer ? "question" : "answer"), class: "btn-secondary" %>
     <%= link_to "戻る", marking_test_path(@test), class: "btn-secondary" %>
     <span class="caption">印刷ダイアログで「PDF として保存」もできます。</span>
+    <% if current_user.system_admin? %>
+      <% stations = PrintStation.active.order(:name).to_a %>
+      <% if stations.any? %>
+        <%= form_with url: print_job_marking_test_path(@test), scope: :print_job, class: "flex flex-wrap items-center gap-3 w-full" do |f| %>
+          <%= hidden_field_tag :kind, @kind %>
+          <%= f.select :print_station_id, stations.map { |s| [ "#{s.name}#{"（オフライン）" unless s.online?}", s.id ] }, {}, class: "input !w-auto", "aria-label": "ステーション" %>
+          <%= f.number_field :copies, min: 1, max: 99, value: 1, class: "input !w-24", "aria-label": "部数" %>
+          <%= f.text_field :driver_preset, maxlength: 100, placeholder: "ドライバーの設定名（例：A4両面）", class: "input !w-64", "aria-label": "ドライバーの設定名" %>
+          <%= f.submit "印刷ジョブを作成", class: "btn-primary cursor-pointer" %>
+        <% end %>
+      <% end %>
+    <% end %>
   </div>
   <article class="mt-sheet" data-controller="math">
     <header class="mt-head">
