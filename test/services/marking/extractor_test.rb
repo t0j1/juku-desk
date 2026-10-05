@@ -117,6 +117,9 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
   test "the Solid Queue concurrency limit comes from GEMINI_MAX_CONCURRENCY (default 1)" do
     assert_equal 1, Marking::StructureJob.concurrency_limit
     assert Marking::StructureJob.new(1).concurrency_key.end_with?("/gemini")
+    # 移行期間に残っている ExtractJob とも同じセマフォ（group）を使う
+    assert_equal Marking::StructureJob.new(1).concurrency_key, Marking::ExtractJob.new(1).concurrency_key
+    assert_operator Marking::StructureJob.concurrency_duration, :>=, 12.hours
   end
 
   test "without GEMINI_API_KEY nothing is enqueued and regions stay confirmed" do
@@ -239,5 +242,15 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     assert_equal 1, Marking::Enqueuer.call(region.upload.crop_regions.where(status: CropRegion::RETRYABLE_STATUSES)).total
     perform_enqueued_jobs(only: Marking::StructureJob)
     assert_equal "extracted", region.reload.status
+  end
+
+  test "heartbeat is called after every wait (RPM and backoff) so a long retry is not taken for a stopped job" do
+    with_gemini(Gemini::Retryable.new("503"), gemini_json, rpm: 600)
+    beats = 0
+    region = make_regions(1).first
+    Marking::Extractor.call(region, heartbeat: -> { beats += 1 })
+    assert_equal "extracted", region.reload.status
+    assert_equal @sleeps.size, beats
+    assert_operator beats, :>=, 1
   end
 end

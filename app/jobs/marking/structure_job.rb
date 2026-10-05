@@ -3,10 +3,12 @@ module Marking
   # - 領域ごとに progress.step!（保存は ProgressReporting が数秒おきに間引く）。「構造化中 3/8領域」
   # - キャンセル：まだ処理していない領域は queued のまま残す（あとで「構造化を開始・やり直す」や上限明けの再開で続きを処理できる）。作った問題は残す
   # - 日次上限：Extractor が領域を quota_exceeded にしたら止め、進捗を held（保留）にする。残りは queued のまま、ResumeJob が上限明けに再開する
-  # Gemini への同時リクエストは GEMINI_MAX_CONCURRENCY（既定 1）件まで。1 回で何十件も処理することがあるので、ExtractJob より長く押さえる
+  # Gemini への同時リクエストは GEMINI_MAX_CONCURRENCY（既定 1）件まで。セマフォはジョブが終われば開放される。
+  # duration は落ちたときの保険で、切れると 2 本目が動き出すため、何百件のまとめて再構造化（RPM 待ち・バックオフ込み）でも切れない長さにする。
+  # group を ExtractJob と揃え、デプロイ時にキューに残っている ExtractJob とも同じセマフォを使う
   class StructureJob < ApplicationJob
     queue_as :default
-    limits_concurrency to: GeminiConfig.max_concurrency, key: ->(*) { "gemini" }, duration: 1.hour
+    limits_concurrency to: GeminiConfig.max_concurrency, key: ->(*) { "gemini" }, group: "gemini", duration: 12.hours
     discard_on ActiveRecord::RecordNotFound
 
     def perform(progress_id, region_ids, label = "構造化中")
@@ -15,7 +17,7 @@ module Marking
       region_ids.each_with_index do |id, i|
         progress.flush! # 1 件の Gemini 待ちが長くても、止まったとは見なされないように
         region = CropRegion.find_by(id: id)
-        Marking::Extractor.call(region) if region
+        Marking::Extractor.call(region, heartbeat: -> { progress.flush! }) if region
         return hold(progress, region_ids.drop(i)) if region&.reload&.quota_exceeded? || GeminiQuota.exceeded?
 
         progress.step!(i + 1, "#{label} #{i + 1}/#{region_ids.size}領域")
