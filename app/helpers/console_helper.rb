@@ -8,6 +8,14 @@ module ConsoleHelper
     end
   end
 
+  SUPPLY_PILLS = { "ok" => [ "十分", :ok ], "low" => [ "少ない", :busy ], "empty" => [ "なし", :ng ] }.freeze
+
+  # 不明（NULL）は「—」
+  def supply_pill(status)
+    label, kind = SUPPLY_PILLS[status]
+    label ? status_pill(label, kind) : "—"
+  end
+
   def pdf_job_pill_kind(job)
     return :ok if job.done?
     return :ng if job.failed?

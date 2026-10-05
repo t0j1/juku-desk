@@ -54,6 +54,13 @@ class PrintApiTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "heartbeat stores toner/paper status, and unknown or missing values become nil" do
+    post "/api/v1/print/heartbeat", params: { toner_status: "low", paper_status: "empty" }, headers: @auth, as: :json
+    assert_equal %w[low empty], @station.reload.then { [ it.toner_status, it.paper_status ] }
+    post "/api/v1/print/heartbeat", params: { toner_status: "unknown", paper_status: nil }, headers: @auth, as: :json
+    assert_equal [ nil, nil ], @station.reload.then { [ it.toner_status, it.paper_status ] }
+  end
+
   test "next leases a due job with the agent's fields and the file url downloads the pdf" do
     job = make_job(scheduled_at: 1.minute.ago)
     get "/api/v1/print/jobs/next", headers: @auth

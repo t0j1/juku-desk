@@ -5,7 +5,7 @@ module Api
         # 応答の server_time で、エージェントは自分の時計とのずれを補正する。
         # 自動更新（latest_version / download_url / sha256）は、3 つとも設定されているときだけ返す。
         def create
-          station.seen!(params[:agent_version])
+          station.seen!(params[:agent_version], toner: params[:toner_status], paper: params[:paper_status])
           PrintJob.sweep!
           render json: { server_time: Time.current.utc.iso8601 }.merge(update_info)
         end
