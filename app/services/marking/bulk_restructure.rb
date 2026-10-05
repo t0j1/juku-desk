@@ -17,19 +17,28 @@ module Marking
     def regions_for(questions)
       region_ids = questions.reorder(nil).distinct.pluck(:region_id)
       CropRegion.where(id: region_ids, status: %w[extracted needs_review])
-                .where.not(id: Question.where(id: ExamItem.select(:question_id)).select(:region_id))
+                .where.not(id: exam_region_ids)
     end
+
+    # 小テストで使っている問題を含む領域の id（サブクエリ）
+    def exam_region_ids = Question.where(id: ExamItem.select(:question_id)).select(:region_id)
+
+    # 選んだ問題のうち、小テストで使っている問題のある領域にあるため対象外になる問題
+    def excluded_for_exam(questions) = questions.reorder(nil).where(region_id: exam_region_ids)
+
+    # 作り直す問題（対象の領域にあるすべての問題）。一覧のボタンの「n 問」と確認画面の件数はこれで数える
+    def target_questions(regions) = Question.where(region_id: regions.select(:id))
 
     # 作り直すと承認が外れる問題（対象の領域にある承認済みの問題。選んでいない問題も同じ領域なら含む）
     def approved_in(regions) = Question.approved.where(region_id: regions.select(:id))
 
     def enqueue!(regions, user:)
       ids = regions.order(:id).ids
-      return if ids.empty?
+      return [ nil, nil ] if ids.empty?
 
       batch = RestructureBatch.create!(user: user, region_ids: ids)
-      Marking::Enqueuer.call(CropRegion.where(id: ids).order(:id))
-      batch
+      progress = Marking::Enqueuer.call(CropRegion.where(id: ids).order(:id), user: user, title: "まとめて再構造化（#{ids.size}件）", label: "再構造化中", subject: batch)
+      [ batch, progress ]
     end
   end
 end

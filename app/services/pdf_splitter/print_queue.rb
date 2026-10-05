@@ -61,7 +61,7 @@ module PdfSplitter
             pages
           end
           out = File.join(dir, "out.pdf")
-          _o, err, st = Open3.capture3("qpdf", "--empty", "--pages", *args, "--", out)
+          _o, err, st = Open3.capture3(*PdfSplitter::NICE, "qpdf", "--empty", "--pages", *args, "--", out)
           raise SplitError, err.presence || "qpdf failed" unless st.success? || st.exitstatus == 3
           yield out
         end

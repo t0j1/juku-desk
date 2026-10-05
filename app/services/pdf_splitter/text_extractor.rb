@@ -16,22 +16,26 @@ module PdfSplitter
       end
     end
 
-    # on_pages: 何ページ目まで済んだかを CHUNK ごとに知らせる（進捗表示用。呼び出し側でキャンセルを確かめて raise してよい）
-    def self.pages_from_path(path, page_count, &on_pages)
+    def self.pages_from_path(path, page_count)
+      texts = []
+      each_chunk(path, page_count) { |chunk, _first| texts.concat(chunk) }
+      texts
+    end
+
+    # CHUNK ページずつ (texts, 先頭ページ番号) を渡す。呼び出し側は受け取ったら捨ててよい（全ページを持たない）
+    def self.each_chunk(path, page_count)
       if page_count > PROBE_PAGES
         probe = extract(path, 1, PROBE_PAGES)
         if probe.all? { |t| t.strip.empty? }
-          on_pages&.call(page_count)
-          return probe + Array.new(page_count - PROBE_PAGES, "")
+          (1..page_count).each_slice(CHUNK) { |c| yield Array.new(c.size, ""), c.first }
+          return
         end
       end
-      (1..page_count).each_slice(CHUNK).flat_map do |chunk|
-        extract(path, chunk.first, chunk.last).tap { on_pages&.call(chunk.last) }
-      end
+      (1..page_count).each_slice(CHUNK) { |c| yield extract(path, c.first, c.last), c.first }
     end
 
     def self.extract(path, from, to)
-      out, _err, st = Open3.capture3("pdftotext", "-layout", "-enc", "UTF-8", "-f", from.to_s, "-l", to.to_s, path.to_s, "-")
+      out, _err, st = Open3.capture3(*PdfSplitter::NICE, "pdftotext", "-layout", "-enc", "UTF-8", "-f", from.to_s, "-l", to.to_s, path.to_s, "-")
       texts = st.success? ? out.force_encoding(Encoding::UTF_8).scrub("").split("\f", -1) : []
       Array.new(to - from + 1) { |i| texts[i].to_s }
     end

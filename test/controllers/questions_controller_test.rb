@@ -111,7 +111,7 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     regions = make_regions(3, status: :confirmed)
     Marking::Enqueuer.call(CropRegion.where(id: regions.map(&:id)))
     travel_to Time.utc(2026, 10, 5, 20, 0, 0)
-    perform_enqueued_jobs(only: Marking::ExtractJob)
+    perform_enqueued_jobs(only: Marking::StructureJob)
 
     get students_path
     assert_select "#gemini-quota-banner", /Gemini の 1 日の上限に達しました。残り 3 件は 10月6日 16:00（JST）以降に自動で再開します/
@@ -131,7 +131,7 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "queued" ], upload_regions.map { |r| r.reload.status }.uniq
     assert_equal "processing", upload.reload.extraction_status.to_s
 
-    perform_enqueued_jobs(only: Marking::ExtractJob)
+    perform_enqueued_jobs(only: Marking::StructureJob)
     assert_equal :completed, upload.reload.extraction_status
     get upload_path(upload)
     assert_select "#extraction-status", /完了/
@@ -207,14 +207,14 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     q = make_question
     other = make_question
     with_gemini(gemini_questions_json({ "source_label" => "〔12〕" }, { "source_label" => "〔13〕" }, { "source_label" => "〔14〕" }))
-    assert_enqueued_jobs 1, only: Marking::ExtractJob do
+    assert_enqueued_jobs 1, only: Marking::StructureJob do
       post restructure_question_path(q)
     end
     assert_redirected_to upload_path(q.region.upload_id)
     assert q.region.reload.queued?
     assert other.region.reload.extracted?
 
-    perform_enqueued_jobs(only: Marking::ExtractJob)
+    perform_enqueued_jobs(only: Marking::StructureJob)
     assert_equal %w[〔12〕 〔13〕 〔14〕], q.region.questions.order(:id).pluck(:source_label)
     assert_raises(ActiveRecord::RecordNotFound) { q.reload }
   end
@@ -237,7 +237,7 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     with_gemini(gemini_questions_json({ "source_label" => "〔12〕" }))
     %w[queued processing].each do |status|
       q.region.update!(status: status)
-      assert_no_enqueued_jobs only: Marking::ExtractJob do
+      assert_no_enqueued_jobs only: Marking::StructureJob do
         post restructure_question_path(q)
       end
       assert_redirected_to upload_path(q.region.upload_id)

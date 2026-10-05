@@ -64,4 +64,19 @@ class JobProgressTest < ApplicationSystemTestCase
     click_on "処理中"
     within("dialog") { assert_text(/処理中（経過 1:0\d）/) }
   end
+
+  test "daily limit shows its own held state (not cancelled or failed), without a cancel button" do
+    progress = JobProgress.create!(user: @user, kind: "marking_structure", title: "画像の構造化", status: :running, total: 8, done: 2, started_at: 30.seconds.ago)
+    visit current_path
+    click_on "処理中"
+    within("dialog") { assert_text "2 / 8 件" }
+    progress.update_columns(status: JobProgress.statuses[:held], finished_at: Time.current,
+                            message: "上限に達しました。残り6件は10月6日 16:00（JST）に自動で再開します")
+    within "dialog" do
+      assert_selector ".text-warn-fg", text: "上限に達しました。残り6件は10月6日 16:00（JST）に自動で再開します", wait: 8
+      assert_no_text "キャンセルしました"
+      assert_no_text "失敗しました"
+      assert_no_button "キャンセル"
+    end
+  end
 end

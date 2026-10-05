@@ -21,7 +21,7 @@ class Tools::PdfSplitter::JobsProgressTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: PdfSplitter::AnalyzeJob, args: [ progress.id ])
 
     follow_redirect!
-    assert_select "[data-controller=progress][data-progress-open-value=true]"
+    assert_select "[data-controller=progress][data-progress-open-id-value=\"#{progress.id}\"]"
     assert_select "[data-controller=progress-reload]", text: /解析しています/
     assert_select "meta[http-equiv=refresh]", false
   end

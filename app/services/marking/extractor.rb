@@ -17,10 +17,12 @@ module Marking
       def client = @client || Gemini::Client.new
     end
 
-    def self.call(region) = new(region).call
+    # heartbeat: RPM 待ち・バックオフのたびに呼ぶ（進捗の updated_at を進め、長いリトライでも「止まった」と見なされないように）
+    def self.call(region, heartbeat: nil) = new(region, heartbeat:).call
 
-    def initialize(region)
+    def initialize(region, heartbeat: nil)
       @region = region
+      @heartbeat = heartbeat
     end
 
     def call
@@ -62,7 +64,7 @@ module Marking
           attempts += 1
           raise Gemini::Error, "#{e.message}（#{GeminiConfig.max_retries} 回やり直しても成功しませんでした）" if attempts > GeminiConfig.max_retries
 
-          self.class.sleeper.call(backoff(attempts))
+          pause(backoff(attempts))
           retry
         end
       end
@@ -72,8 +74,13 @@ module Marking
           wait = GeminiQuota.acquire
           break if wait <= 0
 
-          self.class.sleeper.call(wait)
+          pause(wait)
         end
+      end
+
+      def pause(seconds)
+        self.class.sleeper.call(seconds)
+        @heartbeat&.call
       end
 
       # 2^n 秒 × base に、0〜50% のジッターを足す

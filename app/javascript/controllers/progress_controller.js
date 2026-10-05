@@ -6,7 +6,7 @@ const STALE_WATCH_MS = 10 * 60 * 1000
 // 閉じても処理は続く。画面を移ってもレイアウトに載っているので、バッジから開き直せる。
 export default class extends Controller {
   static targets = [ "badge", "badgeText", "dialog", "list", "item" ]
-  static values = { url: String, ids: Array, open: Boolean, interval: { type: Number, default: 3000 } }
+  static values = { url: String, ids: Array, openId: Number, interval: { type: Number, default: 3000 } }
 
   connect() {
     this.items = new Map()
@@ -14,7 +14,8 @@ export default class extends Controller {
     this.tick = setInterval(() => this.renderClock(), 1000)
     this.onVisibility = () => { if (!document.hidden) this.poll() }
     document.addEventListener("visibilitychange", this.onVisibility)
-    if (this.idsValue.length) this.poll().then(() => { if (this.openValue && this.running().length) this.open() })
+    // 積んだ直後の処理（openId）がまだ終わっていないときだけ自動で開く。もう終わっていたら開かない（画面をふさがない）
+    if (this.idsValue.length) this.poll().then(() => { if (this.openIdValue && this.isRunning(this.openIdValue)) this.open() })
   }
 
   disconnect() {
@@ -88,6 +89,11 @@ export default class extends Controller {
     }
     bar.parentElement.setAttribute("aria-valuenow", p.percent ?? "")
     f("message").textContent = this.statusText(p)
+    // 日次上限の保留は、失敗・キャンセルと見分けられる色にする
+    bar.classList.toggle("bg-warn-fg", p.status === "held")
+    bar.classList.toggle("bg-primary", p.status !== "held")
+    f("message").classList.toggle("text-warn-fg", p.status === "held")
+    f("message").classList.toggle("font-bold", p.status === "held")
     f("cancel").hidden = p.finished
     f("cancel").disabled = p.cancel_requested
     if (p.cancel_requested && !p.finished) f("cancel").textContent = "キャンセルしています…"
@@ -98,6 +104,7 @@ export default class extends Controller {
     if (p.status === "succeeded") return "完了しました"
     if (p.status === "failed") return `失敗しました${p.message ? `：${p.message}` : ""}`
     if (p.status === "cancelled") return "キャンセルしました"
+    if (p.status === "held") return p.message || "上限に達したため保留しています"
     if (p.status === "queued") return "順番待ちです"
     return p.message || ""
   }
@@ -128,6 +135,8 @@ export default class extends Controller {
   watchingStale() {
     return [ ...this.items.values() ].some((i) => i.data.stale && Date.now() - i.staleSince < STALE_WATCH_MS)
   }
+
+  isRunning(id) { const item = this.items.get(id); return !!item && !item.data.finished }
 
   running() { return [ ...this.items.values() ].filter((i) => !i.data.finished) }
 

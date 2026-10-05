@@ -106,4 +106,25 @@ class MarkingReviewTest < ApplicationSystemTestCase
   ensure
     reset_gemini
   end
+
+  test "E-4: questions used in an exam are left out, and the button count matches the confirmation count" do
+    with_gemini(gemini_questions_json({ "question_type" => "choice", "answer_in_material" => true }))
+    a = make_question
+    b = make_question
+    used = make_question
+    Exam.create!(title: "小テスト", mode: "random", filter: {}).items.create!(question: used, position: 1)
+    visit questions_path
+    assert_selector "#bulk-restructure-outdated[value='未対応の問題をすべて再構造化（2 問）']"
+    [ a, b, used ].each { |q| find("input[aria-label='問題 #{q.id} の画像を再構造化に選ぶ']").check }
+    click_on "選択した画像を再構造化"
+    assert_selector "#excluded-for-exam", text: "1 件は小テストで使用中のため除外"
+    assert_selector "#bulk-restructure-confirm", text: "2 件の画像（問題 2 問）"
+
+    visit questions_path
+    click_on "未対応の問題をすべて再構造化（2 問）"
+    assert_selector "#excluded-for-exam", text: "1 件は小テストで使用中のため除外"
+    assert_selector "#bulk-restructure-confirm", text: "2 件の画像（問題 2 問）"
+  ensure
+    reset_gemini
+  end
 end

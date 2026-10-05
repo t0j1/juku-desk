@@ -59,7 +59,7 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
 
   test "with GEMINI_API_KEY the confirmed regions are queued for structuring and the request returns right away" do
     with_gemini(gemini_json)
-    assert_enqueued_jobs 2, only: Marking::ExtractJob do
+    assert_enqueued_jobs 1, only: Marking::StructureJob do # 2 領域を 1 つのジョブで順に処理する
       post uploads_path, params: payload
     end
     assert_response :created
@@ -154,7 +154,7 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#model-unavailable", /GEMINI_MODELを更新してください（1 件）/
 
     ENV["GEMINI_API_KEY"] = "test-key"
-    assert_enqueued_jobs 1, only: Marking::ExtractJob do
+    assert_enqueued_jobs 1, only: Marking::StructureJob do
       post extract_upload_path(upload)
     end
     assert_equal "queued", unavailable.reload.status
