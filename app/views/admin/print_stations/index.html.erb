@@ -22,7 +22,11 @@
           <% unless s.revoked? %>
             <%= button_to "失効", revoke_admin_print_station_path(s), class: "btn-danger btn-sm", data: { turbo_confirm: "トークンを失効します。このステーションは印刷できなくなります。よろしいですか？" } %>
           <% end %>
-          <%= button_to "削除", admin_print_station_path(s), method: :delete, class: "btn-danger btn-sm", data: { turbo_confirm: "「#{s.name}」を削除します。元に戻せません。よろしいですか？" } %>
+          <% if s.deletable? %>
+            <%= button_to "削除", admin_print_station_path(s), method: :delete, class: "btn-danger btn-sm", data: { turbo_confirm: "「#{s.name}」を削除します。テスト印刷のジョブも消えます。元に戻せません。よろしいですか？" } %>
+          <% else %>
+            <span class="caption whitespace-normal max-w-60" id="undeletable_<%= s.id %>"><%= s.undeletable_reason %></span>
+          <% end %>
         </td>
       </tr>
     <% end %>

@@ -88,6 +88,38 @@ class AdminPrintStationsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a station whose test prints failed, even several times, can be deleted" do
+    station, = PrintStation.register!(name: "実機確認")
+    old = PrintJob.create_with_pdf!(station: station, title: "テスト印刷", data: "%PDF-1.4\n%%EOF")
+    old.report!("failed", "driver_preset is required")
+    newer = PrintJob.create_with_pdf!(station: station, title: "テスト印刷", data: "%PDF-1.4\n%%EOF")
+    newer.report!("failed", "x")
+    station.update!(test_print_job_id: newer.id) # 最新のテストだけが指される。古い失敗ジョブも消せること
+    assert station.deletable?
+    get admin_print_stations_path
+    assert_select "form[action=?]", admin_print_station_path(station)
+    assert_difference -> { PrintJob.count } => -2, -> { PrintStation.count } => -1 do
+      delete admin_print_station_path(station)
+    end
+  end
+
+  test "the list shows why a station cannot be deleted instead of the button" do
+    station, = PrintStation.register!(name: "実績あり")
+    PrintJob.create_with_pdf!(station: station, title: "宿題", data: "%PDF-1.4\n%%EOF")
+    get admin_print_stations_path
+    assert_select "#undeletable_#{station.id}", /履歴があるため削除できません/
+    assert_select "form[action=?]", admin_print_station_path(station), false
+  end
+
+  test "a station with a leased test job is not deleted yet" do
+    station, = PrintStation.register!(name: "印刷中")
+    PrintJob.create_with_pdf!(station: station, title: "テスト印刷", data: "%PDF-1.4\n%%EOF").update!(status: :leased, lease_until: 5.minutes.from_now)
+    assert_match "印刷中", station.undeletable_reason
+    assert_no_difference -> { PrintStation.count } do
+      delete admin_print_station_path(station)
+    end
+  end
+
   test "a station that has real jobs is not deleted" do
     station, = PrintStation.register!(name: "実績あり")
     PrintJob.create_with_pdf!(station: station, title: "宿題", data: "%PDF-1.4\n%%EOF")

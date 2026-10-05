@@ -58,15 +58,28 @@ class PrintStation < ApplicationRecord
 
   def revoked? = revoked_at.present?
 
-  # 間違えて作ったステーションを消せるようにする。ただし印刷の履歴を失わないよう、テスト印刷のジョブだけを持つもの
+  TEST_PRINT_TITLE = "テスト印刷"
+
+  # 間違えて作ったステーションを消せるようにする。ただし印刷の履歴を失わないよう、テスト印刷のジョブ
+  # （結果は failed / expired / acknowledged のどれでもよい。何回刷っていてもよい）だけを持つもの
   # （定例印刷の雛形もないもの）に限る。実際に刷ったジョブがあるものは失効で止める。
-  def deletable?
-    print_jobs.where.not(id: test_print_job_id).none? && !PrintSchedule.exists?(print_station_id: id)
+  def deletable? = undeletable_reason.nil?
+
+  # 削除できない理由（画面に出す）。削除できるなら nil
+  def undeletable_reason
+    if print_jobs.where.not(title: TEST_PRINT_TITLE).exists?
+      "印刷のジョブの履歴があるため削除できません（使わないなら失効してください）"
+    elsif PrintSchedule.exists?(print_station_id: id)
+      "定例印刷の雛形があるため削除できません（先に雛形を削除してください）"
+    elsif print_jobs.leased.exists?
+      "印刷中のテストジョブがあるため、今は削除できません（終わってから、または失効してください）"
+    end
   end
 
   # 削除する。deletable? でないときは ArgumentError。テスト印刷のジョブ（R2 のファイルも）は一緒に消す
   def destroy_unused!
-    raise ArgumentError, "「#{name}」は印刷のジョブや定例印刷の雛形があるため削除できません。使わないなら失効してください。" unless deletable?
+    reason = undeletable_reason
+    raise ArgumentError, "「#{name}」を削除できません：#{reason}" if reason
 
     keys = print_jobs.where.not(r2_key: nil).pluck(:r2_key)
     transaction do
@@ -91,7 +104,7 @@ class PrintStation < ApplicationRecord
     raise ArgumentError, "「#{name}」はオフラインです。起動してから、もう一度お試しください。" unless online?
 
     job = PrintTestSheet.with_file(station_name: name) do |path|
-      PrintJob.create_with_pdf!(path: path, station: self, title: "テスト印刷", created_by: created_by, driver_preset: driver_preset.presence, staple: staple.presence)
+      PrintJob.create_with_pdf!(path: path, station: self, title: TEST_PRINT_TITLE, created_by: created_by, driver_preset: driver_preset.presence, staple: staple.presence)
     end
     update!(test_print_job_id: job.id, test_print_result: {})
     job
