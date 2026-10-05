@@ -24,6 +24,16 @@ module Gemini
       raise Retryable, "Gemini への接続に失敗しました（#{e.class}）"
     end
 
+    # このキーで generateContent を呼べるモデル名の一覧（"gemini-…" の形）。モデル名を決める・確認するときに使う
+    def list_models
+      status, body = @transport.call(method: :get, path: "/v1beta/models?pageSize=200", body: nil)
+      raise Error, "Gemini が #{status} を返しました（#{error_message(body)}）" unless status == 200
+
+      JSON.parse(body).fetch("models", []).select { |m| Array(m["supportedGenerationMethods"]).include?("generateContent") }.map { |m| m["name"].to_s.delete_prefix("models/") }.sort
+    rescue JSON::ParserError
+      raise Error, "Gemini の応答を読めませんでした"
+    end
+
     private
       def request_body(image_bytes, mime_type, prompt)
         {
@@ -61,13 +71,14 @@ module Gemini
         ""
       end
 
-      def http_post(path:, body:)
+      def http_post(path:, body:, method: :post)
         uri = URI.join(GeminiConfig.endpoint, path)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
         http.open_timeout = http.read_timeout = GeminiConfig.timeout
-        request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json", "x-goog-api-key" => GeminiConfig.api_key.to_s)
-        request.body = JSON.generate(body)
+        headers = { "Content-Type" => "application/json", "x-goog-api-key" => GeminiConfig.api_key.to_s }
+        request = method == :get ? Net::HTTP::Get.new(uri, headers) : Net::HTTP::Post.new(uri, headers)
+        request.body = JSON.generate(body) if body
         response = http.request(request)
         [ response.code.to_i, response.body.to_s ]
       end
