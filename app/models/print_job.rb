@@ -7,6 +7,9 @@ class PrintJob < ApplicationRecord
   FILE_URL_TTL = 10.minutes
   RESULT_STATUSES = { "spooled" => :acknowledged, "failed" => :failed, "expired" => :expired }.freeze
   MAX_PDF_BYTES = 30.megabytes
+  # 終わったジョブの PDF を残す期間（環境変数で変えられる）。生徒名が入るので長くは置かない。
+  # 短くしすぎると、再印刷の依頼や「何を刷ったか」の確認に間に合わない。
+  PDF_RETENTION = ENV.fetch("PRINT_PDF_RETENTION_DAYS", 30).to_i.days
   TITLE_MAX = 100 # ファイル名や出力名がそのまま入るので、長すぎるものは切り詰める
 
   belongs_to :print_station
@@ -20,6 +23,7 @@ class PrintJob < ApplicationRecord
   validate :deadline_after_schedule
 
   scope :unfinished, -> { where(status: %i[ pending leased ]) }
+  scope :with_pdf, -> { where.not(pdf_data: nil).or(where.not(r2_key: nil)) }
 
   before_validation :default_deadline
 
@@ -51,6 +55,18 @@ class PrintJob < ApplicationRecord
     unfinished.where(expires_at: ...now).update_all(status: statuses[:expired], finished_at: now, lease_until: nil, updated_at: now,
                                               result_message: "締め切りを過ぎたため印刷していません")
     leased.where(lease_until: ...now).update_all(status: statuses[:pending], lease_until: nil, updated_at: now)
+  end
+
+  # 終わってから retention たったジョブの PDF（R2 のオブジェクトと pdf_data）を消す。行は履歴として残す。1 回に max 件まで。消した件数を返す
+  def self.purge_pdfs!(retention: PDF_RETENTION, max: 500)
+    purged = 0
+    where(status: %i[ acknowledged failed expired cancelled ], finished_at: ...retention.ago).with_pdf.order(:id).limit(max).each do |job|
+      key = job.r2_key
+      PdfStorage.r2.delete(key) if key.present? # R2 から消せなかったら例外のまま止め、行は触らずに次回やり直す
+      job.update_columns(r2_key: nil, pdf_data: nil, updated_at: Time.current)
+      purged += 1
+    end
+    purged
   end
 
   # このステーションの、刷る時刻になった pending を 1 件貸し出す。なければ nil

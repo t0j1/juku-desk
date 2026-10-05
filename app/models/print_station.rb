@@ -44,8 +44,13 @@ class PrintStation < ApplicationRecord
     token
   end
 
+  # 失効する。取得済みで未報告（leased）のジョブは pending に戻す。トークンがないと報告できないので、戻さないとリース切れまで宙に浮く
+  # （戻したジョブは、トークンを再発行したステーションが job_id で二重印刷を防ぎつつ取り直す）
   def revoke!
-    update!(revoked_at: Time.current)
+    transaction do
+      update!(revoked_at: Time.current)
+      print_jobs.leased.update_all(status: PrintJob.statuses[:pending], lease_until: nil, updated_at: Time.current)
+    end
   end
 
   def revoked? = revoked_at.present?
