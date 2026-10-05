@@ -29,6 +29,8 @@ class PrintJob < ApplicationRecord
   scope :with_pdf, -> { where.not(pdf_data: nil).or(where.not(r2_key: nil)) }
   # 予定時刻を過ぎてもまだ取りに来られていない（pending のままの）ジョブ。ステーション停止の疑いを一覧で目立たせる
   scope :overdue_pending, ->(now = Time.current) { pending.where(scheduled_at: ..now) }
+  # ハートビートが途絶えているステーションの、まだ終わっていないジョブ。このままでは刷られない疑いがあるものを一覧に出す
+  scope :on_lost_stations, ->(now = Time.current) { unfinished.where(print_station_id: PrintStation.heartbeat_lost(now).select(:id)) }
 
   before_validation :default_deadline
   before_validation { self.duplex = duplex.presence }
@@ -104,6 +106,11 @@ class PrintJob < ApplicationRecord
 
   # 予定時刻を過ぎても、まだ pending（ステーションが取りに来ていない）か
   def overdue_pending?(now = Time.current) = pending? && scheduled_at <= now
+
+  # 一覧の「ハートビート途絶」表示に使う。ジョブ自身は列を持たず、担当ステーションの最終通信をそのまま返す
+  def last_heartbeat_at = print_station.last_seen_at
+
+  def heartbeat_lost? = print_station.heartbeat_lost?
 
   # 一覧に出す失敗・期限切れの理由。エージェントの報告が無ければ、その旨を出す（それ以外の状態は nil）
   def last_error

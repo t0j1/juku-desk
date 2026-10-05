@@ -12,6 +12,8 @@ class PrintStation < ApplicationRecord
   TEST_FIELDS = %w[ tray duplex staple ].freeze # テスト印刷で確かめる 3 点（トレイ／両面／ホチキス）
 
   scope :active, -> { where(revoked_at: nil) }
+  # ハートビートが HEARTBEAT_LOST_AFTER 以上途絶えている有効なステーション。まだ一度も通信していないものは含めない（heartbeat_lost? と同じ）
+  scope :heartbeat_lost, ->(now = Time.current) { active.where(last_seen_at: ..(now - HEARTBEAT_LOST_AFTER)) }
 
   # 生のトークンから探す。失効したものは見つからない
   def self.authenticate(token)
