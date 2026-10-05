@@ -10,6 +10,9 @@
 #   PROBE_UP=1 … analyze のあいだ、別に立てた Puma の /up を 0.2 秒ごとに叩いて最大の応答時間を出す。
 #             CPU を絞るため、Puma・解析・CPU を食う負荷（PROBE_BURNERS 本、既定 1）を taskset で 1 コアに載せる
 #             （負荷1本＋Puma で、Puma の取り分はおよそ 0.5 コア。3 本で 0.25 コア）。解析の子プロセスは本番のワーカーと同じく nice 19
+#   split   … 出力PDFを全部作る（Builder.with_file。qpdf でページを切り出して保存する）。PROBE_GENERATE のときだけ
+#   PROBE_GENERATE=ページ数 … テキストつきのサンプルPDFをその場で作り、analyze と split を測る（CI 用。PROBE_PAGE_KB で1ページの大きさ、既定 100）
+#   PROBE_MAX_MB=400 … どれかのピークがこれを超えたら失敗（終了コード 1）。GITHUB_STEP_SUMMARY があれば結果の表を書く
 #   r2      … R2 から download_to（R2_* と PROBE_R2=1 を渡したときだけ。実際にアップロードして測る）
 require "open3"
 
@@ -49,6 +52,10 @@ if ARGV.first == "child"
     when "analyze"
       PdfSplitter.lower_priority! if ENV["PROBE_NICE"] != "0" # 本番のワーカーと同じ（config/initializers/job_priority.rb）
       PdfSplitter::Analyzer.call(PdfSplitJob.find(blob.pdf_split_job_id))
+    when "split"
+      PdfSplitJob.find(blob.pdf_split_job_id).outputs.where.not(display_name: "probe").order(:position).each do |o|
+        PdfSplitter::Builder.with_file(o) { |path| File.size(path) }
+      end
     when "r2" then Dir.mktmpdir { |d| PdfStorage.r2.download_to(blob.r2_key, File.join(d, "x.pdf")) }
     end
   end
@@ -56,28 +63,66 @@ if ARGV.first == "child"
   exit
 end
 
+# 1ページごとに ASCII のテキストを並べた、pdftotext で読める PDF を作る（xref も正しく書く）
+def generate_pdf(pages, page_kb)
+  line = "Memory probe sample text for a mock exam page, 0123456789 abcdefghij klmnopqrst.\n"
+  lines_per_page = [ page_kb * 1024 / line.bytesize, 1 ].max
+  objs = [ "<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [#{(0...pages).map { |i| "#{4 + i * 2} 0 R" }.join(' ')}] /Count #{pages} >>",
+           "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>" ]
+  pages.times do |i|
+    body = +"BT /F1 9 Tf 12 TL 20 780 Td (Page #{i + 1}) Tj T* ET\n"
+    body << "BT /F1 6 Tf 7 TL 20 760 Td\n" << (line.gsub(/[()\\]/, "").then { |l| "(#{l.chomp}) '\n" } * lines_per_page) << "ET\n"
+    objs << "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents #{5 + i * 2} 0 R /Resources << /Font << /F1 3 0 R >> >> >>"
+    objs << "<< /Length #{body.bytesize} >>\nstream\n#{body}endstream"
+  end
+  out = +"%PDF-1.4\n"
+  offsets = objs.each_with_index.map { |o, i| out.bytesize.tap { out << "#{i + 1} 0 obj\n#{o}\nendobj\n" } }
+  xref = out.bytesize
+  out << "xref\n0 #{objs.size + 1}\n0000000000 65535 f \n" << offsets.map { |o| format("%010d 00000 n \n", o) }.join
+  out << "trailer\n<< /Size #{objs.size + 1} /Root 1 0 R >>\nstartxref\n#{xref}\n%%EOF\n"
+  out.b
+end
+
 size_mb = (ARGV.first || 25).to_i
+generate_pages = ENV["PROBE_GENERATE"].to_i
+results = []
 key = job = nil
 begin
-  user = User.first or abort "User が 1 人もいません（bin/rails db:seed）"
+  user = User.first
+  user ||= User.create!(name: "probe", email_address: "probe@example.com", role: :staff, password: SecureRandom.base64(24) + "aA1!") if generate_pages.positive?
+  user or abort "User が 1 人もいません（bin/rails db:seed）"
   job = user.pdf_split_jobs.create!(original_filename: "probe.pdf", page_count: 1)
-  data = ENV["PROBE_PDF"] ? File.binread(ENV["PROBE_PDF"]) : ("%PDF-1.4\n".b + Random.bytes(size_mb * 1024 * 1024))
-  job.update!(page_count: PdfSplitter::Splitter.page_count_of(data)) if ENV["PROBE_PDF"]
+  data = if generate_pages.positive? then generate_pdf(generate_pages, ENV.fetch("PROBE_PAGE_KB", 100).to_i)
+  elsif ENV["PROBE_PDF"] then File.binread(ENV["PROBE_PDF"])
+  else "%PDF-1.4\n".b + Random.bytes(size_mb * 1024 * 1024)
+  end
+  job.update!(page_count: PdfSplitter::Splitter.page_count_of(data)) if ENV["PROBE_PDF"] || generate_pages.positive?
   blob = PdfBlob.create!(kind: "original", pdf_split_job: job, data:, byte_size: data.bytesize, expires_at: 1.hour.from_now)
   output = job.outputs.create!(display_name: "probe", page_from: 1, page_to: 1, position: 0)
   out_blob = PdfBlob.create!(kind: "output", pdf_split_job: job, pdf_split_output: output, data:, byte_size: data.bytesize, expires_at: 1.hour.from_now)
   modes = %w[string stream output_old output_new]
   modes = %w[analyze] if ENV["PROBE_PDF"]
+  if generate_pages.positive?
+    modes = %w[analyze split]
+    parts = 5
+    per = (job.page_count / parts.to_f).ceil
+    (1..parts).each do |n|
+      from = (n - 1) * per + 1
+      to = [ n * per, job.page_count ].min
+      job.outputs.create!(display_name: "part#{n}", page_from: from, page_to: to, position: n) if from <= to
+    end
+  end
   if ENV["PROBE_R2"] == "1"
     key = "probe/#{SecureRandom.hex(6)}.pdf"
     PdfStorage.r2.put_string(key, data)
     blob.update_columns(r2_key: key, checksum: Digest::SHA256.hexdigest(data))
     modes << "r2"
   end
+  data_size = data.bytesize
   data = nil
   GC.start
 
-  puts ENV["PROBE_PDF"] ? "#{ENV['PROBE_PDF']}（#{job.page_count}ページ）を解析する（RSS: MB）" : "#{size_mb}MB の PDF を読む（RSS: MB）"
+  puts generate_pages.positive? ? "生成したPDF（#{job.page_count}ページ、#{(data_size / 1024.0 / 1024).round(1)}MB）を解析・分割する（RSS: MB）" : ENV["PROBE_PDF"] ? "#{ENV['PROBE_PDF']}（#{job.page_count}ページ）を解析する（RSS: MB）" : "#{size_mb}MB の PDF を読む（RSS: MB）"
   puts "mode\tbefore\tpeak"
   if ENV["PROBE_UP"] == "1"
   begin
@@ -108,7 +153,19 @@ begin
       target = m.start_with?("output") ? out_blob : blob
       out, err, st = Open3.capture3("bin/rails", "runner", __FILE__, "child", m, target.id.to_s)
       puts st.success? ? out.lines.last : "#{m}\tFAILED #{err.lines.last}"
+      results << (st.success? ? out.lines.last.to_s.strip.split("\t") : [ m, nil, nil ])
     end
+  end
+
+  if (max = ENV["PROBE_MAX_MB"]&.to_f) && results.any?
+    over = results.select { |_, _, peak| peak.nil? || peak.to_f > max }
+    if (summary = ENV["GITHUB_STEP_SUMMARY"])
+      File.open(summary, "a") do |f|
+        f.puts "### PDF メモリ計測（#{job.page_count}ページ、#{(data_size / 1024.0 / 1024).round(1)}MB、上限 #{max.round}MB）", "", "| 処理 | 開始時 RSS (MB) | ピーク RSS (MB) | 判定 |", "|---|---|---|---|"
+        results.each { |m, base, peak| f.puts "| #{m} | #{base} | #{peak || '失敗'} | #{over.any? { |o| o.first == m } ? 'NG' : 'OK'} |" }
+      end
+    end
+    abort "ピークが #{max.round}MB を超えたか、計測に失敗しました: #{over.map(&:first).join(', ')}" if over.any?
   end
 
 ensure

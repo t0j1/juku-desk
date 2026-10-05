@@ -1,0 +1,57 @@
+name: PDF memory probe
+
+# PDF の解析・分割のピークメモリを実測する（Render は 512MB）。通常の CI には含めず、手動で実行する。
+#   gh workflow run pdf-memory-probe.yml [-f pages=255 -f page_kb=100 -f max_mb=400]
+# 結果は実行のサマリーに出る。ピークが max_mb を超えたら失敗する。
+on:
+  push:
+    branches: [ chore/pdf-memory-probe-ci ] # TEMP: 動作確認用。確認後に外す
+  workflow_dispatch:
+    inputs:
+      pages:
+        description: "サンプルPDFのページ数"
+        default: "255"
+      page_kb:
+        description: "1ページあたりのテキスト量（KB）"
+        default: "100"
+      max_mb:
+        description: "ピーク RSS の上限（MB）"
+        default: "400"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips qpdf poppler-utils
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Measure peak RSS
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
+          PROBE_GENERATE: ${{ inputs.pages || '255' }}
+          PROBE_PAGE_KB: ${{ inputs.page_kb || '100' }}
+          PROBE_MAX_MB: ${{ inputs.max_mb || '400' }}
+        run: |
+          bin/rails db:prepare
+          bin/rails runner script/pdf_memory_probe.rb
