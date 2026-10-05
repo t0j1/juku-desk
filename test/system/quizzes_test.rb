@@ -209,6 +209,28 @@ class QuizzesTest < ApplicationSystemTestCase
     assert_selector "#quiz-sheet-answer"
   end
 
+  test "print preview toolbar uses the v2 parts and is not printed" do
+    visit new_quiz_path(wordbook_id: wordbooks(:leap).id)
+    pick_count 20
+    click_on "テストをつくる"
+    assert_selector "#quiz-sheet-question"
+    shot "preview_toolbar_#{ENV.fetch('SHOT_TAG', 'after')}"
+
+    within("#print-toolbar") do
+      assert_selector "select.input#print_kind"
+      assert_selector "button.btn-primary", text: "印刷"
+      assert_selector "button.btn-secondary", text: "問題を入れ替える"
+      assert_selector "a.btn-secondary", text: "範囲を変更"
+    end
+
+    # 印刷したとき（print メディア）は操作部分が出ず、用紙だけが残る
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "print")
+    assert_no_selector "#print-toolbar"
+    assert_selector "#quiz-sheet-question"
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "")
+  end
+
   test "preview with 20 words" do
     visit new_quiz_path(wordbook_id: wordbooks(:leap).id)
     pick_count 20
