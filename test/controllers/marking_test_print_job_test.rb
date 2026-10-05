@@ -73,8 +73,21 @@ class MarkingTestPrintJobTest < ActionDispatch::IntegrationTest
     assert_match "オフライン", flash[:alert]
   end
 
-  test "a quiz that cannot be rendered gets no job and an error" do
-    exam = make_exam(question_text: "x を求めなさい。$x^2 = 4$")
+  test "math is typeset in the PDF, never printed as LaTeX source (question and answer sheets)" do
+    exam = make_exam(question_text: 'cos を求めなさい。$\\cos^2 x$ と $\\frac{\\sqrt{3}}{2}$', answer_text: '$-\\sqrt{3}$、$\\frac{7}{6}\\pi$、$x^2$', explanation: '$\\frac{1}{2}$')
+    create_job(exam)
+    post print_job_marking_test_path(exam), params: { kind: "answer", print_job: { print_station_id: @station.id } }
+    PrintJob.order(:id).last(2).each do |job|
+      text = PDF::Reader.new(StringIO.new(job.pdf_bytes)).pages.map(&:text).join
+      assert_no_match(/\\|\$|\^|frac|sqrt|\{/, text, job.title)
+    end
+    sheet = PDF::Reader.new(StringIO.new(PrintJob.order(:id).last.pdf_bytes)).pages.map(&:text).join
+    assert_includes sheet, "√3"
+    assert_includes sheet, "7/6π"
+  end
+
+  test "a quiz with a formula that cannot be typeset gets no job and an error" do
+    exam = make_exam(question_text: 'x を求めなさい。$\\begin{cases} x \\end{cases}$')
     assert_no_difference -> { PrintJob.count } do
       create_job(exam)
     end
