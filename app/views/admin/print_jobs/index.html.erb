@@ -1,0 +1,43 @@
+<% content_for :title, "印刷ジョブ" %>
+<div class="flex items-center mb-6">
+  <h1 class="page-title">印刷ジョブ</h1>
+  <%= link_to "印刷ジョブを作る", new_admin_print_job_path, class: "btn-primary ml-auto" %>
+</div>
+<% if notice %><p id="notice" class="alert-ok mb-4"><%= notice %></p><% end %>
+<% if alert %><p id="alert" class="alert-err mb-4" role="alert"><%= alert %></p><% end %>
+<% if @problems.positive? %>
+  <p id="problem-banner" class="alert-err mb-4" role="alert">この 24 時間に、印刷できなかったジョブが <%= @problems %> 件あります（失敗または期限切れ）。
+    <% if @only_problems %><%= link_to "すべて表示", admin_print_jobs_path, class: "link ml-2" %><% else %><%= link_to "失敗だけ表示", admin_print_jobs_path(problems: 1), class: "link ml-2" %><% end %></p>
+<% end %>
+<% if @waiting.positive? && @offline_stations.any? %>
+  <p id="offline-banner" class="alert-warn mb-4">
+    オフラインのステーションがあります（<%= @offline_stations.map(&:name).join("、") %>）。待機中のジョブ <%= @waiting %> 件は、PC がつながるまで刷られません。
+  </p>
+<% end %>
+<div class="overflow-x-auto">
+<table id="print_jobs" class="table-console [&_td]:px-2 [&_th]:px-2">
+  <thead><tr><th class="whitespace-nowrap">PDF / ステーション</th><th class="whitespace-nowrap">予定・締め切り</th><th class="whitespace-nowrap">状態</th><th></th></tr></thead>
+  <tbody>
+    <% @jobs.each do |j| %>
+      <tr id="print_job_<%= j.id %>">
+        <td class="min-w-40">
+          <span class="font-bold"><%= j.title %></span>
+          <p class="caption"><%= j.print_station.name %>　<%= j.copies %>部<%= j.staple.present? && j.staple != "なし" ? "（ホチキス#{j.staple}）" : "" %></p>
+        </td>
+        <td class="whitespace-nowrap"><%= l j.scheduled_at.in_time_zone, format: :short %><p class="caption">〜 <%= j.expires_at.in_time_zone.to_date == j.scheduled_at.in_time_zone.to_date ? l(j.expires_at.in_time_zone, format: "%H:%M") : l(j.expires_at.in_time_zone, format: :short) %></p></td>
+        <td>
+          <%= print_job_pill(j) %>
+          <% if j.result_message.present? %><p class="text-base text-text-sub mt-1 w-28"><%= j.result_message %></p><% end %>
+        </td>
+        <td>
+          <div class="flex flex-nowrap items-center gap-1.5">
+            <% if j.pending? %><%= button_to "今すぐ印刷", print_now_admin_print_job_path(j), class: "btn-secondary btn-sm whitespace-nowrap" %><% end %>
+            <% unless j.finished? %><%= button_to "取り消す", cancel_admin_print_job_path(j), class: "btn-danger btn-sm whitespace-nowrap", data: { turbo_confirm: "このジョブを取り消します。よろしいですか？" } %><% end %>
+          </div>
+        </td>
+      </tr>
+    <% end %>
+    <% if @jobs.empty? %><tr><td colspan="4" class="text-center text-text-sub"><%= @only_problems ? "失敗・期限切れのジョブはありません" : "印刷ジョブはありません" %></td></tr><% end %>
+  </tbody>
+</table>
+</div>

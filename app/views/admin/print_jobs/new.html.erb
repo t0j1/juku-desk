@@ -1,0 +1,24 @@
+<% content_for :title, "印刷ジョブを作る" %>
+<h1 class="page-title mb-6">印刷ジョブを作る</h1>
+<% if @stations.empty? %>
+  <p class="card max-w-xl">先に<%= link_to "印刷ステーションを登録", new_admin_print_station_path, class: "link" %>してください。</p>
+<% else %>
+  <%= form_with model: [ :admin, @job ], multipart: true, class: "card max-w-xl space-y-4" do |f| %>
+    <% if @error %><div id="error_explanation" class="alert-err" role="alert"><%= @error %></div><% end %>
+    <div><%= f.label :output_id, "印刷する PDF（PDF 分割の出力から）", class: "label" %>
+      <%= select_tag "print_job[output_id]", options_for_select(@outputs.map { |o| [ "#{o.display_name}（#{o.pdf_split_job.original_filename} #{o.pages_label}）", o.id ] }), include_blank: "選んでください", id: "print_job_output_id", class: "input mt-1 !w-auto" %></div>
+    <div><%= f.label :pdf, "または PDF ファイルをアップロード（30MBまで）", class: "label" %><%= file_field_tag "print_job[pdf]", id: "print_job_pdf", accept: "application/pdf", class: "block mt-1" %>
+      <p class="caption mt-1">小テストの印刷プレビューで「PDF として保存」したファイルも、ここから印刷できます。</p></div>
+    <div><%= f.label :print_station_id, "ステーション", class: "label" %>
+      <%= f.select :print_station_id, @stations.map { |s| [ s.name, s.id ] }, {}, class: "input mt-1 !w-auto" %></div>
+    <div><%= f.label :scheduled_at, "印刷する時刻", class: "label" %><%= f.datetime_field :scheduled_at, value: (@job.scheduled_at || Time.current).in_time_zone.strftime("%Y-%m-%dT%H:%M"), class: "input mt-1 !w-auto" %></div>
+    <div><%= f.label :expires_at, "締め切り（空なら 2 時間後）", class: "label" %><%= f.datetime_field :expires_at, value: @job.expires_at&.in_time_zone&.strftime("%Y-%m-%dT%H:%M"), class: "input mt-1 !w-auto" %>
+      <p class="caption mt-1">締め切りを過ぎたジョブは印刷されません（PC が遅れて起きたときに、古いものを刷らないため）。</p></div>
+    <div><%= f.label :copies, "部数", class: "label" %><%= f.number_field :copies, min: 1, max: 99, value: @job.copies || 1, class: "input mt-1 !w-24" %></div>
+    <div><label class="flex items-center gap-2 min-h-11"><%= f.check_box :collate, { checked: @job.collate != false, class: "size-5 accent-primary" } %>1 部ずつまとめる（部単位）</label></div>
+    <div><%= f.label :staple, "ホチキス（表示用）", class: "label" %><%= f.select :staple, PrintJobsHelper::STAPLES, { include_blank: false }, class: "input mt-1 !w-auto" %></div>
+    <div><%= f.label :driver_preset, "ドライバーの印刷設定の名前", class: "label" %><%= f.text_field :driver_preset, maxlength: 100, class: "input mt-1" %>
+      <p class="caption mt-1">教室PCのプリンターに作っておいた設定（例：A4両面・左上ホチキス）。ホチキスは、この設定で指定します。</p></div>
+    <%= f.submit "作る", class: "btn-primary cursor-pointer" %>
+  <% end %>
+<% end %>

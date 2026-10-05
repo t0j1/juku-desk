@@ -52,6 +52,10 @@ Rails.application.routes.draw do
       post :revoke, on: :member
       post :reissue, on: :member
     end
+    resources :print_jobs, only: %i[ index new create ] do
+      post :cancel, on: :member
+      post :print_now, on: :member
+    end
   end
 
   resources :students do
