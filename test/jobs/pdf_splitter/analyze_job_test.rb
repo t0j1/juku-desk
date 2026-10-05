@@ -38,7 +38,8 @@ class PdfSplitter::AnalyzeMemoryTest < ActiveJob::TestCase
     old = PdfSplitter::TextExtractor::CHUNK
     PdfSplitter::TextExtractor.send(:remove_const, :CHUNK)
     PdfSplitter::TextExtractor.const_set(:CHUNK, 4)
-    PdfSplitter::AnalyzeJob.perform_now(job.id)
+    progress = JobProgress.create!(user: job.user, kind: "pdf_analyze", title: "解析", subject: job, total: job.page_count)
+    PdfSplitter::AnalyzeJob.perform_now(progress.id)
     job.reload
     assert job.analyzed?
     assert_equal 20, job.page_analyses.count
