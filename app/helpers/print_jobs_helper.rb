@@ -1,6 +1,8 @@
 module PrintJobsHelper
   STAPLES = [ "なし", "左上", "右上", "2か所" ].freeze
 
+  DUPLEXES = [ [ "指定なし", "" ], [ "長辺とじ", "long" ], [ "短辺とじ", "short" ] ].freeze
+
   def print_job_pill(job)
     case job.status
     when "pending" then status_pill("待機中", :busy)

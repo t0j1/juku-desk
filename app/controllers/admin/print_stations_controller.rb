@@ -42,7 +42,7 @@ module Admin
 
     # サンプルを刷るジョブを作る。刷れたら、トレイ・両面・ホチキスの結果を test_result で入力する
     def test_print
-      attrs = params.fetch(:test_print, {}).permit(:driver_preset, :staple)
+      attrs = params.fetch(:test_print, {}).permit(:driver_preset, :staple, :duplex, :sheets)
       job = @station.start_test_print!(created_by: current_user, **attrs.to_h.symbolize_keys)
       AuditLog.record!(:print_station_test_print, @station, metadata: { name: @station.name, job_id: job.id })
       redirect_to admin_print_stations_path, notice: "「#{@station.name}」にテスト印刷のジョブを作りました。刷れたら、結果を入力してください。", status: :see_other

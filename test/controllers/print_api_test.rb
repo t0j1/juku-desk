@@ -61,6 +61,12 @@ class PrintApiTest < ActionDispatch::IntegrationTest
     assert_equal [ nil, nil ], @station.reload.then { [ it.toner_status, it.paper_status ] }
   end
 
+  test "job json carries duplex (nil when unset)" do
+    assert_nil make_job.as_agent_json(base_url: "http://x")[:duplex]
+    assert_equal "long", make_job(duplex: "long").as_agent_json(base_url: "http://x")[:duplex]
+    assert_not make_job(duplex: "").tap { |j| j.reload }.duplex
+  end
+
   test "next leases a due job with the agent's fields and the file url downloads the pdf" do
     job = make_job(scheduled_at: 1.minute.ago)
     get "/api/v1/print/jobs/next", headers: @auth

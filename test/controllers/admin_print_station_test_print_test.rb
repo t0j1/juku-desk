@@ -17,7 +17,7 @@ class AdminPrintStationTestPrintTest < ActionDispatch::IntegrationTest
     assert job.report!("spooled")
   end
 
-  test "creates a two-page sample job for the station and remembers it" do
+  test "creates a sample job (default 2 sheets = 4 pages) for the station and remembers it" do
     assert_difference -> { PrintJob.count }, 1 do
       assert_difference -> { AuditLog.where(action: "print_station_test_print").count }, 1 do
         start
@@ -30,8 +30,33 @@ class AdminPrintStationTestPrintTest < ActionDispatch::IntegrationTest
     assert_equal "左上", job.staple
     assert job.pending?
     reader = PDF::Reader.new(StringIO.new(job.pdf_bytes))
-    assert_equal 2, reader.page_count
+    assert_equal 4, reader.page_count
     assert_includes reader.pages.first.text, "教室A"
+    assert_nil job.duplex
+  end
+
+  test "sheets and binding edge are applied to the job and the sample" do
+    start(sheets: "3", duplex: "short")
+    job = @station.reload.test_print_job
+    assert_equal "short", job.duplex
+    assert_equal 6, PDF::Reader.new(StringIO.new(job.pdf_bytes)).page_count
+  end
+
+  test "sheets outside 1..20 are refused without creating a job" do
+    [ "0", "21", "abc" ].each do |bad|
+      assert_no_difference -> { PrintJob.count } do
+        start(sheets: bad)
+      end
+      assert_redirected_to admin_print_stations_path
+      assert_match "枚数", flash[:alert]
+    end
+  end
+
+  test "an unknown binding edge is refused" do
+    assert_no_difference -> { PrintJob.count } do
+      start(duplex: "diagonal")
+    end
+    assert_redirected_to admin_print_stations_path
   end
 
   test "an offline or revoked station gets no sample job" do

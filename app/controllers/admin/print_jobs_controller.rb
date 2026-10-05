@@ -81,7 +81,7 @@ module Admin
       end
 
       def job_params
-        params.fetch(:print_job, {}).permit(:scheduled_at, :expires_at, :copies, :collate, :staple, :driver_preset)
+        params.fetch(:print_job, {}).permit(:scheduled_at, :expires_at, :copies, :collate, :staple, :duplex, :driver_preset)
       end
   end
 end

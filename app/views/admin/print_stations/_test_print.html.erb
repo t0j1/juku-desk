@@ -24,6 +24,8 @@
   <% end %>
   <%= form_with url: test_print_admin_print_station_path(station), scope: :test_print, class: "flex flex-wrap items-center gap-2" do |f| %>
     <%= f.text_field :driver_preset, maxlength: 100, placeholder: "ドライバーの設定名", class: "input !w-40", "aria-label": "ドライバーの設定名" %>
+    <%= f.number_field :sheets, min: 1, max: PrintStation::TEST_SHEETS_MAX, value: PrintStation::TEST_SHEETS_DEFAULT, class: "input !w-20", "aria-label": "枚数（用紙の枚数）" %><span class="caption">枚</span>
+    <%= f.select :duplex, PrintJobsHelper::DUPLEXES, {}, class: "input !w-auto", "aria-label": "とじ方" %>
     <%= f.select :staple, PrintJobsHelper::STAPLES, {}, class: "input !w-auto", "aria-label": "ホチキス" %>
     <%= f.submit "テスト印刷", class: "btn-secondary btn-sm cursor-pointer" %>
   <% end %>

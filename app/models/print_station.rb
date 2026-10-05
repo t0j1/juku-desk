@@ -8,6 +8,8 @@ class PrintStation < ApplicationRecord
   validates :name, presence: true, length: { maximum: 60 }, uniqueness: true
 
   TEST_ANSWERS = %w[ yes no ].freeze
+  TEST_SHEETS_DEFAULT = 2 # ホチキスの確認には 2 枚以上が要る
+  TEST_SHEETS_MAX = 20
   TEST_FIELDS = %w[ tray duplex staple ].freeze # テスト印刷で確かめる 3 点（トレイ／両面／ホチキス）
 
   scope :active, -> { where(revoked_at: nil) }
@@ -99,12 +101,14 @@ class PrintStation < ApplicationRecord
   end
 
   # サンプル（表裏 2 ページ）を刷るジョブを作り、前回の結果は消す。失効・オフラインのときは作らない（ArgumentError）
-  def start_test_print!(created_by: nil, driver_preset: nil, staple: nil)
+  def start_test_print!(created_by: nil, driver_preset: nil, staple: nil, duplex: nil, sheets: TEST_SHEETS_DEFAULT)
+    sheets = Integer(sheets.presence || TEST_SHEETS_DEFAULT, exception: false)
+    raise ArgumentError, "枚数は 1〜#{TEST_SHEETS_MAX} で入力してください" unless sheets&.between?(1, TEST_SHEETS_MAX)
     raise ArgumentError, "失効したステーションでは印刷できません" if revoked?
     raise ArgumentError, "「#{name}」はオフラインです。起動してから、もう一度お試しください。" unless online?
 
-    job = PrintTestSheet.with_file(station_name: name) do |path|
-      PrintJob.create_with_pdf!(path: path, station: self, title: TEST_PRINT_TITLE, created_by: created_by, driver_preset: driver_preset.presence, staple: staple.presence)
+    job = PrintTestSheet.with_file(station_name: name, sheets: sheets) do |path|
+      PrintJob.create_with_pdf!(path: path, station: self, title: TEST_PRINT_TITLE, created_by: created_by, driver_preset: driver_preset.presence, staple: staple.presence, duplex: duplex.presence)
     end
     update!(test_print_job_id: job.id, test_print_result: {})
     job
