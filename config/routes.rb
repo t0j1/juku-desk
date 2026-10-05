@@ -48,7 +48,7 @@ Rails.application.routes.draw do
       post :confirm
     end
     resources :announcements, except: :show
-    resources :print_stations, only: %i[ index new create ] do
+    resources :print_stations, only: %i[ index new create destroy ] do
       post :revoke, on: :member
       post :reissue, on: :member
       post :test_print, on: :member
