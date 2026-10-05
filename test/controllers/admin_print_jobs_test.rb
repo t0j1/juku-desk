@@ -25,6 +25,12 @@ class AdminPrintJobsTest < ActionDispatch::IntegrationTest
     PrintJob.create_with_pdf!(station: @station, title: "x", data: PDF_BYTES, **attrs)
   end
 
+  test "the index explains how to print a quiz (save the preview as PDF, upload it, create the job)" do
+    get admin_print_jobs_path
+    assert_response :success
+    assert_select "#print-help", text: /印刷プレビューで「PDF として保存」.*アップロード.*印刷ジョブを作成・実行.*自動生成.*当面/m
+  end
+
   test "only system_admin can use it" do
     [ users(:staff), users(:viewer) ].each do |u|
       sign_in_as u
