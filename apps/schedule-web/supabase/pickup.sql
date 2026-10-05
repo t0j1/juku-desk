@@ -167,6 +167,12 @@ create table if not exists public.pickup_notifications (
 );
 create index if not exists pickup_notifications_at_idx on public.pickup_notifications (at desc);
 
+-- LINE から届いたイベントの処理済み記録（line-webhook が同じイベントを2回受けても、1回だけ処理するため）
+create table if not exists public.pickup_line_events (
+  event_id text primary key,               -- LINE の webhookEventId
+  at       timestamptz not null default now()
+);
+
 ------------------------------------------------------------
 -- 2. 権限（GRANT）と RLS
 --    anon には一切与えない。管理者（authenticated ＋ is_admin()）だけが読み書きできる。
@@ -177,7 +183,7 @@ declare
   t text;
 begin
   foreach t in array array['pickup_settings', 'students', 'student_link_codes', 'student_contacts', 'pickup_availability',
-                           'pickup_date_overrides', 'pickup_groups', 'pickup_reservations', 'pickup_proposals', 'pickup_notifications'] loop
+                           'pickup_date_overrides', 'pickup_groups', 'pickup_reservations', 'pickup_proposals', 'pickup_notifications', 'pickup_line_events'] loop
     execute format('revoke all on public.%I from anon, authenticated', t);
     execute format('grant select, insert, update, delete on public.%I to authenticated', t);
     execute format('alter table public.%I enable row level security', t);
@@ -781,6 +787,24 @@ begin
   select id into pid from public.pickup_proposals where token_hash = public.pickup_hash(p_token);
   if pid is null then perform public.pickup_fail('このリンクは無効です。'); end if;
   return public.pickup_apply_response(pid, p_accept);
+end;
+$$;
+
+-- LINE のイベントを処理する権利を取る（line-webhook 用）。初めて受けたら true、すでに受けていたら false。
+-- 古い記録（7日より前）は、ついでに消す
+create or replace function public.pickup_claim_line_event(p_event_id text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n int;
+begin
+  delete from public.pickup_line_events where at < now() - interval '7 days';
+  insert into public.pickup_line_events (event_id) values (p_event_id) on conflict do nothing;
+  get diagnostics n = row_count;
+  return n = 1;
 end;
 $$;
 

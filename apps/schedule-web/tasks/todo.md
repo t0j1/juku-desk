@@ -9,6 +9,6 @@
 
 ## 残り
 - [ ] 生徒への通知（送迎の承認・却下・相乗りの打診、振替の承認・却下）：開発はメール（Resend）、本番は LINE
-- [ ] LINE 対応：LIFF での本人確認、Messaging API のプッシュ通知、LINE のボタンでの回答（`line-webhook`）
+- [ ] LINE 対応：LIFF での本人確認、Messaging API のプッシュ通知、LINE のボタンでの回答（`line-webhook`：相乗り打診の承諾・辞退は実装済み。振替は生徒側の承諾・辞退の仕組みが未定）
 - [ ] 送迎・欠席・振替のデータの暗号化バックアップ（読み取り専用のバックアップ用ユーザー＋age）
 - [ ] 本番への反映：SQL（`pickup.sql` → `absence.sql`）→ Edge Function（`APP_ENV=prod`・`ALLOWED_ORIGINS`）→ 画面（`main` へのマージ）
