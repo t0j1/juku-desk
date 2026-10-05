@@ -95,4 +95,31 @@ class PrintJobTest < ActiveSupport::TestCase
     assert_not b.cancel!
     assert job.reload.acknowledged?
   end
+
+  test "last_heartbeat_at and heartbeat_lost? follow the station's last seen time" do
+    job = PrintJob.create_with_pdf!(station: @station, title: "x", data: PDF_BYTES, scheduled_at: 1.minute.ago)
+    assert_nil job.last_heartbeat_at
+    assert_not job.heartbeat_lost?
+
+    @station.seen!("0.1.0")
+    assert_in_delta Time.current.to_i, job.last_heartbeat_at.to_i, 5
+    assert_not job.heartbeat_lost?
+
+    @station.update_columns(last_seen_at: 20.minutes.ago)
+    assert job.heartbeat_lost?
+    assert_equal @station.reload.last_seen_at, job.last_heartbeat_at
+  end
+
+  test "on_lost_stations returns only unfinished jobs whose station heartbeat has stopped" do
+    silent, = PrintStation.register!(name: "教室B")
+    silent.update_columns(last_seen_at: 20.minutes.ago)
+    live_job = PrintJob.create_with_pdf!(station: @station, title: "live", data: PDF_BYTES, scheduled_at: 1.minute.ago)
+    silent_job = PrintJob.create_with_pdf!(station: silent, title: "silent", data: PDF_BYTES, scheduled_at: 1.minute.ago)
+    PrintJob.create_with_pdf!(station: silent, title: "done", data: PDF_BYTES, scheduled_at: 1.minute.ago)
+           .update_columns(status: PrintJob.statuses[:acknowledged], finished_at: Time.current)
+
+    ids = PrintJob.on_lost_stations.pluck(:id)
+    assert_equal [ silent_job.id ], ids
+    assert_not_includes ids, live_job.id
+  end
 end

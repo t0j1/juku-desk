@@ -56,4 +56,16 @@ class PrintStationConcurrentRegistrationTest < ActiveSupport::TestCase
     assert_equal 4, results.count(:invalid)
     assert_equal 1, PrintStation.where(name: "同時登録").count
   end
+
+  test "heartbeat_lost scope returns active stations that have gone silent, not unseen or revoked ones" do
+    silent, = PrintStation.register!(name: "静かな教室")
+    silent.update_columns(last_seen_at: 20.minutes.ago)
+    fresh, = PrintStation.register!(name: "元気な教室")
+    fresh.seen!("0.1.0")
+    revoked, = PrintStation.register!(name: "失効した教室")
+    revoked.update_columns(last_seen_at: 20.minutes.ago)
+    revoked.revoke!
+
+    assert_equal [ silent.id ], PrintStation.heartbeat_lost.pluck(:id)
+  end
 end

@@ -18,6 +18,12 @@
     オフラインのステーションがあります（<%= @offline_stations.map(&:name).join("、") %>）。待機中のジョブ <%= @waiting %> 件は、PC がつながるまで刷られません。
   </p>
 <% end %>
+<nav id="print_job_filters" class="flex flex-wrap items-center gap-2 mb-4" aria-label="印刷ジョブの絞り込み">
+  <%= link_to "すべて", admin_print_jobs_path, class: "btn-sm #{@filter.nil? && !@only_problems ? 'btn-primary' : 'btn-secondary'}" %>
+  <% @filters.each do |key, label| %>
+    <%= link_to "#{label}（#{@filter_counts[key.to_sym]}）", admin_print_jobs_path(filter: key), class: "btn-sm #{@filter == key ? 'btn-primary' : 'btn-secondary'}" %>
+  <% end %>
+</nav>
 <div class="overflow-x-auto">
 <table id="print_jobs" class="table-console [&_td]:px-2 [&_th]:px-2">
   <thead><tr><th class="whitespace-nowrap">PDF / ステーション</th><th class="whitespace-nowrap">予定・締め切り</th><th class="whitespace-nowrap">状態</th><th></th></tr></thead>
@@ -33,6 +39,7 @@
           <%= print_job_pill(j) %>
           <% if (error = j.last_error) %><p id="print_job_error_<%= j.id %>" class="mt-1 w-40 text-base font-bold text-err-fg"><%= error %></p><% end %>
           <% if j.overdue_pending? %><p id="print_job_overdue_<%= j.id %>" class="mt-1 w-40 text-base font-bold text-warn-fg">予定時刻を過ぎても印刷されていません</p><% end %>
+          <% if j.heartbeat_lost? %><p id="print_job_heartbeat_lost_<%= j.id %>" class="mt-1 w-40 text-base font-bold text-err-fg">ステーションのハートビートが途絶えています<% if j.last_heartbeat_at %>（最後の通信 <%= l j.last_heartbeat_at.in_time_zone, format: :short %>）<% end %></p><% end %>
         </td>
         <td>
           <div class="flex flex-nowrap items-center gap-1.5">
@@ -42,7 +49,7 @@
         </td>
       </tr>
     <% end %>
-    <% if @jobs.empty? %><tr><td colspan="4" class="text-center text-text-sub"><%= @only_problems ? "失敗・期限切れのジョブはありません" : "印刷ジョブはありません" %></td></tr><% end %>
+    <% if @jobs.empty? %><tr><td colspan="4" class="text-center text-text-sub"><%= @filter ? "「#{@filters[@filter]}」に該当するジョブはありません" : (@only_problems ? "失敗・期限切れのジョブはありません" : "印刷ジョブはありません") %></td></tr><% end %>
   </tbody>
 </table>
 </div>

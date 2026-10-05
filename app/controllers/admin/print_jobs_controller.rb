@@ -3,14 +3,29 @@ module Admin
   class PrintJobsController < BaseController
     before_action :set_job, only: %i[ cancel print_now ]
 
+    # 一覧の絞り込み。problems=1（失敗＋期限切れ）は既存の赤バナーからのリンク用に残す
+    FILTERS = {
+      "failed" => "失敗ジョブ",
+      "expired" => "期限切れ",
+      "overdue" => "未印刷（予定超過）",
+      "heartbeat_lost" => "ハートビート途絶"
+    }.freeze
 
     def index
       @only_problems = params[:problems].present?
-      @jobs = PrintJob.includes(:print_station).order(id: :desc).limit(100)
-      @jobs = @jobs.where(status: %i[ failed expired ]) if @only_problems
+      @filter = params[:filter].presence
+      @filter = nil unless FILTERS.key?(@filter)
+      @filters = FILTERS
+      @jobs = filtered_jobs.limit(100)
       @problems = PrintJob.where(status: %i[ failed expired ], finished_at: 1.day.ago..).count
       @offline_stations = PrintStation.active.reject(&:online?)
       @waiting = PrintJob.overdue_pending.count
+      @filter_counts = {
+        failed: PrintJob.failed.count,
+        expired: PrintJob.expired.count,
+        overdue: @waiting,
+        heartbeat_lost: PrintJob.on_lost_stations.count
+      }
     end
 
     def new
@@ -67,6 +82,18 @@ module Admin
     private
       def set_job
         @job = PrintJob.find(params[:id])
+      end
+
+      # 絞り込みの適用。filter が無ければ problems=1 のときだけ失敗・期限切れに絞る（既存の挙動）
+      def filtered_jobs
+        base = PrintJob.includes(:print_station).order(id: :desc)
+        case @filter
+        when "failed" then base.failed
+        when "expired" then base.expired
+        when "overdue" then base.overdue_pending
+        when "heartbeat_lost" then base.on_lost_stations
+        else @only_problems ? base.where(status: %i[ failed expired ]) : base
+        end
       end
 
       def load_choices
