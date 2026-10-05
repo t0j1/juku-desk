@@ -1,6 +1,7 @@
 <% content_for :title, "ステーションを登録" %>
 <h1 class="page-title mb-6">ステーションを登録</h1>
-<%= form_with model: [ :admin, @station ], class: "space-y-4 max-w-xl" do |f| %>
+<%# 登録直後にトークンの画面を 200 で直接返す。Turbo は 200 の POST 応答を捨てて何も出さないので、Turbo を切る %>
+<%= form_with model: [ :admin, @station ], class: "space-y-4 max-w-xl", data: { turbo: false } do |f| %>
   <% if @station.errors.any? %>
     <div id="error_explanation" class="alert-err" role="alert"><ul><% @station.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul></div>
   <% end %>

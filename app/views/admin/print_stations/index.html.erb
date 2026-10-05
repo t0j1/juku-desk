@@ -17,10 +17,12 @@
         <td><%= s.agent_version.presence || "—" %></td>
         <td class="whitespace-normal min-w-72"><%= render "test_print", station: s %></td>
         <td class="flex flex-nowrap items-center gap-2">
-          <%= button_to "再発行", reissue_admin_print_station_path(s), class: "btn-secondary btn-sm", data: { turbo_confirm: "新しいトークンを発行します。古いトークンはすぐ使えなくなります。よろしいですか？" } %>
+          <%# トークンの画面は 200 で直接返す（URL に残さない）。Turbo は 200 の POST 応答を捨てるので、Turbo を切って通常の送信にする。確認ダイアログは onsubmit で出す %>
+          <%= button_to "再発行", reissue_admin_print_station_path(s), class: "btn-secondary btn-sm", form: { data: { turbo: false }, onsubmit: "return confirm('新しいトークンを発行します。古いトークンはすぐ使えなくなります。よろしいですか？')" } %>
           <% unless s.revoked? %>
             <%= button_to "失効", revoke_admin_print_station_path(s), class: "btn-danger btn-sm", data: { turbo_confirm: "トークンを失効します。このステーションは印刷できなくなります。よろしいですか？" } %>
           <% end %>
+          <%= button_to "削除", admin_print_station_path(s), method: :delete, class: "btn-danger btn-sm", data: { turbo_confirm: "「#{s.name}」を削除します。元に戻せません。よろしいですか？" } %>
         </td>
       </tr>
     <% end %>

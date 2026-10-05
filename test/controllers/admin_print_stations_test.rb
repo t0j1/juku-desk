@@ -58,4 +58,52 @@ class AdminPrintStationsTest < ActionDispatch::IntegrationTest
     assert_select "#print_station_#{on.id}", /オンライン/
     assert_select "#print_station_#{off.id}", /オフライン/
   end
+
+  # Turbo は 200 で返った POST の応答を捨てる（何も表示されない）。トークンの画面を出す2つの送信は Turbo を切る
+  test "token-showing forms opt out of turbo so the one-time token page is rendered" do
+    get new_admin_print_station_path
+    assert_select "form[data-turbo=false][action=?]", admin_print_stations_path
+    station, = PrintStation.register!(name: "教室A")
+    get admin_print_stations_path
+    assert_select "form[data-turbo=false][action=?]", reissue_admin_print_station_path(station)
+  end
+
+  test "an unused station can be deleted with a confirmation, and is audited" do
+    station, = PrintStation.register!(name: "まちがい")
+    get admin_print_stations_path
+    assert_select "button[data-turbo-confirm*=?]", "元に戻せません"
+    assert_difference -> { PrintStation.count } => -1, -> { AuditLog.where(action: "print_station_destroy").count } => 1 do
+      delete admin_print_station_path(station)
+    end
+    assert_redirected_to admin_print_stations_path
+    assert_nil PrintStation.authenticate("x")
+  end
+
+  test "a station with only a test print job can be deleted, jobs included" do
+    station, = PrintStation.register!(name: "テストだけ")
+    job = PrintJob.create_with_pdf!(station: station, title: "テスト印刷", data: "%PDF-1.4\n%%EOF")
+    station.update!(test_print_job_id: job.id)
+    assert_difference -> { PrintJob.count } => -1, -> { PrintStation.count } => -1 do
+      delete admin_print_station_path(station)
+    end
+  end
+
+  test "a station that has real jobs is not deleted" do
+    station, = PrintStation.register!(name: "実績あり")
+    PrintJob.create_with_pdf!(station: station, title: "宿題", data: "%PDF-1.4\n%%EOF")
+    assert_no_difference [ -> { PrintStation.count }, -> { PrintJob.count } ] do
+      delete admin_print_station_path(station)
+    end
+    assert_redirected_to admin_print_stations_path
+    follow_redirect!
+    assert_select "#alert", /削除できません/
+  end
+
+  test "only system_admin can delete" do
+    station, = PrintStation.register!(name: "教室A")
+    sign_in_as users(:staff)
+    assert_no_difference -> { PrintStation.count } do
+      delete admin_print_station_path(station)
+    end
+  end
 end
