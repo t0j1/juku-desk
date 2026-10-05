@@ -10,7 +10,7 @@ module Admin
       @jobs = @jobs.where(status: %i[ failed expired ]) if @only_problems
       @problems = PrintJob.where(status: %i[ failed expired ], finished_at: 1.day.ago..).count
       @offline_stations = PrintStation.active.reject(&:online?)
-      @waiting = PrintJob.pending.where(scheduled_at: ..Time.current).count
+      @waiting = PrintJob.overdue_pending.count
     end
 
     def new
