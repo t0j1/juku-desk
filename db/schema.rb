@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -228,10 +228,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_180000) do
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "print_schedule_id"
+    t.date "scheduled_for"
     t.index ["created_by_id"], name: "index_print_jobs_on_created_by_id"
+    t.index ["print_schedule_id", "scheduled_for"], name: "index_print_jobs_on_schedule_and_day", unique: true, where: "(print_schedule_id IS NOT NULL)"
+    t.index ["print_schedule_id"], name: "index_print_jobs_on_print_schedule_id"
     t.index ["print_station_id", "status", "scheduled_at"], name: "idx_on_print_station_id_status_scheduled_at_ca6e3fbfee"
     t.index ["print_station_id"], name: "index_print_jobs_on_print_station_id"
     t.index ["r2_key"], name: "index_print_jobs_on_r2_key", unique: true
+    t.index ["scheduled_for"], name: "index_print_jobs_on_scheduled_for"
   end
 
   create_table "print_links", force: :cascade do |t|
@@ -242,6 +247,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_180000) do
     t.datetime "updated_at", null: false
     t.index ["created_by_id"], name: "index_print_links_on_created_by_id"
     t.index ["token"], name: "index_print_links_on_token", unique: true
+  end
+
+  create_table "print_schedules", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "print_station_id", null: false
+    t.bigint "created_by_id"
+    t.integer "copies", default: 1, null: false
+    t.boolean "collate", default: true, null: false
+    t.string "staple"
+    t.string "driver_preset"
+    t.integer "weekdays", default: [], null: false, array: true
+    t.string "time_of_day", null: false
+    t.boolean "active", default: true, null: false
+    t.string "r2_key"
+    t.binary "pdf_data"
+    t.string "sha256", null: false
+    t.integer "byte_size", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_print_schedules_on_created_by_id"
+    t.index ["print_station_id"], name: "index_print_schedules_on_print_station_id"
+    t.index ["r2_key"], name: "index_print_schedules_on_r2_key", unique: true
   end
 
   create_table "print_stations", force: :cascade do |t|
@@ -448,9 +475,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_180000) do
   add_foreign_key "pdf_split_jobs", "users"
   add_foreign_key "pdf_split_outputs", "pdf_split_jobs", on_delete: :cascade
   add_foreign_key "pdf_split_page_analyses", "pdf_split_jobs", on_delete: :cascade
+  add_foreign_key "print_jobs", "print_schedules", on_delete: :nullify
   add_foreign_key "print_jobs", "print_stations"
   add_foreign_key "print_jobs", "users", column: "created_by_id"
   add_foreign_key "print_links", "users", column: "created_by_id"
+  add_foreign_key "print_schedules", "print_stations"
+  add_foreign_key "print_schedules", "users", column: "created_by_id"
   add_foreign_key "print_stations", "users", column: "created_by_id"
   add_foreign_key "questions", "crop_regions", column: "region_id", on_delete: :cascade
   add_foreign_key "questions", "users", column: "reviewed_by_id", on_delete: :nullify
