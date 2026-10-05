@@ -7,11 +7,11 @@
   <%= stylesheet_link_tag "katex/katex" %>
 <% end %>
 <div data-controller="page-print" class="marking-print">
-  <div class="flex flex-wrap items-center gap-3 mb-6 print:hidden">
-    <button type="button" class="btn-primary !h-12 min-w-32" data-action="page-print#print"><%= console_icon(:printer) %>印刷</button>
+  <div id="print-toolbar" class="card !py-4 flex flex-wrap items-center gap-3 mb-6 print:hidden">
+    <button type="button" class="btn-primary" data-action="page-print#print"><%= console_icon(:printer) %>印刷</button>
     <%= link_to "もう一方（#{@kind == :answer ? "問題用" : "解答用"}）", print_marking_test_path(@test, kind: @kind == :answer ? "question" : "answer"), class: "btn-secondary" %>
     <%= link_to "戻る", marking_test_path(@test), class: "btn-secondary" %>
-    <span class="text-lg text-text-sub">印刷ダイアログで「PDF として保存」もできます。</span>
+    <span class="caption">印刷ダイアログで「PDF として保存」もできます。</span>
   </div>
   <article class="mt-sheet" data-controller="math">
     <header class="mt-head">

@@ -81,4 +81,26 @@ class MarkingQuizPrintTest < ApplicationSystemTestCase
       page.save_screenshot(Rails.root.join("tmp/marking_quiz_print_answer.png").to_s) if ENV["SCREENSHOTS"]
     end
   end
+
+  test "print screen toolbar uses the v2 parts and is not printed" do
+    seed_questions(3)
+    fill_form(title: "国語 小テスト（第2回）", count: 3, mode: "ランダム")
+    new_tab = window_opened_by { click_on "問題用を印刷" }
+    within_window(new_tab) do
+      assert_selector ".mt-item", count: 3
+      FileUtils.mkdir_p(Rails.root.join("tmp/quiz_screenshots"))
+      page.save_screenshot(Rails.root.join("tmp/quiz_screenshots/marking_print_#{ENV.fetch('SHOT_TAG', 'after')}.png").to_s) if ENV["SCREENSHOTS"]
+      within("#print-toolbar") do
+        assert_selector "button.btn-primary", text: "印刷"
+        assert_selector "a.btn-secondary", text: "もう一方"
+        assert_selector "a.btn-secondary", text: "戻る"
+      end
+
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "print")
+      assert_no_selector "#print-toolbar"
+      assert_selector ".mt-item", count: 3
+    ensure
+      page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", media: "")
+    end
+  end
 end
