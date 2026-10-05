@@ -1,0 +1,38 @@
+<% content_for :title, "印刷ジョブ" %>
+<div class="flex items-center mb-6">
+  <h1 class="page-title">印刷ジョブ</h1>
+  <%= link_to "印刷ジョブを作る", new_admin_print_job_path, class: "btn-primary ml-auto" %>
+</div>
+<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
+<% if alert %><p id="alert" class="mb-4 text-lg font-bold text-err-fg"><%= alert %></p><% end %>
+<% if @problems.positive? %>
+  <p id="problem-banner" class="mb-4 py-2 px-3 bg-err-bg text-err-fg rounded-lg font-bold">この 24 時間に、印刷できなかったジョブが <%= @problems %> 件あります（失敗または期限切れ）。</p>
+<% end %>
+<% if @waiting.positive? && @offline_stations.any? %>
+  <p id="offline-banner" class="mb-4 py-2 px-3 bg-warn-bg text-warn-fg rounded-lg font-bold">
+    オフラインのステーションがあります（<%= @offline_stations.map(&:name).join("、") %>）。待機中のジョブ <%= @waiting %> 件は、PC がつながるまで刷られません。
+  </p>
+<% end %>
+<div class="overflow-x-auto">
+<table id="print_jobs" class="table-console">
+  <thead><tr><th>PDF / ステーション</th><th>予定・締め切り</th><th>部数</th><th>状態</th></tr></thead>
+  <tbody>
+    <% @jobs.each do |j| %>
+      <tr id="print_job_<%= j.id %>">
+        <td class="min-w-40"><span class="font-bold"><%= j.title %></span><p class="caption"><%= j.print_station.name %></p></td>
+        <td class="whitespace-nowrap"><%= l j.scheduled_at.in_time_zone, format: :short %><p class="caption">〜 <%= l j.expires_at.in_time_zone, format: :short %></p></td>
+        <td class="whitespace-nowrap"><%= j.copies %><%= j.staple.present? && j.staple != "なし" ? "（ホチキス#{j.staple}）" : "" %></td>
+        <td>
+          <%= print_job_pill(j) %>
+          <% if j.result_message.present? %><p class="text-base text-text-sub mt-1"><%= j.result_message %></p><% end %>
+        <div class="flex flex-wrap items-center gap-2 mt-2">
+          <% if j.pending? %><%= button_to "今すぐ印刷", print_now_admin_print_job_path(j), class: "btn-secondary" %><% end %>
+          <% unless j.finished? %><%= button_to "取り消す", cancel_admin_print_job_path(j), class: "btn-danger", data: { turbo_confirm: "このジョブを取り消します。よろしいですか？" } %><% end %>
+        </div>
+        </td>
+      </tr>
+    <% end %>
+    <% if @jobs.empty? %><tr><td colspan="4" class="text-center text-text-sub">印刷ジョブはありません</td></tr><% end %>
+  </tbody>
+</table>
+</div>
