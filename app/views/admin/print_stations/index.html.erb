@@ -3,7 +3,7 @@
   <h1 class="page-title">印刷ステーション</h1>
   <%= link_to "ステーションを登録", new_admin_print_station_path, class: "btn-primary ml-auto" %>
 </div>
-<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
+<% if notice %><p id="notice" class="alert-ok mb-4"><%= notice %></p><% end %>
 <div class="overflow-x-auto">
 <table id="print_stations" class="table-console whitespace-nowrap">
   <thead><tr><th>名前</th><th>状態</th><th>最後の通信</th><th>バージョン</th><th></th></tr></thead>
