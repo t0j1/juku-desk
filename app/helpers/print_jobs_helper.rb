@@ -1,5 +1,5 @@
 module PrintJobsHelper
-  STAPLES = [ "なし", "左上", "右上", "2か所" ].freeze
+  STAPLES = [ "なし", "左上" ].freeze
   DUPLEXES = [ [ "指定なし（ドライバーの設定）", "" ], [ "長辺とじ", "long" ], [ "短辺とじ", "short" ] ].freeze
 
   def duplex_label(value) = DUPLEXES.find { |_, v| v == value.to_s }&.first&.sub(/（.*/, "")

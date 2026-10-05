@@ -31,6 +31,18 @@ class AdminPrintJobsTest < ActionDispatch::IntegrationTest
     assert_select "#print-help", text: /印刷プレビューで「PDF として保存」.*アップロード.*印刷ジョブを作成・実行.*自動生成.*当面/m
   end
 
+  test "staple choices are none / upper-left only, and jobs saved with an old value still list" do
+    assert_equal %w[ なし 左上 ], PrintJobsHelper::STAPLES
+    new_job(staple: "右上")
+    new_job(staple: "2か所")
+    get admin_print_jobs_path
+    assert_response :success
+    assert_select "p.caption", /ホチキス右上/
+    assert_select "p.caption", /ホチキス2か所/
+    get new_admin_print_job_path
+    assert_select "select[name='print_job[staple]'] option", count: 2
+  end
+
   test "create takes the duplex choice; blank means driver default; the new form offers it" do
     get new_admin_print_job_path
     assert_select "select[name='print_job[duplex]'] option", count: 3
