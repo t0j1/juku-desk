@@ -22,7 +22,7 @@ module Tools
           redirect_to tools_pdf_splitter_jobs_path, alert: result.error
         else
           AuditLog.record!(:create, result.job, metadata: { filename: result.job.original_filename, pages: result.job.page_count })
-          ::PdfSplitter::AnalyzeJob.perform_later(result.job.id)
+          start_analyze(result.job)
           redirect_to tools_pdf_splitter_job_path(result.job)
         end
       end
@@ -36,7 +36,7 @@ module Tools
       # 解析をやり直す
       def analyze
         @job.update!(status: :uploaded, error_message: nil)
-        ::PdfSplitter::AnalyzeJob.perform_later(@job.id)
+        start_analyze(@job)
         redirect_to tools_pdf_splitter_job_path(@job)
       end
 
@@ -72,7 +72,9 @@ module Tools
           end
           @job.update!(boundaries: set.to_a, status: :splitting, output_count: set.to_a.size, error_message: nil)
         end
-        ::PdfSplitter::SplitJob.perform_later(@job.id)
+        progress = JobProgress.enqueue(::PdfSplitter::SplitJob, user: current_user, kind: "pdf_split", subject: @job,
+                                       title: "分割: #{@job.original_filename}", total: set.to_a.sum { |b| b["to"] - b["from"] + 1 })
+        open_progress(progress)
         redirect_to tools_pdf_splitter_job_path(@job), notice: "#{set.to_a.size}ファイルに分割しています。"
       end
 
@@ -148,6 +150,12 @@ module Tools
       end
 
       private
+        def start_analyze(job)
+          progress = JobProgress.enqueue(::PdfSplitter::AnalyzeJob, user: current_user, kind: "pdf_analyze", subject: job,
+                                         title: "解析: #{job.original_filename}", total: job.page_count)
+          open_progress(progress)
+        end
+
         # 入力が誤っていても打ち直さなくて済むよう、エラー時は入力した値のまま画面を出し直す
         def save_boundaries
           set = ::PdfSplitter::BoundarySet.new(boundary_rows, page_count: @job.page_count)

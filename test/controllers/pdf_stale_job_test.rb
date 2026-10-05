@@ -17,7 +17,8 @@ class PdfStaleJobTest < ActionDispatch::IntegrationTest
     assert_match "メモリ不足の可能性", response.body
     assert_select ".alert-err button", text: "再試行"
 
-    assert_enqueued_with(job: PdfSplitter::AnalyzeJob, args: [ job.id ]) { post analyze_tools_pdf_splitter_job_path(job) }
+    post analyze_tools_pdf_splitter_job_path(job)
+    assert_enqueued_with(job: PdfSplitter::AnalyzeJob, args: [ JobProgress.where(subject: job).last.id ])
     perform_enqueued_jobs
     assert job.reload.analyzed?
   end

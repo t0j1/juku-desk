@@ -3,7 +3,9 @@ module PdfSplitter
   # 全ページ分のテキストを配列に持たない（255ページの模試で 512MB を超えて落ちたため）。
   # 区切りごとに updated_at を進めるので、進まなくなった解析は PdfSplitJob#fail_if_stale! で見分けられる
   class Analyzer
-    def self.call(job)
+    # progress があれば、チャンクごとに進み具合を知らせる。キャンセルされたら ProgressReporting::Cancelled を投げる。
+    # 途中までの解析結果は DB に残さない（キャンセルや失敗のときは page_analyses を消す）
+    def self.call(job, progress: nil)
       detector = HeadingDetector.new
       headings = []
       rows = []
@@ -12,6 +14,7 @@ module PdfSplitter
         page_count = job.page_count.presence || Splitter.page_count(path)
         job.page_analyses.delete_all
         TextExtractor.each_chunk(path, page_count) do |texts, first_page|
+          done = first_page + texts.size - 1
           texts.each_with_index do |text, i|
             page = first_page + i
             h = detector.detect(text)
@@ -26,11 +29,16 @@ module PdfSplitter
           rows.clear
           job.touch
           GC.start
+          progress&.step!(done, "解析中 #{done}/#{page_count}ページ（#{done * 100 / page_count}%）")
         end
       end
+      progress&.check_cancel!
       guess = PatternGuesser.new.guess(headings, page_count: job.page_count)
       job.update!(status: :analyzed, pattern: guess[:pattern], confidence: guess[:confidence], boundaries: guess[:boundaries])
       job
+    rescue Exception # キャンセルを含む。途中までの行は残さない
+      job.page_analyses.delete_all
+      raise
     end
   end
 end

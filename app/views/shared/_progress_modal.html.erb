@@ -1,0 +1,37 @@
+<%# 時間のかかる処理の進捗。閉じても処理は続き、右上のバッジから開き直せる。ページに処理中のものがなければ読みに行かない %>
+<% active_ids = JobProgress.where(user: current_user).active.pluck(:id) %>
+<% open_id = flash[:open_progress] %>
+<div data-controller="progress" data-progress-url-value="<%= progresses_path %>" data-progress-ids-value="<%= (active_ids | [ open_id ].compact).to_json %>"
+     data-progress-open-id-value="<%= open_id.to_i %>" data-action="progress:open@window->progress#open" class="print:hidden">
+  <button type="button" data-progress-target="badge" data-action="progress#open" hidden
+          class="fixed top-3 right-3 z-40 inline-flex items-center gap-2 h-11 px-4 rounded-pill bg-bg text-text font-bold text-base shadow-raise-sm cursor-pointer">
+    <span class="inline-block size-3 rounded-full bg-primary animate-pulse" aria-hidden="true"></span>
+    <span data-progress-target="badgeText">処理中</span>
+  </button>
+
+  <dialog data-progress-target="dialog" aria-labelledby="progress-title" class="m-auto w-[min(92vw,520px)] rounded-card bg-surface text-text shadow-raise p-0 backdrop:bg-black/40">
+    <div class="px-8 py-7 space-y-5">
+      <div class="flex items-center justify-between gap-4">
+        <h2 id="progress-title" class="section-title">処理の進み具合</h2>
+        <button type="button" data-action="progress#close" class="btn-secondary btn-sm">閉じる</button>
+      </div>
+      <p class="caption">閉じても処理は続きます。右上の「処理中」から開き直せます。</p>
+      <ul data-progress-target="list" class="space-y-6"></ul>
+    </div>
+  </dialog>
+
+  <template data-progress-target="item">
+    <li data-progress-item class="space-y-2">
+      <div class="flex items-center justify-between gap-3">
+        <span data-field="title" class="font-bold text-lg"></span>
+        <span data-field="percent" class="font-bold text-lg tnum"></span>
+      </div>
+      <div class="h-3 rounded-pill shadow-inset overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+        <div data-field="bar" class="h-full rounded-pill bg-primary transition-[width] duration-500" style="width: 0%"></div>
+      </div>
+      <p data-field="detail" class="caption tnum"></p>
+      <p data-field="message" class="caption"></p>
+      <button type="button" data-field="cancel" data-action="progress#cancel" class="btn-danger btn-sm">キャンセル</button>
+    </li>
+  </template>
+</div>
