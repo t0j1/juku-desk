@@ -3,6 +3,7 @@
   <h1 class="page-title">印刷ジョブ</h1>
   <%= link_to "印刷ジョブを作る", new_admin_print_job_path, class: "btn-primary ml-auto" %>
 </div>
+<p id="print-help" class="caption mb-4 max-w-3xl">小テストを刷るときは、小テストの印刷プレビューで「PDF として保存」し、「印刷ジョブを作る」でそのファイルをアップロードして、印刷ジョブを作成・実行します。サーバーで PDF を自動生成する方法は、当面は用意していません。</p>
 <% if notice %><p id="notice" class="alert-ok mb-4"><%= notice %></p><% end %>
 <% if alert %><p id="alert" class="alert-err mb-4" role="alert"><%= alert %></p><% end %>
 <% if @problems.positive? %>
