@@ -146,4 +146,40 @@ class PdfSplitter::ProgressTest < ActiveJob::TestCase
     perform_enqueued_jobs
     assert progress.reload.finished?
   end
+
+  test "a split judged stale and then actually finished ends done, with progress and job in agreement" do
+    make_outputs
+    progress = enqueue(PdfSplitter::SplitJob, "pdf_split", 30)
+    # ジョブ 1 件目の途中で 6 分止まり、その間に進捗の読み出しが stale と判定する（食い違いの再現）
+    stalled = false
+    store = ->(output, source_path:) do
+      if !stalled
+        stalled = true
+        progress.reload.update_columns(updated_at: 6.minutes.ago)
+        JobProgress.find(progress.id).fail_if_stale!
+        assert @job.reload.failed?, "stale 判定でジョブも failed になる"
+      end
+    end
+    stub_class_method(PdfSplitter::Builder, :ensure_stored, store) { perform_enqueued_jobs }
+
+    progress.reload
+    assert progress.succeeded?, "実際に完了したので、failed 表示のままにしない（#{progress.status}）"
+    assert_equal 30, progress.done
+    assert_nil progress.message.to_s[/止まりました/]
+    assert @job.reload.done?
+  end
+
+  test "revive puts a wrongly failed job back to processing" do
+    @job.update!(status: :analyzing)
+    progress = enqueue(PdfSplitter::AnalyzeJob, "pdf_analyze", 255)
+    progress.start!(total: 255) # ジョブ側のオブジェクト
+    progress.update_columns(updated_at: 10.minutes.ago)
+    JobProgress.find(progress.id).fail_if_stale! # 画面側の読み出しが stale と判定
+    assert @job.reload.failed?
+
+    progress.step!(100, "解析中 100/255ページ（39%）") # 動いていた
+    assert @job.reload.analyzing?
+    assert_nil @job.error_message
+    assert JobProgress.find(progress.id).running?
+  end
 end

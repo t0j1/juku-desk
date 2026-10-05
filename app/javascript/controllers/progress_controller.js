@@ -1,5 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
+const STALE_WATCH_MS = 10 * 60 * 1000
+
 // 時間のかかる処理の進捗モーダルと、右上のバッジ。処理中のものがあるあいだだけ、数秒ごとに /progress を読む。
 // 閉じても処理は続く。画面を移ってもレイアウトに載っているので、バッジから開き直せる。
 export default class extends Controller {
@@ -39,7 +41,9 @@ export default class extends Controller {
       const res = await fetch(this.urlValue, { headers: { Accept: "application/json" } })
       if (res.ok) (await res.json()).progresses.forEach((p) => this.update(p))
     } catch (_) { /* 通信が切れても次の周期でやり直す */ }
-    if (this.running().length) {
+    // 止まったと見なして failed にしたものも、実は動いていて後から完了することがあるので、読み続ける
+    // ただし本当に止まっていた場合に永久に読み続けないよう、見はじめてから STALE_WATCH_MS までで打ち切る
+    if (this.running().length || this.watchingStale()) {
       this.timer = setTimeout(() => this.poll(), this.intervalValue)
     }
   }
@@ -56,7 +60,9 @@ export default class extends Controller {
     }
     item.data = p
     item.fetchedAt = Date.now()
-    if (!p.finished) item.sawRunning = true
+    if (p.stale) item.staleSince ??= Date.now()
+    else item.staleSince = null
+    if (!p.finished) { item.sawRunning = true; item.announced = false } // 止まったと見なされた後に動き出したら、終わった時にまた知らせる
     this.render(item)
     this.renderBadge()
     // 画面を開く前に終わっていたものは知らせない（知らせると、受け取った画面が読み直しを繰り返す）
@@ -124,6 +130,10 @@ export default class extends Controller {
     const running = this.running()
     this.badgeTarget.hidden = running.length === 0 && !this.dialogTarget.open
     this.badgeTextTarget.textContent = running.length > 1 ? `処理中 ${running.length}件` : "処理中"
+  }
+
+  watchingStale() {
+    return [ ...this.items.values() ].some((i) => i.data.stale && Date.now() - i.staleSince < STALE_WATCH_MS)
   }
 
   isRunning(id) { const item = this.items.get(id); return !!item && !item.data.finished }
