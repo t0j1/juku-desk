@@ -31,8 +31,8 @@ class AdminPrintStationsTest < ActionDispatch::IntegrationTest
     get admin_print_stations_path
     assert_select "#print_station_#{known.id}", /少ない/
     assert_select "#print_station_#{known.id}", /なし/
+    assert_select "#print_station_#{unknown.id} td:nth-child(3)", "—"
     assert_select "#print_station_#{unknown.id} td:nth-child(4)", "—"
-    assert_select "#print_station_#{unknown.id} td:nth-child(5)", "—"
   end
 
   test "a duplicate or blank name is refused" do

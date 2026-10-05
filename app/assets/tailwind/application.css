@@ -86,6 +86,29 @@
   .table-console tbody td { @apply h-16 px-4; border-bottom: 1px solid var(--color-row-line); }
   .table-console tbody tr:last-child td { border-bottom: 0; }
 
+  /* 印刷ステーション一覧：1200px 以上は 6 列の表（%固定・横スクロールなし）、未満は 1 ステーション = 1 カード。文字は縮めない（本文 18px 以上） */
+  .station-table { @apply w-full text-lg text-text; table-layout: fixed; }
+  .station-table thead th { @apply h-11 px-4 text-left text-base font-bold text-text-sub whitespace-nowrap; border-bottom: 1px solid var(--color-row-line); }
+  .station-row td { @apply px-4 py-3 align-middle; height: 4rem; }
+  .station-row td:not(.station-name) { overflow-wrap: anywhere; }
+  .station-seen { @apply mt-1 text-text-sub; font-size: 16px; }
+  .station-seen.is-offline { @apply text-err-fg; }
+  .station-actions { @apply flex flex-wrap items-center gap-2; }
+  .station-panel-row td { @apply px-4 pb-4; border-bottom: 1px solid var(--color-row-line); }
+  .station-panel { @apply rounded-card bg-surface shadow-raise px-8 py-7; border: 1px solid var(--color-card-edge); }
+  .station:not(:last-of-type) .station-row td { border-bottom: 0; }
+  @media (max-width: 1199px) {
+    .station-table thead { @apply sr-only; }
+    .station-table, .station-table tbody, .station-table tr, .station-table td { display: block; width: 100%; }
+    .station-table colgroup { display: none; }
+    .station { @apply rounded-card bg-surface shadow-raise px-6 py-4 mb-4; border: 1px solid var(--color-card-edge); }
+    .station-row td { @apply flex items-start gap-3 px-0 py-2; height: auto; border: 0 !important; }
+    .station-row td::before { content: attr(data-label); @apply shrink-0 w-28 font-bold text-text-sub; }
+    .station-row td.station-actions { display: flex; }
+    .station-panel-row td { @apply px-0 pb-0; border: 0; }
+    .station-panel { box-shadow: none; padding: 0; }
+  }
+
   .alert-ok { @apply text-lg rounded-field bg-ok-bg text-ok-fg px-4 py-3 font-bold; }
   .alert-err { @apply text-lg rounded-field bg-err-bg text-err-fg px-4 py-3 font-bold; }
   .alert-warn { @apply text-lg rounded-field bg-warn-bg text-warn-fg px-4 py-3 font-bold shadow-raise-sm; }
