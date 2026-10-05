@@ -4,8 +4,6 @@ name: PDF memory probe
 #   gh workflow run pdf-memory-probe.yml [-f pages=255 -f page_kb=100 -f max_mb=400]
 # 結果は実行のサマリーに出る。ピークが max_mb を超えたら失敗する。
 on:
-  push:
-    branches: [ chore/pdf-memory-probe-ci ] # TEMP: 動作確認用。確認後に外す
   workflow_dispatch:
     inputs:
       pages:
