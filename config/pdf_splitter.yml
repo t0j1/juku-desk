@@ -7,7 +7,7 @@ shared:
     problem_patterns: [ '問題|演習|練習|確認テスト|ドリル' ]
   limits:
     max_file_mb: 30
-    max_pages: 300
+    max_pages: <%= ENV.fetch("PDF_MAX_PAGES", 300) %>   # 解析のピークメモリを 350MB 以下に保つための上限
     max_jobs_per_day: 20
     max_outputs: 50
     thumbnail_pages: 8
@@ -18,6 +18,8 @@ shared:
     max_original_mb: 30
     max_outputs_mb_per_job: 40
     max_total_mb: 150
+    orphan_min_age_hours: 24     # DB に行が無い R2 オブジェクトを孤児として消すまでの猶予
+    orphan_sweep_limit: <%= ENV.fetch("PDF_ORPHAN_SWEEP_LIMIT", 100) %>   # 1 回の掃除で消す件数の上限
   naming:
     template: "{prefix}{round}_{kind}{suffix}"
     prefix: ""

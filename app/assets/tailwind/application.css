@@ -1,64 +1,102 @@
 @import "tailwindcss";
 
-/* Admin Console design tokens v1 (estimated from 碩学館 Admin Console screenshots; no source CSS in repo) */
-@theme {
+/* ソフト・ニューモーフィズム v2 のトークン（塾日報ステーションと碩学館で共通）。色・影・角丸はここ 1 か所で決め、画面側では直書きしない。
+   `@theme static`: 使われていないトークンも CSS 変数（:root）として出す */
+@theme static {
   --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
-  --color-console-bg-from: #F3F1FE;
-  --color-console-bg-to: #ECEAFD;
+
+  /* 背景とカードは同じ色。浮き出し・へこみは影だけで作る */
+  --color-bg: #EDF0F7;
+  --color-surface: #EDF0F7;
+  --color-shadow-hi: #FFFFFF;
+  --color-shadow-lo: #C8CFDF;
+  --shadow-raise: 6px 6px 14px var(--color-shadow-lo), -6px -6px 14px var(--color-shadow-hi);
+  --shadow-raise-sm: 3px 3px 8px var(--color-shadow-lo), -3px -3px 8px var(--color-shadow-hi);
+  --shadow-inset: inset 3px 3px 7px var(--color-shadow-lo), inset -3px -3px 7px var(--color-shadow-hi);
+  --shadow-primary: 4px 4px 10px rgba(91, 75, 224, .35), -4px -4px 10px #FFFFFF;
+
+  --color-text: #252B3B;
+  --color-text-sub: #5A6178;
   --color-primary: #5B4BE0;
-  --color-primary-to: #7C5CF0;
+  --primary-grad: linear-gradient(135deg, #6A5BEA, #5442D6);
   --color-primary-hover: #4A3BC8;
-  --color-ink: #1F2433;
-  --color-ink-sub: #6B7080;
-  --color-ink-head: #6B7080;
-  --color-line: #E6E4F0;
-  --color-line-strong: #D5D3E0;
-  --color-ok: #1E7A3E;
-  --color-ok-bg: #E8F6EC;
-  --color-busy: #4A3BC8;
-  --color-busy-bg: #EEEBFD;
-  --color-ng: #C62828;
-  --color-ng-bg: #FDECEC;
+
+  --color-ok-fg: #1E7A3E;
+  --color-ok-bg: #E3F3E8;
+  --color-run-fg: #2F5FC4;
+  --color-run-bg: #E4ECFB;
+  --color-err-fg: #B42323;
+  --color-err-bg: #FBE6E6;
+  --color-warn-fg: #7A4B00;
   --color-warn-bg: #FFF6E0;
-  --color-warn-line: #F2B544;
-  --color-warn-ink: #7A4B00;
-  --shadow-card: 0 2px 12px rgba(60, 50, 140, .06);
-  /* 小テスト作成画面（Soft Gamified） */
-  --color-surface: #F6F5FB;
-  --color-bubble: #EEEBFF;
-  --color-quiz-ink: #1F1D2B;
-  --color-quiz-sub: #5E5A72;
-  --color-quiz-line: #E4E2F0;
-  --shadow-quiz: 0 4px 12px rgba(91, 75, 224, .12);
+
+  --color-field-border: #7A8399; /* 入力欄の 1px 線。影だけだと見えないので必須 */
+  --color-row-line: #DCE1EC;
+  --color-card-edge: rgba(255, 255, 255, .6);
+
+  --radius-card: 24px;
+  --radius-button: 14px;
+  --radius-field: 12px;
+  --radius-drop: 18px;
+  --radius-pill: 999px;
+}
+
+@layer base {
+  body { background: var(--color-bg); color: var(--color-text); font-size: 18px; }
+  /* フォーカスは全部品で同じ */
+  :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }
 
 @layer components {
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg text-[15px] font-bold text-white cursor-pointer
-           bg-gradient-to-r from-primary to-primary-to hover:from-primary-hover hover:to-primary-hover
-           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-primary disabled:hover:to-primary-to;
+  /* カード：浮き出し。枠線で区切らず影で区切る */
+  .card { @apply rounded-card bg-surface shadow-raise px-8 py-7; border: 1px solid var(--color-card-edge); }
+  .page-title { @apply text-[30px] leading-tight font-bold text-text; }
+  .section-title { @apply text-[22px] font-bold text-text; }
+  .caption { @apply text-base text-text-sub; }
+  .label { @apply block text-lg font-bold text-text mb-1.5; }
+
+  /* ボタン：押せるもの＝浮き出し、押している間はへこむ。primary は 1 画面 1 つ */
+  .btn-primary, .btn-secondary, .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 h-[52px] px-6 rounded-button text-[19px] font-bold whitespace-nowrap cursor-pointer select-none
+           disabled:opacity-[.55] disabled:cursor-not-allowed;
   }
-  .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1 h-9 px-3 rounded-lg text-sm font-bold bg-white text-ink border border-line-strong hover:bg-console-bg-from cursor-pointer;
-  }
-  .btn-danger { @apply inline-flex items-center h-9 px-3 rounded-lg text-sm font-bold text-ng bg-ng-bg cursor-pointer; }
-  .input { @apply block w-full max-w-[480px] h-11 px-3 rounded-lg border border-line-strong bg-white text-[15px] text-ink focus:outline-2 focus:outline-primary; }
-  .pill { @apply inline-flex items-center gap-1 h-7 px-3 rounded-full text-xs font-bold whitespace-nowrap; }
-  .pill-ok { @apply text-ok bg-ok-bg; }
-  .pill-busy { @apply text-busy bg-busy-bg; }
-  .pill-ng { @apply text-ng bg-ng-bg; }
-  .pill-neutral { @apply text-ink-sub border border-line-strong; }
-  .table-console { @apply w-full text-sm text-ink; }
-  .table-console thead th { @apply h-10 px-4 text-left text-xs font-bold text-ink-head border-b border-line; }
-  .table-console tbody td { @apply h-14 px-4 border-b border-line; }
+  .btn-primary { background-image: var(--primary-grad); @apply text-white shadow-primary; }
+  .btn-primary:hover:not(:disabled) { background-image: none; background-color: var(--color-primary-hover); }
+  .btn-primary:active:not(:disabled) { box-shadow: inset 3px 3px 7px rgba(0, 0, 0, .3); }
+  .btn-secondary { @apply bg-bg text-text shadow-raise-sm; }
+  .btn-danger { @apply bg-bg text-err-fg shadow-raise-sm; }
+  .btn-secondary:active:not(:disabled), .btn-danger:active:not(:disabled) { @apply shadow-inset; }
+  .btn-sm { @apply h-11 px-4 text-[17px]; }
+
+  /* 入力：へこみ＋ 1px の線 */
+  .input { @apply block w-full max-w-[420px] h-[52px] px-4 rounded-field bg-bg text-[19px] text-text shadow-inset; border: 1px solid var(--color-field-border); }
+  .input[aria-invalid="true"], .input.is-invalid { border-color: var(--color-err-fg); }
+  textarea.input { @apply h-auto py-3; }
+
+  /* ピル：浮き出し。意味は必ず「記号＋文字」で示す */
+  .pill { @apply inline-flex items-center gap-1.5 h-[34px] px-3.5 rounded-pill text-base font-bold whitespace-nowrap shadow-raise-sm; }
+  .pill-ok { @apply text-ok-fg bg-ok-bg; }
+  .pill-busy { @apply text-run-fg bg-run-bg; }
+  .pill-ng { @apply text-err-fg bg-err-bg; }
+  .pill-neutral { @apply text-text-sub bg-bg; }
+
+  /* 表：外枠なし、行区切りだけ、行高 64 */
+  .table-console { @apply w-full text-lg text-text; }
+  .table-console thead th { @apply h-11 px-4 text-left text-base font-bold text-text-sub; border-bottom: 1px solid var(--color-row-line); }
+  .table-console tbody td { @apply h-16 px-4; border-bottom: 1px solid var(--color-row-line); }
+  .table-console tbody tr:last-child td { border-bottom: 0; }
+
+  .alert-ok { @apply text-lg rounded-field bg-ok-bg text-ok-fg px-4 py-3 font-bold; }
+  .alert-err { @apply text-lg rounded-field bg-err-bg text-err-fg px-4 py-3 font-bold; }
+  .alert-warn { @apply text-lg rounded-field bg-warn-bg text-warn-fg px-4 py-3 font-bold shadow-raise-sm; }
+  .link { @apply text-lg font-bold text-primary hover:underline; }
   .tnum { font-variant-numeric: tabular-nums; }
 }
 
 /* 小テスト用紙（A4 縦）。画面では縮小表示し、印刷では @page の余白 15mm の内側に原寸で出す。色は使わない */
 .sheet-frame { zoom: .62; width: max-content; }
 .sheet { width: 210mm; height: 297mm; padding: 15mm; box-sizing: border-box; display: flex; flex-direction: column;
-         background: #fff; color: #000; box-shadow: var(--shadow-card); border: 1px solid var(--color-line-strong); }
+         background: #fff; color: #000; box-shadow: var(--shadow-raise); }
 .sheet-head { padding-bottom: 4mm; border-bottom: .4mm solid #000; margin-bottom: 4mm; }
 .sheet-title { font-size: 15pt; font-weight: 700; margin-bottom: 3mm; }
 .sheet-meta { display: flex; justify-content: space-between; align-items: flex-end; font-size: 11pt; }
@@ -78,24 +116,53 @@
   .sheet { height: 266mm; padding: 0; box-shadow: none; border: 0; }
 }
 
-/* 小テスト作成: つまみ2つの範囲スライダー。range を2枚重ね、トラックは触れず、つまみだけ触れるようにする */
-.range-slider { --lo: 0; --hi: 1; position: relative; height: 44px; margin: 8px 0 16px; }
-.range-track { position: absolute; left: 22px; right: 22px; top: 18px; height: 8px; border-radius: 9999px; background: var(--color-quiz-line); }
-.range-fill { position: absolute; top: 0; bottom: 0; border-radius: 9999px; background: var(--color-primary);
-              left: calc(var(--lo) * 100%); right: calc((1 - var(--hi)) * 100%); }
-.range-thumb { position: absolute; inset: 0; width: 100%; height: 44px; margin: 0; background: none; pointer-events: none; appearance: none; -webkit-appearance: none; }
-.range-thumb::-webkit-slider-runnable-track { height: 44px; background: none; }
-.range-thumb::-moz-range-track { height: 44px; background: none; }
-.range-thumb::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; pointer-events: auto; cursor: grab; width: 44px; height: 44px; border-radius: 9999px;
-  background: #fff; border: 3px solid var(--color-primary); box-sizing: border-box; box-shadow: var(--shadow-quiz); }
-.range-thumb::-moz-range-thumb { pointer-events: auto; cursor: grab; width: 44px; height: 44px; border-radius: 9999px;
-  background: #fff; border: 3px solid var(--color-primary); box-sizing: border-box; box-shadow: var(--shadow-quiz); }
-.range-thumb:focus-visible::-webkit-slider-thumb { outline: 3px solid var(--color-primary); outline-offset: 3px; }
-.range-thumb:focus-visible::-moz-range-thumb { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+/* マーキングの小テスト印刷（問題用・解答用）。A4・余白 15mm は印刷ビューの @page で指定。色は使わず、日本語フォントは明示する */
+:root { --marking-font: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic", "Meiryo", sans-serif; }
+.mt-sheet { font-family: var(--marking-font); color: #000; background: #fff; max-width: 210mm; padding: 15mm; box-sizing: border-box; box-shadow: var(--shadow-raise); }
+.mt-head { padding-bottom: 4mm; border-bottom: .4mm solid #000; margin-bottom: 6mm; }
+.mt-title { font-size: 15pt; font-weight: 700; margin-bottom: 3mm; }
+.mt-kind { margin-left: 2mm; }
+.mt-meta { display: flex; flex-wrap: wrap; gap: 2mm 8mm; font-size: 10.5pt; }
+.mt-name-line { display: inline-block; width: 45mm; border-bottom: .3mm solid #000; }
+.mt-short { font-size: 10pt; margin-bottom: 4mm; }
+.mt-list { list-style: none; margin: 0; padding: 0; }
+.mt-section { margin-bottom: 4mm; }
+.mt-section-head { font-size: 12pt; font-weight: 700; margin-bottom: 3mm; break-after: avoid; page-break-after: avoid; }
+.mt-section-no { margin-right: 1mm; }
+.mt-section .mt-no { width: 10mm; }
+.mt-item { display: flex; gap: 3mm; margin-bottom: 6mm; font-size: 11.5pt; line-height: 1.7; break-inside: avoid; page-break-inside: avoid; }
+.mt-no { flex: none; width: 9mm; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mt-main { flex: 1; min-width: 0; }
+.mt-text, .mt-answer, .mt-expl { white-space: pre-wrap; overflow-wrap: anywhere; }
+.mt-expl { margin-top: 1mm; font-size: 10pt; }
+.mt-options { list-style: none; margin: 1.5mm 0 0; padding: 0; }
+.mt-options li { display: flex; gap: 2mm; }
+.mt-opt-no { flex: none; width: 6mm; text-align: center; border: .3mm solid #000; border-radius: 50%; font-size: 9.5pt; line-height: 5mm; height: 5mm; margin-top: 1mm; }
+.mt-ruled { margin-top: 3mm; height: 16mm; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 7.5mm, #000 7.5mm, #000 8mm); }
+/* 形式別のレイアウト（英語）：並べ替え・長文・英作文・和訳（AI 作成の印は印刷に出さない。#62 の決定） */
+.mt-ja { margin-bottom: .5mm; }
+.mt-reorder, .mt-compose, .mt-source { overflow-wrap: anywhere; }
+.mt-extra { margin-left: 2mm; white-space: nowrap; }
+.mt-blank { display: inline-block; white-space: nowrap; }
+.mt-blank-gap { display: inline-block; width: 28mm; }
+.mt-passage { white-space: pre-wrap; overflow-wrap: anywhere; text-indent: 1em; margin-bottom: 2mm; }
+.mt-underline { text-decoration: underline; text-decoration-thickness: .3mm; text-underline-offset: 1mm; }
+.mt-mark { font-weight: 700; margin: 0 .5mm; }
+.mt-subs { list-style: none; margin: 0; padding: 0; }
+.mt-sub { display: flex; gap: 2mm; margin-top: 2mm; break-inside: avoid; page-break-inside: avoid; }
+.mt-sub-no { flex: none; width: 8mm; text-align: right; }
+.mt-sub-main { flex: 1; min-width: 0; }
+.mt-ruled-1 { height: 8mm; margin-top: 1mm; }
+.mt-ruled-translate { height: 24mm; }
+.mt-item-passage { break-inside: auto; page-break-inside: auto; }
+@media print {
+  .mt-sheet { padding: 0; box-shadow: none; border: 0; max-width: none; }
+  .marking-print, .mt-sheet { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
 
 /* 吹き出しの左向きのしっぽ */
 .speech-bubble { position: relative; }
-.speech-bubble::before { content: ""; position: absolute; left: -10px; top: 50%; margin-top: -10px; border: 10px solid transparent; border-left-width: 0; border-right-color: var(--color-bubble); }
+.speech-bubble::before { content: ""; position: absolute; left: -10px; top: 50%; margin-top: -10px; border: 10px solid transparent; border-left-width: 0; border-right-color: var(--color-bg); }
 
 /* 紙吹雪（0.8 秒）。reduced-motion のときは JS 側で出さない */
 .confetti { position: fixed; left: 0; top: 0; width: 100%; height: 0; pointer-events: none; z-index: 50; overflow: visible; }

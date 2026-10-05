@@ -4,9 +4,10 @@ module Tools
       # サムネイルは1件ずつ作る（同時に何十MBもの元PDFを読み込んでメモリ不足で落ちるのを防ぐ）
       THUMB_LOCK = Mutex.new
 
-      before_action :set_job, except: %i[ index create ]
+      before_action :set_job, except: %i[ index create status ]
 
       def index
+        current_user.pdf_split_jobs.fail_stale!
         @jobs = current_user.pdf_split_jobs.order(created_at: :desc).limit(50)
       end
 
@@ -21,7 +22,7 @@ module Tools
           redirect_to tools_pdf_splitter_jobs_path, alert: result.error
         else
           AuditLog.record!(:create, result.job, metadata: { filename: result.job.original_filename, pages: result.job.page_count })
-          ::PdfSplitter::AnalyzeJob.perform_later(result.job.id)
+          start_analyze(result.job)
           redirect_to tools_pdf_splitter_job_path(result.job)
         end
       end
@@ -35,7 +36,7 @@ module Tools
       # 解析をやり直す
       def analyze
         @job.update!(status: :uploaded, error_message: nil)
-        ::PdfSplitter::AnalyzeJob.perform_later(@job.id)
+        start_analyze(@job)
         redirect_to tools_pdf_splitter_job_path(@job)
       end
 
@@ -71,7 +72,9 @@ module Tools
           end
           @job.update!(boundaries: set.to_a, status: :splitting, output_count: set.to_a.size, error_message: nil)
         end
-        ::PdfSplitter::SplitJob.perform_later(@job.id)
+        progress = JobProgress.enqueue(::PdfSplitter::SplitJob, user: current_user, kind: "pdf_split", subject: @job,
+                                       title: "分割: #{@job.original_filename}", total: set.to_a.sum { |b| b["to"] - b["from"] + 1 })
+        open_progress(progress)
         redirect_to tools_pdf_splitter_job_path(@job), notice: "#{set.to_a.size}ファイルに分割しています。"
       end
 
@@ -103,7 +106,7 @@ module Tools
         queue = ::PdfSplitter::PrintQueue.new(@job, params[:items], pad_even: params[:pad_even] == "1")
         return redirect_to(print_tools_pdf_splitter_job_path(@job), alert: queue.errors.join(" ")) unless queue.valid?
         AuditLog.record!(:print, @job, metadata: { job_id: @job.id, queue: params[:items], pad_even: params[:pad_even] == "1" })
-        send_pdf queue.to_pdf, filename: queue.filename, disposition: "inline"
+        queue.with_pdf { |path| send_pdf_file(path, filename: queue.filename, disposition: "inline") }
       end
 
       # 同じ回の問題＋解答を1つにまとめて印刷（inline）
@@ -111,15 +114,24 @@ module Tools
         outputs = @job.outputs.where(round_label: params[:round]).to_a
         return redirect_to(print_tools_pdf_splitter_job_path(@job), alert: "対象のファイルがありません。") if outputs.empty?
         AuditLog.record!(:print, @job, metadata: { job_id: @job.id, bundle: params[:round], outputs: outputs.map(&:display_name) })
-        send_pdf ::PdfSplitter::PrintOptimizer.bundle(outputs), filename: "#{params[:round]}_まとめ.pdf", disposition: "inline"
+        ::PdfSplitter::PrintOptimizer.with_bundle(outputs) { |path| send_pdf_file(path, filename: "#{params[:round]}_まとめ.pdf", disposition: "inline") }
       end
 
       def download_zip
         outputs = @job.outputs.to_a
         return redirect_to(tools_pdf_splitter_job_path(@job), alert: "分割済みのファイルがありません。") if outputs.empty?
         AuditLog.record!(:export, @job, metadata: { job_id: @job.id, format: "zip", count: outputs.size })
-        send_data ::PdfSplitter::Zipper.zip(outputs), filename: "#{File.basename(@job.original_filename, '.*')}.zip",
-                                                     type: "application/zip", disposition: "attachment"
+        ::PdfSplitter::Zipper.with_zip(outputs) do |path|
+          send_pdf_file(path, filename: "#{File.basename(@job.original_filename, '.*')}.zip", type: "application/zip", disposition: "attachment")
+        end
+      end
+
+      # 解析中・分割中の画面がポーリングする軽い状態（ページ本体は読み直さない）。
+      # 必要な列だけを読み、bytea やページの解析結果には触らない
+      def status
+        job = current_user.pdf_split_jobs.select(:id, :status, :updated_at).find(params[:id])
+        job.fail_if_stale!
+        render json: { status: job.status, busy: job.uploaded? || job.analyzing? || job.splitting? }
       end
 
       # 境界確認用のサムネイル（保存しない）
@@ -138,6 +150,12 @@ module Tools
       end
 
       private
+        def start_analyze(job)
+          progress = JobProgress.enqueue(::PdfSplitter::AnalyzeJob, user: current_user, kind: "pdf_analyze", subject: job,
+                                         title: "解析: #{job.original_filename}", total: job.page_count)
+          open_progress(progress)
+        end
+
         # 入力が誤っていても打ち直さなくて済むよう、エラー時は入力した値のまま画面を出し直す
         def save_boundaries
           set = ::PdfSplitter::BoundarySet.new(boundary_rows, page_count: @job.page_count)

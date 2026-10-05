@@ -1,0 +1,13 @@
+<% content_for :title, "一括登録のプレビュー" %>
+<% valid = @rows.count(&:valid?) %>
+<% errors = @rows.size - valid %>
+<h1 class="page-title mb-4">一括登録のプレビュー</h1>
+<p id="import-summary" class="mb-4 text-lg"><%= @rows.size %>行中、取り込めるのは <b><%= valid %></b>行、エラーは <b><%= errors %></b>行です。<%= errors.positive? ? "エラーが1行でもあると登録できません。CSVを直してやり直してください。" : "" %></p>
+<%= render "admin/user_imports/rows", rows: @rows %>
+<% if errors.zero? && valid.positive? %>
+  <%= form_with url: confirm_admin_user_import_path, class: "inline" do |f| %>
+    <%= f.hidden_field :csv, value: @csv %>
+    <%= f.submit "#{valid}人を招待する", class: "btn-primary cursor-pointer" %>
+  <% end %>
+<% end %>
+<%= link_to "やり直す", new_admin_user_import_path, class: "ml-4 text-lg underline" %>

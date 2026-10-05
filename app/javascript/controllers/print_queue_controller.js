@@ -70,7 +70,7 @@ export default class extends Controller {
         const b = document.createElement("button")
         b.type = "button"
         b.textContent = text
-        b.className = "rounded px-3 py-1 border"
+        b.className = "btn-secondary btn-sm"
         b.dataset.action = `print-queue#${action}`
         li.append(b)
       }

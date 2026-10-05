@@ -39,9 +39,17 @@ scripts/backup.mjs      自動バックアップ本体（検証つき）／backu
    実行結果に「pg_cron の登録に失敗しました」と出た場合は、**Integrations → Cron** で有効にしてから、もう一度実行してください。
 3. 設計は `docs/pickup-plan.md`。テストは次のとおりです。
    - DB だけ（手元）: `npm i --no-save @electric-sql/pglite && node scripts/pickup-db.test.mjs`
-   - Edge Function の本体・共通時刻の提案（手元）: `node --test scripts/pickup-api.test.mjs scripts/pickup-common.test.mjs`
+   - Edge Function の本体・共通時刻の提案（手元）: `node --test scripts/pickup-api.test.mjs scripts/pickup-common.test.mjs scripts/line-webhook.test.mjs`
    - 通しのテスト（開発用 Supabase に対して。生徒2人の登録 → 予約 → 相乗り → 確定 → 後片付け）:
      `.env.dev` に開発用の `ADMIN_EMAIL=` と `ADMIN_PASSWORD=` を書いてから `node scripts/pickup-e2e.mjs`（`.env.dev` は Git に入りません）
+
+### 2-b'. LINE のボタンでの回答：`line-webhook` をデプロイする（本番）
+1. `pickup.sql` を実行し直す（LINE の二重処理を防ぐ表 `pickup_line_events` と関数が増えています。何度実行しても壊れません）。
+2. Secret を登録する: `LINE_CHANNEL_SECRET`（Messaging API のチャネルシークレット）と `LINE_CHANNEL_ACCESS_TOKEN`（返信用のチャネルアクセストークン）。Git や `config.js` には入れません。
+3. `npx supabase functions deploy line-webhook --no-verify-jwt --project-ref <プロジェクトID>`
+4. LINE Developers の Messaging API 設定で、Webhook URL に `https://<プロジェクトID>.supabase.co/functions/v1/line-webhook` を入れ、「Webhookの利用」をオンにして「検証」を押す。
+5. 相乗り打診の通知のボタンには、postback の data として `a=pickup&id=<打診のID>&r=accept`（承諾）／`r=decline`（辞退）を入れます。署名（X-Line-Signature）が合わないリクエストは 401 で捨てます。
+6. すでに回答済み・期限切れ・本人の予約ではない打診は、回答せずに LINE の返信でその理由を伝えます。同じイベントが2回届いても処理は1回です。
 
 ### 2-c. 欠席連絡・振替授業を使う場合：`absence.sql` を実行する
 1. SQL Editor で `supabase/absence.sql` の中身をすべて貼り付けて **Run**（`pickup.sql` のあとに。何度実行しても壊れません）。

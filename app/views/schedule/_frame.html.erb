@@ -1,0 +1,11 @@
+<% content_for :embed, true %>
+<% if @schedule_src %>
+  <%# 渡すトークンの形式は P2-2b と共通: URL フラグメント "#token=<jwt>" と、更新時の postMessage {type: "juku-desk:token", token, exp} %>
+  <% token_data = @schedule_token ? { controller: "schedule-token", schedule_token_url_value: schedule_token_path, schedule_token_origin_value: @schedule_origin, schedule_token_exp_value: @schedule_token.expires_at } : {} %>
+  <iframe src="<%= @schedule_src %>" title="<%= title %>" id="schedule-frame" class="block w-full flex-1 min-h-0 border-0" referrerpolicy="strict-origin-when-cross-origin" <%= tag.attributes(data: token_data) %>></iframe>
+<% else %>
+  <div id="schedule-unset" class="p-6 md:p-8">
+    <h1 class="page-title mb-2">スケジュールは未設定です</h1>
+    <p class="text-text-sub">環境変数 SCHEDULE_WEB_URL（schedule-web の URL）が設定されていないため、表示できません。</p>
+  </div>
+<% end %>

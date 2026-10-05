@@ -5,7 +5,7 @@ class PdfSplitterTest < ApplicationSystemTestCase
 
   test "upload a workbook, split into named files, rename and open the print page" do
     visit new_session_path
-    fill_in "メールアドレス", with: users(:instructor).email_address
+    fill_in "メールアドレス", with: users(:staff).email_address
     fill_in "パスワード", with: "password"
     click_on "ログイン"
     click_on "PDF分割"
@@ -18,6 +18,10 @@ class PdfSplitterTest < ApplicationSystemTestCase
       within("#boundaries-form") { click_on "この範囲で分割する" }
     end
     assert_text "分割したファイル（10）"
+    # 分割は積まれただけ（ここでは実行されない）なので進捗モーダルが開く。閉じてから操作する
+    assert_selector "dialog[open]"
+    within("dialog") { click_on "閉じる" }
+    assert_no_selector "dialog[open]"
 
     first_output = PdfSplitJob.last.outputs.first
     find_field("names[#{first_output.id}]").fill_in(with: "英語 第1回 問題")
@@ -60,7 +64,7 @@ class PdfSplitterTest < ApplicationSystemTestCase
     job = create_pdf_job(fixture: "scanned_images.pdf")
     job.update!(boundaries: [])
     visit new_session_path
-    fill_in "メールアドレス", with: users(:instructor).email_address
+    fill_in "メールアドレス", with: users(:staff).email_address
     fill_in "パスワード", with: "password"
     click_on "ログイン"
     assert_link "PDF分割"

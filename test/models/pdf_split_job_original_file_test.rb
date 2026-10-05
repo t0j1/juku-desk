@@ -6,12 +6,12 @@ class PdfSplitJobOriginalFileTest < ActiveSupport::TestCase
     FileUtils.rm_f(job.original_cache_path)
     original = file_fixture("scanned_images.pdf").binread
     stub = 4096
-    PdfSplitJob.send(:remove_const, :CHUNK_BYTES)
-    PdfSplitJob.const_set(:CHUNK_BYTES, stub)
+    PdfBlob.send(:remove_const, :CHUNK_BYTES)
+    PdfBlob.const_set(:CHUNK_BYTES, stub)
     job.with_original_file { |path| assert_equal original, File.binread(path) }
   ensure
-    PdfSplitJob.send(:remove_const, :CHUNK_BYTES)
-    PdfSplitJob.const_set(:CHUNK_BYTES, 8.megabytes)
+    PdfBlob.send(:remove_const, :CHUNK_BYTES)
+    PdfBlob.const_set(:CHUNK_BYTES, 1.megabyte)
   end
 
   test "SplitJob reads the original once for all outputs" do
@@ -20,7 +20,8 @@ class PdfSplitJobOriginalFileTest < ActiveSupport::TestCase
     calls = 0
     orig = PdfSplitJob.instance_method(:with_original_file)
     PdfSplitJob.define_method(:with_original_file) { |&b| calls += 1; orig.bind(self).call(&b) }
-    PdfSplitter::SplitJob.perform_now(job.id)
+    progress = JobProgress.create!(user: job.user, kind: "pdf_split", title: "分割", subject: job, total: job.page_count)
+    PdfSplitter::SplitJob.perform_now(progress.id)
     assert_equal 1, calls
     assert job.reload.done?, job.error_message
     assert_equal 3, job.pdf_blobs.where(kind: "output").count

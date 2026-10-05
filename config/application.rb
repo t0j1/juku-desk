@@ -21,6 +21,9 @@ module JukuDesk
     # These settings can be overridden in specific environments using the files
     # in config/environments, which are processed later.
     #
+    # Active Storage は使っていない（画像の variant も無い）。既定の :vips のままだと、ruby-vips が無いため
+    # 起動のたびに「Generating image variants with libvips requires the ruby-vips gem」が出る
+    config.active_storage.variant_processor = :disabled
     config.time_zone = "Tokyo"
     config.i18n.default_locale = :ja
     config.i18n.available_locales = %i[ja en]

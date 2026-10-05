@@ -1,0 +1,8 @@
+<% content_for :title, "リカバリーコード" %>
+<h1 class="page-title mb-2">2段階認証を有効にしました</h1>
+<p class="mb-4 text-lg font-bold text-err-fg">リカバリーコードはこの画面でしか表示されません。印刷するか、パスワード管理アプリなど安全な場所に保管してください。</p>
+<p class="mb-4 text-lg text-text-sub">端末を失くしたとき、1つのコードで1回だけログインできます（10個）。</p>
+<ul id="recovery-codes" class="mb-6 grid grid-cols-2 gap-2 max-w-sm font-mono text-lg">
+  <% @recovery_codes.each do |code| %><li class="rounded-lg border border-row-line bg-white px-3 py-2 select-all"><%= code %></li><% end %>
+</ul>
+<%= link_to "保管したので閉じる", root_path, class: "btn-primary" %>

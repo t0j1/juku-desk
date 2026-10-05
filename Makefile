@@ -30,7 +30,8 @@ dev-web:
 	python3 -m http.server $(SCHEDULE_PORT) -d apps/schedule-web/public
 
 test-rails:
+	node --test test/javascript/*.test.mjs
 	bin/rails test
 
 test-web:
-	cd apps/schedule-web && node --test scripts/backup.test.mjs scripts/pickup-api.test.mjs scripts/pickup-common.test.mjs
+	cd apps/schedule-web && node --test scripts/backup.test.mjs scripts/pickup-api.test.mjs scripts/pickup-common.test.mjs scripts/nav.test.mjs scripts/headers.test.mjs

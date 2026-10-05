@@ -10,9 +10,43 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "announcement_reads", force: :cascade do |t|
+    t.bigint "announcement_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["announcement_id", "user_id"], name: "index_announcement_reads_on_announcement_id_and_user_id", unique: true
+    t.index ["announcement_id"], name: "index_announcement_reads_on_announcement_id"
+    t.index ["user_id"], name: "index_announcement_reads_on_user_id"
+  end
+
+  create_table "announcements", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "body"
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "system_key"
+    t.index ["created_by_id"], name: "index_announcements_on_created_by_id"
+    t.index ["starts_at", "ends_at"], name: "index_announcements_on_starts_at_and_ends_at"
+    t.index ["system_key"], name: "index_announcements_on_system_key", unique: true
+  end
+
+  create_table "answer_events", force: :cascade do |t|
+    t.bigint "question_id", null: false
+    t.bigint "student_id"
+    t.boolean "correct"
+    t.datetime "answered_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["question_id"], name: "index_answer_events_on_question_id"
+    t.index ["student_id"], name: "index_answer_events_on_student_id"
+  end
 
   create_table "audit_logs", force: :cascade do |t|
     t.bigint "user_id"
@@ -23,24 +57,109 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "impersonator_id"
     t.index ["auditable_type", "auditable_id"], name: "index_audit_logs_on_auditable_type_and_auditable_id"
     t.index ["created_at"], name: "index_audit_logs_on_created_at"
+    t.index ["impersonator_id"], name: "index_audit_logs_on_impersonator_id"
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
+  end
+
+  create_table "crop_regions", force: :cascade do |t|
+    t.bigint "upload_id", null: false
+    t.jsonb "bbox", default: {}, null: false
+    t.string "r2_key", null: false
+    t.float "confidence"
+    t.string "status", default: "pending", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "error_message"
+    t.datetime "extracted_at"
+    t.boolean "generate_answers", default: true, null: false
+    t.index ["status"], name: "index_crop_regions_on_status"
+    t.index ["upload_id"], name: "index_crop_regions_on_upload_id"
+  end
+
+  create_table "gemini_quotas", force: :cascade do |t|
+    t.float "tokens", default: 1.0, null: false
+    t.datetime "refilled_at"
+    t.date "day"
+    t.integer "day_count", default: 0, null: false
+    t.datetime "exceeded_at"
+    t.datetime "resume_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "job_progresses", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.string "title", null: false
+    t.string "subject_type"
+    t.bigint "subject_id"
+    t.integer "status", default: 0, null: false
+    t.integer "total"
+    t.integer "done", default: 0, null: false
+    t.string "message"
+    t.string "active_job_id"
+    t.datetime "cancel_requested_at"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subject_type", "subject_id"], name: "index_job_progresses_on_subject_type_and_subject_id"
+    t.index ["user_id", "status"], name: "index_job_progresses_on_user_id_and_status"
+    t.index ["user_id"], name: "index_job_progresses_on_user_id"
+  end
+
+  create_table "login_events", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "email_address", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.boolean "success", default: false, null: false
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_login_events_on_created_at"
+    t.index ["email_address"], name: "index_login_events_on_email_address"
+    t.index ["user_id"], name: "index_login_events_on_user_id"
+  end
+
+  create_table "mail_templates", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "subject", null: false
+    t.text "body", null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_mail_templates_on_key", unique: true
+    t.index ["updated_by_id"], name: "index_mail_templates_on_updated_by_id"
+  end
+
+  create_table "password_histories", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "password_digest", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_password_histories_on_user_id"
   end
 
   create_table "pdf_blobs", force: :cascade do |t|
     t.bigint "pdf_split_job_id", null: false
     t.bigint "pdf_split_output_id"
     t.string "kind", null: false
-    t.binary "data", null: false
+    t.binary "data"
     t.integer "byte_size", null: false
     t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "r2_key"
+    t.string "checksum"
+    t.datetime "r2_migrated_at"
     t.index ["expires_at"], name: "index_pdf_blobs_on_expires_at"
     t.index ["pdf_split_job_id", "kind"], name: "index_pdf_blobs_on_pdf_split_job_id_and_kind"
     t.index ["pdf_split_job_id"], name: "index_pdf_blobs_on_pdf_split_job_id"
     t.index ["pdf_split_output_id"], name: "index_pdf_blobs_on_pdf_split_output_id"
+    t.index ["r2_key"], name: "index_pdf_blobs_on_r2_key", unique: true
   end
 
   create_table "pdf_split_jobs", force: :cascade do |t|
@@ -88,6 +207,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
     t.index ["pdf_split_job_id"], name: "index_pdf_split_page_analyses_on_pdf_split_job_id"
   end
 
+  create_table "print_jobs", force: :cascade do |t|
+    t.bigint "print_station_id", null: false
+    t.bigint "created_by_id"
+    t.string "title", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "scheduled_at", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "lease_until"
+    t.integer "lease_count", default: 0, null: false
+    t.integer "copies", default: 1, null: false
+    t.boolean "collate", default: true, null: false
+    t.string "staple"
+    t.string "driver_preset"
+    t.string "r2_key"
+    t.binary "pdf_data"
+    t.string "sha256", null: false
+    t.integer "byte_size", null: false
+    t.text "result_message"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "print_schedule_id"
+    t.date "scheduled_for"
+    t.index ["created_by_id"], name: "index_print_jobs_on_created_by_id"
+    t.index ["print_schedule_id", "scheduled_for"], name: "index_print_jobs_on_schedule_and_day", unique: true, where: "(print_schedule_id IS NOT NULL)"
+    t.index ["print_schedule_id"], name: "index_print_jobs_on_print_schedule_id"
+    t.index ["print_station_id", "status", "scheduled_at"], name: "idx_on_print_station_id_status_scheduled_at_ca6e3fbfee"
+    t.index ["print_station_id"], name: "index_print_jobs_on_print_station_id"
+    t.index ["r2_key"], name: "index_print_jobs_on_r2_key", unique: true
+    t.index ["scheduled_for"], name: "index_print_jobs_on_scheduled_for"
+  end
+
   create_table "print_links", force: :cascade do |t|
     t.string "token", null: false
     t.bigint "created_by_id"
@@ -98,12 +249,114 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
     t.index ["token"], name: "index_print_links_on_token", unique: true
   end
 
+  create_table "print_schedules", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "print_station_id", null: false
+    t.bigint "created_by_id"
+    t.integer "copies", default: 1, null: false
+    t.boolean "collate", default: true, null: false
+    t.string "staple"
+    t.string "driver_preset"
+    t.integer "weekdays", default: [], null: false, array: true
+    t.string "time_of_day", null: false
+    t.boolean "active", default: true, null: false
+    t.string "r2_key"
+    t.binary "pdf_data"
+    t.string "sha256", null: false
+    t.integer "byte_size", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_print_schedules_on_created_by_id"
+    t.index ["print_station_id"], name: "index_print_schedules_on_print_station_id"
+    t.index ["r2_key"], name: "index_print_schedules_on_r2_key", unique: true
+  end
+
+  create_table "print_stations", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "token_digest", null: false
+    t.datetime "token_issued_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "last_seen_at"
+    t.string "agent_version"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "test_print_job_id"
+    t.jsonb "test_print_result", default: {}, null: false
+    t.string "toner_status"
+    t.string "paper_status"
+    t.index ["created_by_id"], name: "index_print_stations_on_created_by_id"
+    t.index ["name"], name: "index_print_stations_on_name", unique: true
+    t.index ["token_digest"], name: "index_print_stations_on_token_digest", unique: true
+  end
+
+  create_table "questions", force: :cascade do |t|
+    t.bigint "region_id", null: false
+    t.string "subject"
+    t.text "question_text", default: "", null: false
+    t.jsonb "options", default: [], null: false
+    t.text "answer_text", default: "", null: false
+    t.text "explanation", default: "", null: false
+    t.text "tags", default: [], null: false, array: true
+    t.integer "difficulty"
+    t.jsonb "raw_ai", default: {}, null: false
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "source_label"
+    t.string "question_type"
+    t.jsonb "payload", default: {}, null: false
+    t.string "answer_source", default: "material", null: false
+    t.index ["region_id"], name: "index_questions_on_region_id"
+    t.index ["reviewed_at"], name: "index_questions_on_reviewed_at"
+    t.index ["reviewed_by_id"], name: "index_questions_on_reviewed_by_id"
+    t.index ["subject"], name: "index_questions_on_subject"
+    t.index ["tags"], name: "index_questions_on_tags", using: :gin
+    t.check_constraint "answer_source::text = ANY (ARRAY['material'::character varying, 'ai'::character varying]::text[])", name: "questions_answer_source_values"
+    t.check_constraint "difficulty IS NULL OR difficulty >= 1 AND difficulty <= 5", name: "questions_difficulty_range"
+    t.check_constraint "question_type IS NULL OR (question_type::text = ANY (ARRAY['reorder'::character varying, 'translate_en_ja'::character varying, 'compose_ja_en'::character varying, 'passage'::character varying, 'fill_blank'::character varying, 'choice'::character varying, 'free'::character varying]::text[]))", name: "questions_question_type_values"
+  end
+
+  create_table "recovery_codes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "code_digest", null: false
+    t.datetime "used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "code_digest"], name: "index_recovery_codes_on_user_id_and_code_digest", unique: true
+    t.index ["user_id"], name: "index_recovery_codes_on_user_id"
+  end
+
+  create_table "restructure_batches", force: :cascade do |t|
+    t.bigint "user_id"
+    t.bigint "region_ids", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_restructure_batches_on_user_id"
+  end
+
+  create_table "section_templates", force: :cascade do |t|
+    t.string "question_type", null: false
+    t.text "instruction", null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["question_type"], name: "index_section_templates_on_question_type", unique: true
+    t.index ["updated_by_id"], name: "index_section_templates_on_updated_by_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "ip_address"
     t.string "user_agent"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "impersonator_id"
+    t.text "impersonation_reason"
+    t.datetime "impersonation_expires_at"
+    t.bigint "origin_session_id"
+    t.index ["impersonator_id"], name: "index_sessions_on_impersonator_id"
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
@@ -128,14 +381,63 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
     t.index ["name"], name: "index_students_on_name"
   end
 
+  create_table "test_items", force: :cascade do |t|
+    t.bigint "test_id", null: false
+    t.bigint "question_id", null: false
+    t.integer "position", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "section"
+    t.integer "sub_position"
+    t.string "question_type"
+    t.index ["question_id"], name: "index_test_items_on_question_id"
+    t.index ["test_id", "position"], name: "index_test_items_on_test_id_and_position", unique: true
+    t.index ["test_id", "question_id"], name: "index_test_items_on_test_id_and_question_id", unique: true
+    t.index ["test_id", "section", "sub_position"], name: "index_test_items_on_test_id_and_section_and_sub_position", unique: true, where: "(section IS NOT NULL)"
+    t.check_constraint "(section IS NULL) = (sub_position IS NULL)", name: "test_items_section_pair"
+  end
+
+  create_table "tests", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "mode", null: false
+    t.string "subject"
+    t.jsonb "filter", default: {}, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "sections", default: [], null: false
+    t.index ["created_by_id"], name: "index_tests_on_created_by_id"
+    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying, 'by_tag'::character varying]::text[])", name: "tests_mode_values"
+  end
+
+  create_table "uploads", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "sha256", null: false
+    t.string "r2_key", null: false
+    t.string "content_type", null: false
+    t.integer "width", null: false
+    t.integer "height", null: false
+    t.integer "byte_size", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sha256"], name: "index_uploads_on_sha256", unique: true
+    t.index ["user_id"], name: "index_uploads_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email_address", null: false
     t.string "password_digest", null: false
     t.string "name", null: false
-    t.integer "role", default: 0, null: false
-    t.boolean "active", default: true, null: false
+    t.integer "role", default: 1, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "failed_attempts", default: 0, null: false
+    t.datetime "locked_until"
+    t.string "otp_secret_ciphertext"
+    t.datetime "otp_enabled_at"
+    t.bigint "otp_last_used_step"
+    t.boolean "otp_setup_required", default: false, null: false
+    t.integer "status", default: 0, null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
 
@@ -158,14 +460,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_010000) do
     t.index ["wordbook_id"], name: "index_words_on_wordbook_id"
   end
 
+  add_foreign_key "announcement_reads", "announcements", on_delete: :cascade
+  add_foreign_key "announcement_reads", "users", on_delete: :cascade
+  add_foreign_key "announcements", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "answer_events", "questions", on_delete: :cascade
+  add_foreign_key "answer_events", "students", on_delete: :nullify
   add_foreign_key "audit_logs", "users"
+  add_foreign_key "audit_logs", "users", column: "impersonator_id"
+  add_foreign_key "crop_regions", "uploads", on_delete: :cascade
+  add_foreign_key "job_progresses", "users", on_delete: :nullify
+  add_foreign_key "login_events", "users", on_delete: :nullify
+  add_foreign_key "mail_templates", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "password_histories", "users"
   add_foreign_key "pdf_blobs", "pdf_split_jobs", on_delete: :cascade
   add_foreign_key "pdf_blobs", "pdf_split_outputs", on_delete: :cascade
   add_foreign_key "pdf_split_jobs", "users"
   add_foreign_key "pdf_split_outputs", "pdf_split_jobs", on_delete: :cascade
   add_foreign_key "pdf_split_page_analyses", "pdf_split_jobs", on_delete: :cascade
+  add_foreign_key "print_jobs", "print_schedules", on_delete: :nullify
+  add_foreign_key "print_jobs", "print_stations"
+  add_foreign_key "print_jobs", "users", column: "created_by_id"
   add_foreign_key "print_links", "users", column: "created_by_id"
+  add_foreign_key "print_schedules", "print_stations"
+  add_foreign_key "print_schedules", "users", column: "created_by_id"
+  add_foreign_key "print_stations", "users", column: "created_by_id"
+  add_foreign_key "questions", "crop_regions", column: "region_id", on_delete: :cascade
+  add_foreign_key "questions", "users", column: "reviewed_by_id", on_delete: :nullify
+  add_foreign_key "recovery_codes", "users"
+  add_foreign_key "restructure_batches", "users", on_delete: :nullify
+  add_foreign_key "section_templates", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "sessions", "users"
+  add_foreign_key "sessions", "users", column: "impersonator_id", on_delete: :cascade
   add_foreign_key "student_weekdays", "students"
+  add_foreign_key "test_items", "questions", on_delete: :restrict
+  add_foreign_key "test_items", "tests", on_delete: :cascade
+  add_foreign_key "tests", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "uploads", "users", on_delete: :nullify
   add_foreign_key "words", "wordbooks"
 end

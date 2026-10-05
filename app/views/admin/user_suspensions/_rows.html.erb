@@ -1,0 +1,11 @@
+<table class="table-console mb-6">
+  <thead><tr><th>行</th><th>メールアドレス</th><th>氏名</th><th>権限</th><th>結果</th></tr></thead>
+  <tbody>
+    <% rows.each do |row| %>
+      <tr class="<%= "bg-err-bg" unless row.valid? %>">
+        <td><%= row.line %></td><td><%= row.email %></td><td><%= row.name %></td><td><%= row.role && t("roles.#{row.role}", default: row.role) %></td>
+        <td><%= row.valid? ? status_pill("OK", :ok) : status_pill(row.errors.join(" / "), :ng) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

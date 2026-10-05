@@ -1,8 +1,8 @@
 ja:
   roles:
-    instructor: 講師
-    manager: 上長
-    admin: 管理者
+    staff: スタッフ
+    system_admin: システム管理者
+    viewer: 閲覧のみ
   activerecord:
     models:
       user: ユーザー
@@ -13,6 +13,7 @@ ja:
         name: 氏名
         email_address: メールアドレス
         password: パスワード
+        password_confirmation: パスワード（確認）
         role: 権限
       student:
         name: 氏名
@@ -30,3 +31,14 @@ ja:
       splitting: 分割中
       done: 分割済み
       failed: 失敗
+  crop_region_status:
+    pending: 確定前
+    confirmed: 確定（構造化前）
+    rejected: 除外
+    queued: 順番待ち
+    processing: 処理中
+    extracted: 構造化済み
+    needs_review: 要確認
+    failed: エラー
+    quota_exceeded: 日次上限で保留
+    model_unavailable: モデルが利用できません

@@ -1,0 +1,12 @@
+<% content_for :title, "一括停止のプレビュー" %>
+<% valid = @rows.count(&:valid?) %>
+<h1 class="page-title mb-4">一括停止のプレビュー</h1>
+<p id="suspend-summary" class="mb-4 text-lg"><%= @rows.size %>行中、停止するのは <b><%= valid %></b>人、エラーは <b><%= @rows.size - valid %></b>行です。エラーの行は停止しません。</p>
+<%= render "admin/user_suspensions/rows", rows: @rows %>
+<% if valid.positive? %>
+  <%= form_with url: confirm_admin_user_suspension_path, class: "inline" do |f| %>
+    <%= f.hidden_field :csv, value: @csv %>
+    <%= f.submit "#{valid}人を停止する", class: "btn-danger cursor-pointer" %>
+  <% end %>
+<% end %>
+<%= link_to "やり直す", new_admin_user_suspension_path, class: "ml-4 text-lg underline" %>

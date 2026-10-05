@@ -17,19 +17,22 @@ module PdfSplitter
         return fail!("本日のアップロード上限（#{@limits[:max_jobs_per_day]}件）に達しました。")
       end
 
-      data = file.read.b
-      return fail!("PDFファイルではありません。") unless data.start_with?("%PDF-")
+      # アップロードは一時ファイルに書いてパスで扱う（全体を String にしない）。R2 ならそのままストリーミングで送る
+      job = Dir.mktmpdir do |dir|
+        path = File.join(dir, "upload.pdf")
+        File.open(path, "wb") { |f| IO.copy_stream(file, f) }
+        return fail!("PDFファイルではありません。") unless File.binread(path, 5) == "%PDF-"
 
-      data = Splitter.decrypt_to_string(data, password:) if password.present?
-      pages = Splitter.page_count_of(data)
-      return fail!("ページ数が多すぎます（上限 #{@limits[:max_pages]}ページ）。") if pages > @limits[:max_pages].to_i
-      return fail!("ページがありません。") if pages < 1
+        if password.present?
+          decrypted = File.join(dir, "decrypted.pdf")
+          Splitter.decrypt(path, decrypted, password:)
+          path = decrypted
+        end
+        pages = Splitter.page_count(path)
+        return fail!("ページ数が多すぎます（上限 #{@limits[:max_pages]}ページ）。") if pages > @limits[:max_pages].to_i
+        return fail!("ページがありません。") if pages < 1
 
-      job = PdfSplitJob.transaction do
-        j = @user.pdf_split_jobs.create!(original_filename: File.basename(file.original_filename.to_s).presence || "upload.pdf",
-                                         page_count: pages)
-        j.pdf_blobs.create!(kind: "original", data:, byte_size: data.bytesize, expires_at: @retention[:days].to_i.days.from_now)
-        j
+        save_job(file, path, pages)
       end
       Result.new(job:)
     rescue InvalidPdf
@@ -37,6 +40,28 @@ module PdfSplitter
     end
 
     private
+      # R2 へのアップロードを先に済ませ、成功してから DB に確定する（トランザクションの中で外部への PUT をしない）。
+      # DB の処理が失敗したら、R2 のオブジェクトを消す。
+      def save_job(file, path, pages)
+        expires_at = @retention[:days].to_i.days.from_now
+        staged = PdfBlob.stage!(kind: "original", path:) if PdfStorage.r2?
+        begin
+          PdfSplitJob.transaction do
+            j = @user.pdf_split_jobs.create!(original_filename: File.basename(file.original_filename.to_s).presence || "upload.pdf",
+                                             page_count: pages)
+            if staged
+              PdfBlob.attach_staged!(staged, kind: "original", pdf_split_job: j, expires_at:)
+            else
+              PdfBlob.store!(kind: "original", pdf_split_job: j, path:, expires_at:)
+            end
+            j
+          end
+        rescue Exception # rubocop:disable Lint/RescueException -- 孤児オブジェクトを残さないため、何が起きても消してから投げ直す
+          PdfBlob.discard_staged(staged) if staged
+          raise
+        end
+      end
+
       def max_mb = [ @limits[:max_file_mb].to_i, @retention[:max_original_mb].to_i ].min
       def fail!(message) = Result.new(error: message)
   end

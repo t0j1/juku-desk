@@ -1,0 +1,21 @@
+<% content_for :title, "メール文面" %>
+<h1 class="page-title mb-6">メール文面</h1>
+<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
+<table id="mail_templates" class="table-console">
+  <thead><tr><th>メール</th><th>件名</th><th>状態</th><th></th></tr></thead>
+  <tbody>
+    <% @templates.each do |t| %>
+      <tr id="mail_template_<%= t.key %>">
+        <td class="font-bold"><%= t.label %></td>
+        <td><%= t.subject %></td>
+        <td><%= t.customized? ? status_pill("編集済み", :busy) : status_pill("初期値", :neutral) %></td>
+        <td class="flex items-center gap-2">
+          <%= link_to "編集・プレビュー", edit_admin_mail_template_path(t.key), class: "btn-secondary" %>
+          <% if t.customized? %>
+            <%= button_to "初期値に戻す", reset_admin_mail_template_path(t.key), method: :post, class: "btn-danger", data: { turbo_confirm: "#{t.label}の文面を初期値に戻します。よろしいですか？" } %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

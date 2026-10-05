@@ -24,35 +24,33 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-screen bg-gradient-to-b from-console-bg-from to-console-bg-to text-ink font-sans text-[15px]">
+  <body class="min-h-screen bg-bg print:bg-white text-text font-sans text-lg">
     <% if authenticated? %>
-      <div class="flex min-h-screen gap-6 p-6 print:block print:p-0 print:min-h-0">
-        <aside class="w-[300px] shrink-0 flex flex-col print:hidden">
-          <%= link_to root_path, class: "flex items-center gap-3 px-2 mb-8" do %>
-            <span class="flex items-center justify-center size-11 rounded-xl bg-gradient-to-br from-primary to-primary-to text-white text-xl font-bold" aria-hidden="true">塾</span>
-            <span class="leading-tight"><span class="block font-bold text-ink">塾日報ステーション</span><span class="block text-xs text-ink-sub">Admin Console</span></span>
-          <% end %>
-          <nav aria-label="メインメニュー" class="space-y-1">
-            <%= nav_item "生徒データベース", students_path, :users, active: controller_path == "students" %>
-            <%= nav_item "PDF分割", tools_pdf_splitter_jobs_path, :scissors, active: controller_path.start_with?("tools/pdf_splitter") && action_name != "print" %>
-            <%= nav_item "印刷", print_library_path, :printer, active: controller_path == "print_library" || (controller_path == "tools/pdf_splitter/jobs" && action_name == "print") %>
-            <%= nav_item "小テスト作成", new_quiz_path, :pencil, active: controller_path == "quizzes" %>
-          </nav>
-          <div class="mt-auto rounded-xl bg-white/70 border border-line p-4">
-            <p class="font-bold text-sm text-ink"><%= current_user.name %></p>
-            <p class="text-xs text-ink-sub mb-3"><%= t("roles.#{current_user.role}") %></p>
-            <%= button_to session_path, method: :delete, class: "inline-flex items-center gap-2 text-sm text-ink-sub hover:text-ink cursor-pointer" do %>
-              <%= console_icon(:logout, size: 16) %>ログアウト
-            <% end %>
-          </div>
-        </aside>
-        <main class="flex-1 min-w-0 bg-white rounded-[20px] shadow-card p-8 print:p-0 print:shadow-none print:rounded-none">
+      <% if impersonating? %>
+        <%= render "shared/impersonation_banner" %>
+        <div class="h-12 print:hidden" aria-hidden="true"></div>
+      <% end %>
+      <div class="flex <%= content_for?(:embed) ? (impersonating? ? "h-[calc(100vh-3rem)] h-[calc(100dvh-3rem)]" : "h-screen h-dvh") : "min-h-screen" %> flex-col gap-3 p-3 md:flex-row md:gap-4 md:p-4 lg:gap-6 lg:p-6 print:block print:p-0 print:min-h-0" data-controller="sidebar">
+        <%# 768px 未満：ヘッダーの ☰ でサイドバーを開閉する %>
+        <header class="md:hidden flex items-center gap-3 print:hidden">
+          <button type="button" id="sidebar-toggle" data-sidebar-target="button" data-action="sidebar#toggle" aria-controls="app-sidebar" aria-expanded="false"
+                  class="inline-flex items-center justify-center size-12 rounded-button bg-bg shadow-raise-sm text-text cursor-pointer" aria-label="メニューを開く">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <span class="font-bold text-text">塾日報ステーション</span>
+        </header>
+        <div data-sidebar-target="scrim" data-action="click->sidebar#close" class="hidden fixed inset-0 z-30 bg-black/40 md:hidden print:hidden" aria-hidden="true"></div>
+        <%= render "shared/sidebar" %>
+        <main class="flex-1 min-w-0 flex flex-col <%= content_for?(:embed) ? "min-h-0 overflow-hidden rounded-card shadow-raise" : "gap-7" %> print:block print:p-0 print:shadow-none print:rounded-none">
+          <%= render "shared/gemini_quota_banner" %>
+          <%= render "shared/announcements" %>
           <%= render "shared/flash" %>
           <%= yield %>
         </main>
       </div>
+      <%= render "shared/progress_modal" %>
     <% else %>
-      <main class="mx-auto max-w-xl mt-16 bg-white rounded-[20px] shadow-card p-8">
+      <main class="card mx-auto max-w-xl mt-16">
         <%= render "shared/flash" %>
         <%= yield %>
       </main>

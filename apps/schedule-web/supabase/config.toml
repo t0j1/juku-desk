@@ -4,3 +4,7 @@ project_id = "sekigaku-schedule"
 # 利用者向け API は、自分で本人確認（LINE / 開発用メール）をするので、Supabase の JWT 検証は使わない
 [functions.pickup-api]
 verify_jwt = false
+
+# LINE から呼ばれる。JWT ではなく X-Line-Signature で確認する
+[functions.line-webhook]
+verify_jwt = false

@@ -6,4 +6,8 @@ class ApplicationController < ActionController::Base
 
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
+
+  private
+    # 次の画面で進捗モーダルを開く（redirect の前に呼ぶ）
+    def open_progress(progress) = flash[:open_progress] = progress.id
 end

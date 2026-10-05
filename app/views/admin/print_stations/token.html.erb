@@ -1,0 +1,8 @@
+<% content_for :title, "トークン" %>
+<h1 class="page-title mb-6">「<%= @station.name %>」のトークン</h1>
+<div class="card max-w-xl space-y-3">
+  <p class="alert-warn">このトークンは今だけ表示します。もう一度は見られません。</p>
+  <code id="station-token" class="block break-all rounded-field bg-bg shadow-inset p-3"><%= @token %></code>
+  <p class="text-text-sub">教室PCで <code>print-agent token</code> に貼り付けて保存してください（Windows の DPAPI で暗号化されます）。</p>
+</div>
+<%= link_to "一覧へ戻る", admin_print_stations_path, class: "btn-secondary mt-6 inline-flex" %>

@@ -1,0 +1,13 @@
+<% content_for :title, "「#{@template.label}」の指示文" %>
+<h1 class="page-title mb-4">「<%= @template.label %>」の指示文</h1>
+<p class="mb-4 text-lg text-text-sub">初期値：<%= SectionTemplate::DEFAULTS.fetch(@template.question_type) %></p>
+<%= form_with model: @template, url: section_template_path(@template.question_type), method: :patch, scope: :section_template, class: "space-y-4 max-w-2xl" do |f| %>
+  <% if @template.errors.any? %>
+    <div id="error_explanation" class="py-2 px-3 bg-err-bg text-err-fg rounded-lg"><ul><% @template.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul></div>
+  <% end %>
+  <div><%= f.label :instruction, "指示文", class: "label" %><%= f.text_area :instruction, rows: 3, required: true, maxlength: 300, class: "block w-full rounded-lg border border-field-border bg-bg px-3 py-2 mt-1 text-lg" %></div>
+  <div class="flex items-center gap-3">
+    <%= f.submit "保存", class: "btn-primary cursor-pointer" %>
+    <%= link_to "一覧に戻る", section_templates_path, class: "text-lg underline" %>
+  </div>
+<% end %>

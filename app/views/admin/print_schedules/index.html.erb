@@ -1,0 +1,28 @@
+<% content_for :title, "定例印刷" %>
+<div class="flex items-center mb-6">
+  <h1 class="page-title">定例印刷</h1>
+  <%= link_to "雛形を登録", new_admin_print_schedule_path, class: "btn-primary ml-auto" %>
+</div>
+<p class="caption mb-4 max-w-3xl">曜日と時刻を決めた雛形から、毎日 18:00 に翌日分の印刷ジョブを「待機中」で作ります。1 日に作る上限は <%= PrintSchedule::DAILY_LIMIT %> 件です。</p>
+<% if notice %><p id="notice" class="alert-ok mb-4"><%= notice %></p><% end %>
+<div class="overflow-x-auto">
+<table id="print_schedules" class="table-console whitespace-nowrap">
+  <thead><tr><th>名前</th><th>ステーション</th><th>曜日・時刻</th><th>部数</th><th>状態</th><th></th></tr></thead>
+  <tbody>
+    <% @schedules.each do |s| %>
+      <tr id="print_schedule_<%= s.id %>">
+        <td class="font-bold"><%= s.name %></td>
+        <td><%= s.print_station.name %></td>
+        <td><%= s.weekdays_label %>　<%= s.time_of_day %></td>
+        <td><%= s.copies %></td>
+        <td><%= s.active ? status_pill("有効", :ok) : status_pill("停止中", :neutral) %></td>
+        <td class="flex flex-nowrap items-center gap-2">
+          <%= button_to (s.active ? "停止" : "再開"), toggle_admin_print_schedule_path(s), class: "btn-secondary btn-sm" %>
+          <%= button_to "削除", admin_print_schedule_path(s), method: :delete, class: "btn-danger btn-sm", data: { turbo_confirm: "この雛形を削除します（作成済みのジョブは残ります）。よろしいですか？" } %>
+        </td>
+      </tr>
+    <% end %>
+    <% if @schedules.empty? %><tr><td colspan="6" class="text-center text-text-sub">雛形はまだありません</td></tr><% end %>
+  </tbody>
+</table>
+</div>

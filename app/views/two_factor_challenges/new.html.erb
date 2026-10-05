@@ -1,0 +1,13 @@
+<% content_for :title, "2段階認証" %>
+<div class="mx-auto max-w-md">
+  <h1 class="font-bold text-2xl mb-2">2段階認証</h1>
+  <p class="text-lg text-text-sub mb-6">認証アプリに表示されている6桁のコードを入力してください。端末がないときは、リカバリーコード（1回だけ使えます）を入力できます。</p>
+  <%= form_with url: two_factor_challenge_path, class: "space-y-4" do |form| %>
+    <div>
+      <%= form.label :code, "認証コード または リカバリーコード", class: "label" %>
+      <%= form.text_field :code, required: true, autofocus: true, autocomplete: "one-time-code", inputmode: "text", maxlength: 32, class: "input mt-1" %>
+    </div>
+    <%= form.submit "ログイン", class: "btn-primary cursor-pointer" %>
+    <p class="text-lg"><%= link_to "最初からやり直す", new_session_path, class: "underline" %></p>
+  <% end %>
+</div>

@@ -30,8 +30,35 @@ DATABASE_URL        = Neon の接続文字列（?sslmode=require 付き）
 SOLID_QUEUE_IN_PUMA = true
 WEB_CONCURRENCY     = 0   # 512MB プランでは single mode（ワーカープロセスを増やさない）
 RAILS_MAX_THREADS   = 3
+SCHEDULE_WEB_URL    = https://<project>.pages.dev   # 任意。サイドバーの「スケジュール」（/schedule 以下）が schedule-web を iframe で埋め込む。未設定ならサイドバーに出さず、/schedule は「未設定」と表示
 ```
 Settings → Deploy Hook の URL を控える。
+
+### PDF の置き場所（Neon の bytea ⇄ Cloudflare R2）
+PDF 本体は既定で Neon の `pdf_blobs.data`（bytea）に入る。Neon の無料ストレージは小さく、読み出しのたびに全体がメモリに乗るので、Cloudflare R2（無料枠 10GB・転送料なし）へ移せるようにしてある。環境変数 `PDF_STORAGE=db|r2` で切り替える（**既定は `db`＝従来どおり**）。
+
+R2 を使うときの環境変数（すべて Render に登録。リポジトリには入れない）:
+```
+PDF_STORAGE          = r2
+R2_ACCOUNT_ID        = Cloudflare のアカウント ID（R2_ENDPOINT で上書きも可）
+R2_ACCESS_KEY_ID     = R2 の API トークンのアクセスキー
+R2_SECRET_ACCESS_KEY = 同シークレット
+R2_BUCKET            = バケット名
+```
+
+**切り替えの手順（人間）**
+1. R2 でバケットを作り、**そのバケットだけ**に書ける API トークンを作る。
+2. （任意）バケットのライフサイクルルールで、オブジェクトを 8 日で自動削除にしておく。アプリは 7 日で消すが、失敗したときの取りこぼしの保険になる。
+アップロードは「R2 への PUT → 照合 → DB に確定」の順で、PUT は DB のトランザクションの外で行う。DB の処理が失敗したら、PUT 済みのオブジェクトをその場で消す。それでも消せなかったものや、途中で落ちて行が無いまま残ったオブジェクトは、`PdfSplitter::CleanupJob` が `pdf/` 以下を調べ、作成から 24 時間以上たち、DB に行が無いものを削除する（猶予は `retention.orphan_min_age_hours`、1 回に消す件数の上限は環境変数 `PDF_ORPHAN_SWEEP_LIMIT`＝既定 100。人間の作業は不要）。
+
+3. Render に上の環境変数を登録して再デプロイする（`PDF_STORAGE` はまだ `db` のままでよい。migration はコンテナ起動時に自動で流れる）。
+4. Render の Shell で既存データを移す: `bin/rails pdf_blobs:migrate_to_r2`。1 件ずつ処理し、R2 のサイズとチェックサムを照合する。1 件でも一致しなければそこで止まる。止まっても、同じコマンドをもう一度実行すれば続きから進む（`LIMIT=5` で件数を絞って試せる）。DB のコピーは消えない。
+5. `PDF_STORAGE=r2` に切り替えて再デプロイし、アップロード・分割・ダウンロード・印刷が動くか確認する。
+6. 問題がなければ、DB のコピーを消す: `CONFIRM=yes bin/rails pdf_blobs:purge_db_copies`。R2 側を照合し直して、一致したものだけ消す。**これを実行すると `db` には戻せない**。容量を実際に空けるには、そのあと Neon で `VACUUM FULL pdf_blobs;` が必要（ロックがかかるので、使っていない時間に）。
+
+**ロールバック**: `PDF_STORAGE=db` に戻す。purge する前なら、移行済みのデータも DB に残っているのでそのまま読める。`PDF_STORAGE=r2` の間に新しくアップロードした PDF は R2 にしか無い（`R2_*` を消さないこと。期限は 7 日なので、待てば消える）。`R2_*` を外した場合、cleanup は R2 にある行の削除を飛ばして警告だけ出し、DB だけの行は消す（`R2_*` を戻せば次回消える）。
+
+実装の要点: Active Storage ではなく薄いアダプタ（`app/services/pdf_storage/r2.rb`、`aws-sdk-s3`）。PDF は独自の期限・容量上限・一括削除を持ち、Active Storage の添付テーブルに載せ替えると二重管理になるため。読み書きはファイルへのストリーミングで、PDF 全体を 1 つの String にするのは db モードの保存と、出力 PDF（小さい）のレスポンスだけ。メモリの比較は `bin/rails runner script/pdf_memory_probe.rb 25`（`PROBE_R2=1` と `R2_*` を付けると R2 も測る）。
 
 ## 3. GitHub
 Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を登録する。
@@ -39,6 +66,7 @@ Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を�
 
 ## 4. 確認
 - `https://<app>.onrender.com/up` が 200 を返す。
+- **デプロイ成功の確認（Render の権限が無くてもできる）**: `curl https://juku-desk.onrender.com/up/version` の `sha` が `main` の最新コミット（`git rev-parse origin/main`）と一致すれば、新しいコードで起動できている。古い SHA のままなら、デプロイ中か失敗（Render → Events で確認）。`unknown` は `RENDER_GIT_COMMIT` が無い環境（ローカルなど）。返すのは `sha` と `booted_at` だけで、認証は不要。
 - Render → Events に各デプロイが並ぶ。**Rollback** はここから（直近のデプロイに戻せる）。
 
 ## 5. スリープ防止（cron-job.org）
@@ -103,3 +131,41 @@ Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が
 - **schedule-web だけ変えたのに Rails の CI が走る**: 同じ PR で Rails 側や `ci.yml` 以外のルートのファイルも変えていないか確認する。
 - **schedule-web のテストが `import` で落ちる**: Node 24 が必要（`mise install`）。pglite 系は `npm i --no-save @electric-sql/pglite` を `apps/schedule-web` で実行してから。
 - **バックアップが動かない**: 旧 private リポジトリ側の Actions を確認する（このリポジトリでは動かさない）。
+
+## マーキング検出（画像の取り込み）
+
+赤枠でマーキングした教材画像を取り込む機能（`/marking`）。画像（縮小済みの元画像と切り出し）は R2 に置き、DB には `uploads` / `crop_regions` を持つ。
+
+- **本番では `R2_*` の設定が必須**（`PDF_STORAGE` が `db` のままでも、画像だけは R2 を使う）。`R2_BUCKET` が無いと、本番では取り込み時にエラーになる（Render Free のディスクは消えるため、ローカルには置かない）。開発・テストは `storage/marking`（`MARKING_DISK_PATH` で変更可）。
+- 画像のデコードはブラウザで行う。サーバーは大きな画像をデコードしない。
+- 設定値は環境変数（すべて任意。未設定なら既定値）。しきい値: `MARKING_MIN_AREA_RATIO`（0.005）、`MARKING_MAX_AREA_RATIO`（0.9）、`MARKING_MAX_ASPECT_RATIO`（20）、`MARKING_MAX_FILL_RATIO`（0.95）、`MARKING_IOU_THRESHOLD`（0.5）、`MARKING_TILT_THRESHOLD`（0.5）、`MARKING_MERGE_GAP`（12）、`MARKING_MIN_SATURATION`（70）、`MARKING_MIN_VALUE`（50）、`MARKING_HUE_LOW`（10）、`MARKING_HUE_HIGH`（170）、`MARKING_CLOSE_KERNEL` / `_ITERATIONS`（5 / 2）、`MARKING_OPEN_KERNEL` / `_ITERATIONS`（3 / 1）。縮小・上限: `MARKING_MAX_LONG_SIDE`（1600）、`MARKING_MAX_BYTES`（5242880）、`MARKING_MAX_REGIONS`（100）、`MARKING_CROP_PADDING`（4）、`MARKING_JPEG_QUALITY`（0.85）。
+- 同じ画像（sha256 が同じ）は取り込み直さず、既存の upload を返す。
+
+### Gemini による構造化（マーキング検出 M-2）
+
+確定した領域は Solid Queue のジョブ（`Marking::ExtractJob`）で 1 件ずつ Gemini に送り、問題・選択肢・解答・解説・タグに構造化して `questions` に保存する。結果は `/marking/questions` で確認・編集・承認する（承認済みだけが出題対象）。
+
+**人間の作業**: `GEMINI_API_KEY` を Render に登録する（無料枠を使う。未設定の間は、取り込んだ領域は構造化されずに「確定」のまま残り、画像の画面の「構造化を開始・やり直す」で後から始められる）。
+
+環境変数（`GEMINI_API_KEY` 以外は任意）: `GEMINI_MODEL`（gemini-3.8-flash）、`GEMINI_RPM`（10）、`GEMINI_RPD`（250）、`GEMINI_BURST`（1。トークンバケットの容量）、`GEMINI_MAX_CONCURRENCY`（1）、`GEMINI_TIMEOUT_SECONDS`（60）、`GEMINI_MAX_RETRIES`（5）、`GEMINI_RETRY_BASE_SECONDS`（2）、`GEMINI_ENDPOINT`（テスト用に差し替える場合）。RPM / RPD は契約中の無料枠の値に合わせて設定する。
+
+- RPM はトークンバケット、RPD は太平洋時間 0 時にリセットする日次カウンタ（`gemini_quotas` の 1 行を全プロセスで共有）。429（分あたり）・5xx・タイムアウトは、指数バックオフ + ジッターで最大 5 回までやり直し、だめなら **その領域だけ** `failed`（ほかは続行）。
+- **モデルの廃止・利用不可**（Gemini が 404 を返す）は通常のエラーと分けて `model_unavailable` にし、「モデルが利用できません：GEMINI_MODELを更新してください」と表示する。`GEMINI_MODEL` を更新して再デプロイしたあと、画像ごとの「構造化を開始・やり直す」で再投入する。
+- **1 つの領域に複数の問題**（〔1〕〔2〕など）があるときは、1 領域から複数の questions を作る。問題番号は `questions.source_label` に入れ、`question_text` には含めない。
+- **日次上限**（自前の RPD に到達、または Gemini の RESOURCE_EXHAUSTED が日次のもの）は `failed` ではなく `quota_exceeded`。残りは `queued` のまま保留し、太平洋時間 0 時の 1 分後に `Marking::ResumeJob` が自動で再開する。画面上部に専用のバナー（残り件数と再開時刻（JST））を出し、監査ログに `gemini_daily_quota_exceeded` を記録する。
+- 科目が null か 5 科目以外のときは `needs_review`（問題は保存して、レビューで科目を決める）。`question_text` / `answer_text` が空なら `failed`。生の応答は `questions.raw_ai` に残る。
+- メモリ計測: `RAILS_ENV=test bin/rails runner script/marking_extract_memory_probe.rb [件数] [1 枚の KB]`。
+
+### LIFF 送迎予約と管理画面の連携（L-4）
+
+LIFF から入った予約（`pickup_reservations.status = 'pending'`）は、埋め込み済みの schedule-web 管理画面（`/schedule/admin` の「承認待ち」）にそのまま出て、承認・却下できる。DB は統合しない（予約は Supabase、監査ログと お知らせは juku-desk）。
+
+- **承認・却下の監査ログ**: Supabase のトリガー（`pickup.sql` の `pickup_notify_rails`）が、管理者による pending → approved / rejected のときだけ pg_net で `POST /internal/schedule_events` を呼び、`audit_logs` に `schedule_reservation_approve` / `schedule_reservation_reject` を1件残す（再送されても予約ごとに1件）。期限切れの自動却下・本人の取り消しは対象外。署名は `"<unix秒>.<event>.<reservation_id>.<actor_id>"` の HMAC-SHA256（ヘッダ `X-Schedule-Timestamp` / `X-Schedule-Signature: sha256=<hex>`、時刻のずれは5分まで）。送信に失敗しても承認は成功する。
+- **LINE の残り通数のバナー（L-3 との取り決め）**: 送る側は `POST /internal/schedule_events` に、次の JSON を署名つきで送る。
+  - 本文: `{"event":"line_quota_updated","remaining":19}`。`event` は固定の文字列、`remaining` は 0 以上の整数（JSON の number。文字列・小数・負数は 422）。その月の残り通数そのもの（差分ではない）。
+  - ヘッダ: `X-Schedule-Timestamp`（unix 秒）と `X-Schedule-Signature: sha256=<hex>`。署名は `"<unix秒>.line_quota_updated.<remaining>."` の HMAC-SHA256（末尾の `.` の後ろの actor_id は空）。鍵は `SCHEDULE_EVENTS_SECRET`。時刻のずれは5分まで。
+  - 応答: 成功は 204、署名不正・期限切れは 401、秘密未設定は 503、本文不正は 422。
+  - 動作: `remaining < 20` でお知らせバナー（#17。`announcements.system_key = 'line_quota_low'`、月末まで）を出し、既読にされていても、一度 20 通以上に戻ってからまた切ったときは出し直す。ちょうど 20 通は出さない。20 通以上になったら閉じる。送る側（L-3 の保存処理）はこの PR には含まない。
+**人間の作業**:
+1. Render に `SCHEDULE_EVENTS_SECRET`（16 文字以上のランダムな文字列）を登録する。未設定の間、エンドポイントは 503 を返す。
+2. Supabase の SQL Editor で最新の `pickup.sql` を流し（`create extension pg_net` が有効なこと）、続けて宛先を1回だけ登録する: `insert into public.rails_webhook (id, url, secret) values (1, 'https://<juku-desk>/internal/schedule_events', '<SCHEDULE_EVENTS_SECRET と同じ値>') on conflict (id) do update set url = excluded.url, secret = excluded.secret;`（`rails_webhook` は anon / 管理者のブラウザからは読めない）。未登録のあいだは通知しない。

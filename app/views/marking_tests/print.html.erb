@@ -1,0 +1,53 @@
+<% subjects = @test.subject || @items.map { |i| i.question.subject }.compact.uniq.join("・") %>
+<% content_for :title, "#{@test.title}（#{@kind == :answer ? "解答用" : "問題用"}）" %>
+<% content_for :head do %>
+  <style>
+    @page { size: A4 portrait; margin: 15mm; @bottom-center { content: counter(page) " / " counter(pages); font-family: var(--marking-font); font-size: 9pt; } }
+  </style>
+  <%= stylesheet_link_tag "katex/katex" %>
+<% end %>
+<div data-controller="page-print" class="marking-print">
+  <div id="print-toolbar" class="card !py-4 flex flex-wrap items-center gap-3 mb-6 print:hidden">
+    <button type="button" class="btn-primary" data-action="page-print#print"><%= console_icon(:printer) %>印刷</button>
+    <%= link_to "もう一方（#{@kind == :answer ? "問題用" : "解答用"}）", print_marking_test_path(@test, kind: @kind == :answer ? "question" : "answer"), class: "btn-secondary" %>
+    <%= link_to "戻る", marking_test_path(@test), class: "btn-secondary" %>
+    <span class="caption">印刷ダイアログで「PDF として保存」もできます。</span>
+    <% if current_user.system_admin? %>
+      <% stations = PrintStation.active.order(:name).to_a %>
+      <% if stations.any? %>
+        <%= form_with url: print_job_marking_test_path(@test), scope: :print_job, class: "flex flex-wrap items-center gap-3 w-full" do |f| %>
+          <%= hidden_field_tag :kind, @kind %>
+          <%= f.select :print_station_id, stations.map { |s| [ "#{s.name}#{"（オフライン）" unless s.online?}", s.id ] }, {}, class: "input !w-auto", "aria-label": "ステーション" %>
+          <%= f.number_field :copies, min: 1, max: 99, value: 1, class: "input !w-24", "aria-label": "部数" %>
+          <%= f.text_field :driver_preset, maxlength: 100, placeholder: "ドライバーの設定名（例：A4両面）", class: "input !w-64", "aria-label": "ドライバーの設定名" %>
+          <%= f.submit "印刷ジョブを作成", class: "btn-primary cursor-pointer" %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+  <article class="mt-sheet" data-controller="math">
+    <header class="mt-head">
+      <div class="mt-title"><%= @test.title %><span class="mt-kind"><%= @kind == :answer ? "【解答】" : "" %></span></div>
+      <div class="mt-meta">
+        <span>科目：<%= subjects.presence || "—" %></span>
+        <span>作成日：<%= @test.created_at.strftime("%Y年%-m月%-d日") %></span>
+        <% if @kind == :question %><span>名前：<span class="mt-name-line"></span></span><% end %>
+      </div>
+    </header>
+    <% if @test.short? %><p class="mt-short print:hidden">※ 問題が足りないため <%= @items.size %> 問で作成されています。</p><% end %>
+    <% if @test.sectioned? %>
+      <% @items.chunk_while { |a, b| a.section == b.section }.each do |group| %>
+        <section class="mt-section" id="print_section_<%= group.first.section %>">
+          <h2 class="mt-section-head"><span class="mt-section-no">【<%= group.first.section %>】</span><%= @instructions[group.first.question_type] %></h2>
+          <ol class="mt-list">
+            <% group.each do |item| %><%= render "print_item", item: item %><% end %>
+          </ol>
+        </section>
+      <% end %>
+    <% else %>
+      <ol class="mt-list">
+        <% @items.each do |item| %><%= render "print_item", item: item %><% end %>
+      </ol>
+    <% end %>
+  </article>
+</div>

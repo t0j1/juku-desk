@@ -1,7 +1,7 @@
 require "test_helper"
 
 class QuizzesControllerTest < ActionDispatch::IntegrationTest
-  setup { sign_in_as users(:instructor) }
+  setup { sign_in_as users(:staff) }
 
   def create_quiz(**overrides)
     post quizzes_path, params: { quiz: { wordbook_id: wordbooks(:leap).id, start_no: 1, end_no: 50, count: 50 }.merge(overrides) }
@@ -25,12 +25,16 @@ class QuizzesControllerTest < ActionDispatch::IntegrationTest
     get new_quiz_path(wordbook_id: wordbooks(:leap).id)
     assert_response :success
     assert_select "[aria-current=step]", text: /範囲と問題数/
-    assert_select "p", text: "範囲は 1〜50 です"
-    assert_select "input[name='quiz[start_no]'][value='1']"
+    assert_select "p", text: "No.1〜50 から選べます"
+    assert_select "input[name='quiz[start_no]'][value='1']" # 開始は毎回 1
+    assert_select "select#quiz_span_preset option[selected][value='100']" # 単語数の初期値は 100
+    assert_select "input[name='quiz[span]'][value='100']"
+    assert_select "input[name='quiz[end_no]']", count: 0
+    assert_select "[data-quiz-range-target=customWrap][hidden]"
     assert_select "[data-quiz-range-target=greeting]", text: "今日は何問いってみる？"
     assert_select "input[type=radio][name='quiz[count]']", count: 5
     assert_select "input[type=radio][name='quiz[count]'][checked]", count: 0
-    assert_select "input[type=range]", count: 2
+    assert_select "input[type=range]", count: 0 # スライダーは無い
     assert_select "button[type=submit]", text: "テストをつくる"
   end
 
@@ -40,18 +44,27 @@ class QuizzesControllerTest < ActionDispatch::IntegrationTest
 
     get new_quiz_path(wordbook_id: wordbooks(:leap).id, start_no: 11, end_no: 40, count: 25)
     assert_select "input[name='quiz[start_no]'][value='11']"
-    assert_select "input[name='quiz[end_no]'][value='40']"
+    assert_select "input[name='quiz[span]'][value='30']" # 11〜40 は 30 語
+    assert_select "select#quiz_span_preset option[selected][value='custom']"
+    assert_select "[data-quiz-range-target=customWrap]:not([hidden]) input[value='30']"
     assert_select "input[type=radio][name='quiz[count]'][value='25'][checked]" # 候補にない値も、そのまま選択状態で戻す
     assert_select "[data-quiz-range-target=greeting]", text: "25問！いいね"
     assert_select "[data-quiz-range-target=startError]:not([hidden])", count: 0
   end
 
   test "invalid range re-renders step 2 with errors" do
-    create_quiz(start_no: 0, end_no: 60, count: 5)
+    create_quiz(start_no: 0, span: 0, count: 5)
     assert_response :unprocessable_entity
-    assert_select "[data-quiz-range-target=startError]:not([hidden])", text: /✕ 1〜50 の範囲/
-    assert_select "[data-quiz-range-target=endError]:not([hidden])", text: /✕ 1〜50 の範囲/
+    assert_select "[data-quiz-range-target=startError]:not([hidden])", text: /✕ 1〜50の数字を入れてください/
+    assert_select "[data-quiz-range-target=spanError]:not([hidden])", text: /✕ 1以上の数字を入れてください/
     assert_select "[data-quiz-range-target=countError]:not([hidden])", text: /✕ 問題数は 10〜50/
+  end
+
+  test "start + span creates the quiz and stops at the last number" do
+    create_quiz(start_no: 41, span: 100, count: 10)
+    assert_response :success
+    assert_select "#quiz-sheet-question .sheet-title", text: "LEAP 改訂版 No.41–50"
+    assert_select "input[name='quiz[end_no]'][value='50']" # プレビューの「入れ替え」は計算済みの終わりの番号を送る
   end
 
   test "valid request renders the A4 preview with distinct words and a left-heavy split" do

@@ -9,7 +9,11 @@ class Quiz
   attribute :wordbook
   attribute :start_no, :integer
   attribute :end_no, :integer
+  attribute :span, :integer # 開始から何語か。あれば end_no は span から計算する（単語帳の最後で止める）
   attribute :count, :integer
+
+  SPAN_CHOICES = [ 50, 100, 200, 300, 500 ].freeze
+  DEFAULT_SPAN = 100
 
   validate :check_range_and_count
 
@@ -42,22 +46,48 @@ class Quiz
     "#{wordbook.name} No.#{start_no}–#{end_no}"
   end
 
+  # 開始 + 語数 − 1。単語帳の最後を超えるときは最後で止める
+  def self.end_for(start_no, span, max)
+    [ start_no + span - 1, max ].min
+  end
+
+  # 最後の番号で止めたか（画面に「最後の番号までにしました」と出す）
+  def clamped?
+    span.present? && start_no.present? && start_no + span - 1 > wordbook.max_number
+  end
+
   private
     def check_range_and_count
       min, max = wordbook.min_number, wordbook.max_number
       range_ok = true
-      { start_no: start_no, end_no: end_no }.each do |attr, value|
-        if value.nil?
-          errors.add(attr, "数字で入力してください")
-          range_ok = false
-        elsif value < min || value > max
-          errors.add(attr, "#{min}〜#{max} の範囲で入力してください")
+
+      unless whole_number?(:start_no) && start_no.between?(min, max)
+        errors.add(:start_no, "#{min}〜#{max}の数字を入れてください")
+        range_ok = false
+      end
+
+      if !span_given? && end_no.nil?
+        errors.add(:span, "1以上の数字を入れてください")
+        range_ok = false
+      elsif span_given?
+        if whole_number?(:span) && span >= 1
+          self.end_no = self.class.end_for(start_no, span, max) if range_ok
+        else
+          errors.add(:span, "1以上の数字を入れてください")
           range_ok = false
         end
-      end
-      if range_ok && start_no > end_no
-        errors.add(:start_no, "開始は終了以下にしてください")
-        range_ok = false
+      else
+        # 終わりの番号を直接受け取る従来の形（直接の POST 用）
+        if end_no.nil?
+          errors.add(:end_no, "数字で入力してください")
+          range_ok = false
+        elsif end_no < min || end_no > max
+          errors.add(:end_no, "#{min}〜#{max} の範囲で入力してください")
+          range_ok = false
+        elsif range_ok && start_no > end_no
+          errors.add(:start_no, "開始は終了以下にしてください")
+          range_ok = false
+        end
       end
 
       if count.nil? || count < MIN_COUNT || count > MAX_COUNT
@@ -65,5 +95,18 @@ class Quiz
       elsif range_ok && count > available_count
         errors.add(:count, "範囲内の語数（#{available_count}語）を超えています")
       end
+    end
+
+    def raw_input(name) = @attributes[name].value_before_type_cast
+
+    def span_given?
+      !raw_input("span").to_s.strip.empty?
+    end
+
+    # 「12.5」「abc」のような値は、整数に丸められる前の入力で弾く
+    def whole_number?(attr)
+      value = public_send(attr)
+      raw = raw_input(attr.to_s)
+      !value.nil? && raw.to_s.strip.match?(/\A\d+\z/)
     end
 end

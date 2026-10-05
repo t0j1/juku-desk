@@ -1,0 +1,10 @@
+<%# 期間内で、まだ既読にしていないお知らせを全画面の上部にバナーで出す。「既読にして閉じる」で本人だけ消える %>
+<% Announcement.banners_for(current_user).each do |a| %>
+  <section id="announcement_<%= a.id %>" role="region" aria-label="お知らせ" class="mb-4 flex items-start gap-3 rounded-xl bg-warn-bg text-warn-fg px-4 py-3 print:hidden">
+    <div class="min-w-0 flex-1">
+      <p class="font-bold"><%= a.title %></p>
+      <% if a.body.present? %><div class="mt-1 text-lg"><%= simple_format(h(a.body)) %></div><% end %>
+    </div>
+    <%= button_to "既読にして閉じる", read_announcement_path(a), method: :post, class: "shrink-0 text-lg font-bold underline cursor-pointer" %>
+  </section>
+<% end %>

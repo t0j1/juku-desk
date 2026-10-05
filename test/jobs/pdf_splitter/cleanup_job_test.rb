@@ -22,4 +22,18 @@ class PdfSplitter::CleanupJobTest < ActiveJob::TestCase
     PdfSplitter::CleanupJob.perform_now(max_total_bytes: newest.byte_size)
     assert_equal [ newest.id ], PdfBlob.pluck(:id)
   end
+
+  test "deletes expired and over-quota objects from R2 too" do
+    with_pdf_storage("r2") do |r2|
+      job = new_job
+      expired = store_blob(job, expires_at: 1.minute.ago)
+      old = store_blob(job, kind: "output")
+      old.update_columns(created_at: 2.days.ago)
+      newest = store_blob(job, kind: "output")
+      PdfSplitter::CleanupJob.perform_now(max_total_bytes: newest.byte_size)
+      assert_equal [ newest.r2_key ], r2.objects.keys
+      assert_equal [ newest.id ], PdfBlob.pluck(:id)
+      assert_includes r2.deletes, expired.r2_key
+    end
+  end
 end

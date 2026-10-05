@@ -46,7 +46,11 @@ module PdfSplitter
       "#{label.truncate(80, omission: '')}.pdf"
     end
 
-    def to_pdf
+    # 全体を String で返す（テスト用）。配信には with_pdf を使うこと
+    def to_pdf = with_pdf { |path| File.binread(path) }
+
+    # 一時ファイルのパスを渡す（ブロックを抜けると消える）
+    def with_pdf
       @job.with_original_file do |src|
         Dir.mktmpdir do |dir|
           blank = File.join(dir, "blank.pdf")
@@ -57,9 +61,9 @@ module PdfSplitter
             pages
           end
           out = File.join(dir, "out.pdf")
-          _o, err, st = Open3.capture3("qpdf", "--empty", "--pages", *args, "--", out)
+          _o, err, st = Open3.capture3(*PdfSplitter::NICE, "qpdf", "--empty", "--pages", *args, "--", out)
           raise SplitError, err.presence || "qpdf failed" unless st.success? || st.exitstatus == 3
-          File.binread(out)
+          yield out
         end
       end
     end

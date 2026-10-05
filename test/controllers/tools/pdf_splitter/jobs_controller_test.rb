@@ -3,7 +3,7 @@ require "test_helper"
 class Tools::PdfSplitter::JobsControllerTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
-  setup { sign_in_as users(:instructor) }
+  setup { sign_in_as users(:staff) }
 
   def upload(name = "workbook_p1.pdf", type = "application/pdf")
     post tools_pdf_splitter_jobs_path, params: { file: fixture_file_upload(name, type) }
@@ -176,13 +176,13 @@ class Tools::PdfSplitter::JobsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "enforces the daily upload limit" do
-    PdfSplitter.config[:limits][:max_jobs_per_day].times { users(:instructor).pdf_split_jobs.create!(original_filename: "x.pdf") }
+    PdfSplitter.config[:limits][:max_jobs_per_day].times { users(:staff).pdf_split_jobs.create!(original_filename: "x.pdf") }
     assert_no_difference("PdfSplitJob.count") { upload }
     assert_match "上限", flash[:alert]
   end
 
   test "cannot access another user's job" do
-    job = create_pdf_job(user: users(:manager))
+    job = create_pdf_job(user: users(:system_admin))
     get tools_pdf_splitter_job_path(job)
     assert_response :not_found
   end
