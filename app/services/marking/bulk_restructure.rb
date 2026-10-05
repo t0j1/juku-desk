@@ -34,11 +34,11 @@ module Marking
 
     def enqueue!(regions, user:)
       ids = regions.order(:id).ids
-      return if ids.empty?
+      return [ nil, nil ] if ids.empty?
 
       batch = RestructureBatch.create!(user: user, region_ids: ids)
-      Marking::Enqueuer.call(CropRegion.where(id: ids).order(:id))
-      batch
+      progress = Marking::Enqueuer.call(CropRegion.where(id: ids).order(:id), user: user, title: "まとめて再構造化（#{ids.size}件）", label: "再構造化中", subject: batch)
+      [ batch, progress ]
     end
   end
 end

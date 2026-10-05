@@ -22,7 +22,11 @@ class UploadsController < ApplicationController
     return redirect_to upload_path(upload), alert: "GEMINI_API_KEY が設定されていません。" unless GeminiConfig.configured?
 
     regions = upload.crop_regions
-    count = Marking::Enqueuer.call(regions.where(status: CropRegion::RETRYABLE_STATUSES).or(regions.stale_processing), generate_answers: generate_answers?)
+    # queued：キャンセルや上限で止まり、順番待ちのまま残っているもの（続きから処理する。同じ領域を二重に積んでも Extractor が 1 回だけ処理する）
+    progress = Marking::Enqueuer.call(regions.where(status: CropRegion::RETRYABLE_STATUSES + %w[queued]).or(regions.stale_processing).order(:id),
+                                      generate_answers: generate_answers?, user: current_user, title: "画像 ##{upload.id} の構造化", subject: upload)
+    count = progress&.total || 0
+    open_progress(progress) if progress
     redirect_to upload_path(upload), notice: "#{count} 件を構造化の順番待ちに入れました。", status: :see_other
   end
 
@@ -50,7 +54,7 @@ class UploadsController < ApplicationController
     return render_error(error) if error
 
     upload = save_upload(file, content_type, sha256, regions)
-    Marking::Enqueuer.call(upload.crop_regions, generate_answers: generate_answers?) # 構造化は順番待ちに積むだけ（すぐ返す）
+    Marking::Enqueuer.call(upload.crop_regions.order(:id), generate_answers: generate_answers?, user: current_user, title: "画像 ##{upload.id} の構造化", subject: upload) # 構造化は順番待ちに積むだけ（すぐ返す）
     render json: { id: upload.id, duplicate: false, regions: upload.crop_regions.size, url: upload_path(upload) }, status: :created
   rescue ActiveRecord::RecordNotUnique
     existing = Upload.find_by!(sha256:)
