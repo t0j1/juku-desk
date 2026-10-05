@@ -43,7 +43,7 @@ class AdminPrintJobsTest < ActionDispatch::IntegrationTest
   end
 
   test "an invalid duplex value is refused by the model" do
-    job = PrintJob.new(station: @station, title: "x", duplex: "both")
+    job = PrintJob.new(print_station: @station, title: "x", duplex: "both")
     assert_not job.valid?
     assert_includes job.errors[:duplex].first, "含まれていません"
     assert_nil new_job(duplex: "").duplex
