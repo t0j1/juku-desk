@@ -64,17 +64,29 @@ class PrintJob < ApplicationRecord
   # 受理できれば true、状態が合わなければ false
   def report!(result, message = nil)
     target = RESULT_STATUSES[result.to_s] or return false
-    return status.to_sym == target || cancelled? if finished?
 
-    update!(status: target, result_message: message.to_s.first(500).presence, finished_at: Time.current, lease_until: nil)
-    true
+    # sweep!（ハートビートや jobs/next の中で走る）や cancel! と同時になっても上書きしないよう、行をロックして読み直してから判断する
+    with_lock do
+      if finished?
+        status.to_sym == target || cancelled?
+      else
+        update!(status: target, result_message: message.to_s.first(500).presence, finished_at: Time.current, lease_until: nil)
+        true
+      end
+    end
   end
 
   def finished? = acknowledged? || failed? || expired? || cancelled?
 
   def cancel!
-    return false if finished?
-    update!(status: :cancelled, finished_at: Time.current, lease_until: nil)
+    with_lock do
+      if finished?
+        false
+      else
+        update!(status: :cancelled, finished_at: Time.current, lease_until: nil)
+        true
+      end
+    end
   end
 
   def file_url(base_url:)
