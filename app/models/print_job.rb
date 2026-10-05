@@ -14,6 +14,7 @@ class PrintJob < ApplicationRecord
 
   belongs_to :print_station
   belongs_to :created_by, class_name: "User", optional: true
+  belongs_to :print_schedule, optional: true # 定例印刷の雛形から作ったジョブ
 
   enum :status, { pending: 0, leased: 1, acknowledged: 2, failed: 3, expired: 4, cancelled: 5 }, default: :pending
 

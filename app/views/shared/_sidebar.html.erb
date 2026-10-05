@@ -26,6 +26,7 @@
         <%= nav_item "メール文面", admin_mail_templates_path, :mail, active: controller_path == "admin/mail_templates" %>
         <%= nav_item "印刷ステーション", admin_print_stations_path, :printer, active: controller_path == "admin/print_stations" %>
         <%= nav_item "印刷ジョブ", admin_print_jobs_path, :printer, active: controller_path == "admin/print_jobs" %>
+        <%= nav_item "定例印刷", admin_print_schedules_path, :printer, active: controller_path == "admin/print_schedules" %>
         <%= nav_item "ログイン履歴", admin_login_events_path, :search, active: controller_path == "admin/login_events" %>
       </div>
     <% end %>
