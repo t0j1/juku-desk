@@ -96,7 +96,7 @@ class PrintScheduleKindsTest < ActiveSupport::TestCase
     travel_to(Time.zone.local(2026, 10, 6, 17, 1)) { job = PrintJob.lease_next_for!(@station) }
 
     assert_nil job # 0 名なので刷らない
-    assert PrintJob.last.failed?
+    assert PrintJob.last.cancelled?
   end
 
   test "the roster can be narrowed by grade or by students, and sorted" do
@@ -175,15 +175,16 @@ class PrintScheduleKindsTest < ActiveSupport::TestCase
     assert_equal 6, leased.copies
   end
 
-  test "an empty roster is not printed and is recorded as failed with the reason; the next job is still leased" do
+  test "an empty roster is not printed and is recorded as skipped (cancelled) with the reason; the next job is still leased" do
     roster.generate_job!(TUESDAY)
     student_job = PrintJob.create_with_pdf!(station: @station, title: "別のジョブ", data: PDF_BYTES, scheduled_at: Time.zone.local(2026, 10, 6, 17, 0, 30))
 
     leased = travel_to(Time.zone.local(2026, 10, 6, 17, 1)) { PrintJob.lease_next_for!(@station) }
 
     empty = PrintJob.where(print_schedule: PrintSchedule.last).first
-    assert empty.failed?
-    assert_match(/0 件のため/, empty.result_message)
+    assert empty.cancelled?
+    refute empty.failed?
+    assert_match(/対象 0 名のためスキップ/, empty.result_message)
     assert_nil empty.pdf_data
     assert_equal student_job, leased
   end
@@ -213,6 +214,15 @@ class PrintScheduleKindsTest < ActiveSupport::TestCase
     PrintJob.destroy_all
     word_test(wordbook)
     assert_equal({ created: 1, skipped: 1 }, PrintSchedule.generate_for!(TUESDAY, limit: 1))
+  end
+
+  test "a job skipped for an empty roster does not count toward the daily limit" do
+    roster.generate_job!(TUESDAY)
+    travel_to(Time.zone.local(2026, 10, 6, 17, 1)) { PrintJob.lease_next_for!(@station) }
+    assert PrintJob.where(print_schedule: PrintSchedule.last).first.cancelled?
+
+    word_test(wordbook)
+    assert_equal({ created: 1, skipped: 0 }, PrintSchedule.generate_for!(TUESDAY, limit: 1))
   end
 
   test "a stopped schedule and a revoked station make no job (unchanged)" do

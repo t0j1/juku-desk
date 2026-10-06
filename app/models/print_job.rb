@@ -79,7 +79,7 @@ class PrintJob < ApplicationRecord
   end
 
   # このステーションの、刷る時刻になった pending を 1 件貸し出す。なければ nil
-  # 名簿・単語テストのジョブ（generate_on_lease）は、ここで PDF を作る。作れなかった・対象 0 名のものは failed にして、次のジョブを探す
+  # 名簿・単語テストのジョブ（generate_on_lease）は、ここで PDF を作る。作れなかった・単語が 0 件のものは failed、名簿の対象 0 名は cancelled（スキップ）にして、次のジョブを探す
   def self.lease_next_for!(station, now = Time.current)
     transaction do
       sweep!(now)
@@ -101,7 +101,11 @@ class PrintJob < ApplicationRecord
 
     document = print_schedule&.build_document(scheduled_for || now.to_date)
     return fail_generation!("定例印刷の雛形が削除されたため、印刷していません", now) unless document
-    return fail_generation!("対象が 0 件のため、印刷していません（スキップ）", now) if document.empty?
+    if document.empty?
+      return skip_generation!("対象 0 名のためスキップしました（印刷していません）", now) if print_schedule.kind == "roster"
+
+      return fail_generation!("対象が 0 件のため、印刷していません（単語帳が無い・単語が無い）", now)
+    end
 
     # 生成の途中でデータベースのエラーが出ても、外側のトランザクション（貸し出し）を壊さないよう savepoint で囲む
     self.class.transaction(requires_new: true) do
@@ -182,6 +186,12 @@ class PrintJob < ApplicationRecord
   end
 
   private
+    # 対象 0 名は失敗ではない。刷らずに取り消し（cancelled）、理由を残す。日次上限には数えない
+    def skip_generation!(message, now)
+      update!(status: :cancelled, finished_at: now, lease_until: nil, result_message: message)
+      false
+    end
+
     def fail_generation!(message, now)
       update!(status: :failed, finished_at: now, lease_until: nil, result_message: message)
       false
