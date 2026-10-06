@@ -36,7 +36,7 @@ class DailyScheduleTaskTest < ActiveSupport::TestCase
   test "validates the fields of the chosen execution type" do
     refute DailyScheduleTask.new(name: "x", execution_time: "08:00", repeat_type: "daily", execution_type: "print").valid?
     refute DailyScheduleTask.new(name: "x", execution_time: "08:00", repeat_type: "daily", execution_type: "create_draft").valid?
-    refute DailyScheduleTask.new(name: "x", execution_time: "8:00", repeat_type: "daily", execution_type: "create_draft", template_key: "notice", save_destination: "drafts").valid?
+    refute DailyScheduleTask.new(name: "x", execution_time: "08:00", repeat_type: "daily", execution_type: "create_draft", template_key: "notice", save_destination: "drafts").valid?
     refute DailyScheduleTask.new(name: "x", execution_time: "08:00", repeat_type: "custom", execution_type: "create_draft", template_key: "notice", save_destination: "drafts").valid?
     assert draft_task.valid?
   end
