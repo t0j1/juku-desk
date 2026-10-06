@@ -44,7 +44,7 @@ class MarkingTestsController < ApplicationController
   # 小テストの PDF をサーバーで作り、そのまま印刷ジョブにする（アップロード不要）。ステーションがオフラインのとき、PDF を作れないときは、ジョブを作らない
   def print_job
     kind = params[:kind] == "answer" ? :answer : :question
-    jp = params.fetch(:print_job, {}).permit(:print_station_id, :copies, :scheduled_at, :staple, :collate)
+    jp = params.fetch(:print_job, {}).permit(:print_station_id, :copies, :scheduled_at, :expires_at, :staple, :collate)
     station = PrintStation.active.find_by(id: jp[:print_station_id])
     return print_job_failed("ステーションを選んでください。", kind) unless station
     return print_job_failed("「#{station.name}」はオフラインです。起動してから、もう一度お試しください。", kind) unless station.online?

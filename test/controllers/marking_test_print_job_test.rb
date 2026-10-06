@@ -75,6 +75,18 @@ class MarkingTestPrintJobTest < ActionDispatch::IntegrationTest
     assert_equal "other", PrintJob.order(:id).last.driver_preset
   end
 
+  test "the print time and deadline from the form go into the job; a deadline before the time is refused" do
+    exam = make_exam
+    at = 1.day.from_now.change(sec: 0)
+    create_job(exam, scheduled_at: at.strftime("%Y-%m-%dT%H:%M"), expires_at: (at + 3.hours).strftime("%Y-%m-%dT%H:%M"))
+    job = PrintJob.order(:id).last
+    assert_equal [ at, at + 3.hours ], [ job.scheduled_at, job.expires_at ]
+    assert_no_difference -> { PrintJob.count } do
+      create_job(exam, scheduled_at: at.strftime("%Y-%m-%dT%H:%M"), expires_at: (at - 1.hour).strftime("%Y-%m-%dT%H:%M"))
+    end
+    assert_redirected_to print_marking_test_path(exam, kind: "question")
+  end
+
   test "an offline station gets no job" do
     @station.update_columns(last_seen_at: 1.hour.ago)
     exam = make_exam

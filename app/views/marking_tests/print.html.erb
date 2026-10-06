@@ -19,6 +19,8 @@
           <%= hidden_field_tag :kind, @kind %>
           <%= f.select :print_station_id, stations.map { |s| [ "#{s.name}#{"（オフライン）" unless s.online?}", s.id ] }, {}, class: "input !w-auto", "aria-label": "ステーション" %>
           <%= f.number_field :copies, min: 1, max: 99, value: 1, class: "input !w-24", "aria-label": "部数" %>
+          <label class="flex items-center gap-1"><span class="caption">印刷する時刻</span><%= f.datetime_field :scheduled_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "input !w-auto", "aria-label": "印刷する時刻" %></label>
+          <label class="flex items-center gap-1"><span class="caption">締め切り</span><%= f.datetime_field :expires_at, class: "input !w-auto", "aria-label": "締め切り（空なら 2 時間後）" %></label>
           <%= driver_preset_select "print_job", blank_label: "（ステーションの既定を使う）", input_class: "input" %>
           <%= f.submit "印刷ジョブを作成", class: "btn-primary cursor-pointer" %>
         <% end %>
