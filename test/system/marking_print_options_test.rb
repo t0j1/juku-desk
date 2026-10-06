@@ -53,6 +53,21 @@ class MarkingPrintOptionsTest < ApplicationSystemTestCase
     end
   end
 
+  test "no-lines keeps the normal height and only drops the ruled background, and going back restores it" do
+    open_print do
+      normal = ruled_height
+      bg = ->{ find(".mt-ruled", match: :first).evaluate_script("getComputedStyle(this).backgroundImage") }
+      assert_match(/repeating-linear-gradient/, bg.call)
+      select "線なし", from: "解答欄の広さ"
+      assert_equal "none", find(".mt-sheet")["data-answer-size"]
+      assert_equal "none", bg.call
+      assert_in_delta normal, ruled_height, 0.5
+      select "ふつう", from: "解答欄の広さ"
+      assert_match(/repeating-linear-gradient/, bg.call)
+      assert_equal false, page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")
+    end
+  end
+
   test "layout by count splits the questions into pages that break after each page, never in the middle of a question" do
     open_print do
       select "1ページあたりの問題数を指定", from: "ページ内の配置"
