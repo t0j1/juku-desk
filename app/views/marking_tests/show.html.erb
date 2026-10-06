@@ -20,7 +20,7 @@
         <ol class="space-y-3">
           <% group.each do |item| %>
             <li id="test_item_<%= item.position %>" class="rounded-xl border border-row-line bg-bg p-3">
-              <span class="tnum font-bold mr-2"><%= item.number_label %></span><span class="whitespace-pre-wrap" data-controller="math"><%= item.question.question_text %></span>
+              <span class="tnum font-bold mr-2"><%= item.number_label %></span><span class="text-base text-text-sub mr-2" data-origin="<%= item.question.region.upload_id %>">画像 #<%= item.question.region.upload_id %></span><span class="whitespace-pre-wrap" data-controller="math"><%= item.question.question_text %></span>
             </li>
           <% end %>
         </ol>
@@ -31,7 +31,7 @@
 <ol id="test-items" class="space-y-3">
   <% @items.each do |item| %>
     <li id="test_item_<%= item.position %>" class="rounded-xl border border-row-line bg-bg p-3">
-      <span class="tnum font-bold mr-2"><%= item.position %></span><span class="whitespace-pre-wrap" data-controller="math"><%= item.question.question_text %></span>
+      <span class="tnum font-bold mr-2"><%= item.position %></span><span class="text-base text-text-sub mr-2" data-origin="<%= item.question.region.upload_id %>">画像 #<%= item.question.region.upload_id %></span><span class="whitespace-pre-wrap" data-controller="math"><%= item.question.question_text %></span>
     </li>
   <% end %>
 </ol>

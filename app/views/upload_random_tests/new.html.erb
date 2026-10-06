@@ -1,23 +1,23 @@
-<% content_for :title, "ランダムで作る（画像 ##{@upload.id}）" %>
+<% content_for :title, "ランダムで作る（#{source_label}）" %>
 <div class="flex flex-wrap items-center gap-3 mb-6">
-  <h1 class="page-title mr-auto">ランダムで作る（画像 #<%= @upload.id %>）</h1>
-  <%= link_to "画像に戻る", upload_path(@upload), class: "btn-secondary" %>
+  <h1 class="page-title mr-auto">ランダムで作る（<%= source_label %>）</h1>
+  <%= link_to "戻る", source.is_a?(QuestionFolder) ? question_folder_path(source) : upload_path(source), class: "btn-secondary" %>
 </div>
 <% if alert %><p id="alert" class="mb-4 text-lg font-bold text-err-fg"><%= alert %></p><% end %>
 <% if @questions.empty? %>
-  <p id="no-questions" class="text-lg">この画像に、承認済みの問題がありません。</p>
+  <p id="no-questions" class="text-lg">この画像・フォルダに、承認済みの問題がありません。</p>
 <% else %>
   <% if @questions.size < @count %>
     <p id="shortfall" class="mb-3 text-lg font-bold text-err-fg">問題が足りないため <%= @questions.size %> 問で作成されます（指定 <%= @count %> 問・承認済み <%= @available %> 問）。</p>
   <% end %>
   <ol id="picked-questions" class="mb-4 max-w-3xl space-y-2">
     <% @questions.each.with_index(1) do |q, i| %>
-      <li class="rounded-xl bg-surface p-3" data-question="<%= q.id %>"><span class="tnum font-bold mr-2"><%= i %></span><%= q.source_label %> <span class="whitespace-pre-wrap" data-controller="math"><%= truncate(q.question_text, length: 120) %></span></li>
+      <li class="rounded-xl bg-surface p-3" data-question="<%= q.id %>"><span class="tnum font-bold mr-2"><%= i %></span><%= link_to "画像 ##{q.region.upload_id}", upload_path(q.region.upload_id), class: "underline text-base", data: { origin: q.region.upload_id } %> <%= q.source_label %> <span class="whitespace-pre-wrap" data-controller="math"><%= truncate(q.question_text, length: 120) %></span></li>
     <% end %>
   </ol>
   <div class="flex flex-wrap items-center gap-3">
-    <%= link_to "選び直す", new_upload_random_test_path(@upload, count: @count), class: "btn-secondary", id: "reroll" %>
-    <%= form_with url: upload_random_test_path(@upload), class: "flex flex-wrap items-center gap-3" do |f| %>
+    <%= link_to "選び直す", new_path(count: @count), class: "btn-secondary", id: "reroll" %>
+    <%= form_with url: create_path, class: "flex flex-wrap items-center gap-3" do |f| %>
       <%= hidden_field_tag :count, @count, id: nil %>
       <% @questions.each do |q| %><%= hidden_field_tag "question_ids[]", q.id, id: nil %><% end %>
       <%= f.label :title, "タイトル", class: "label" %>

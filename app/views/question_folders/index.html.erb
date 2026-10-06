@@ -1,0 +1,21 @@
+<% content_for :title, "問題フォルダ" %>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="page-title mr-auto">問題フォルダ</h1>
+  <%= link_to "取り込み画像", uploads_path, class: "btn-secondary" %>
+  <%= link_to "小テストの出題", new_marking_test_path, class: "btn-secondary" %>
+</div>
+<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
+<% if alert %><p id="alert" class="mb-4 text-lg font-bold text-err-fg"><%= alert %></p><% end %>
+<p class="mb-4 text-lg text-text-sub">複数の取り込み画像を 1 つにまとめて、フォルダ内の全画像の問題から 1 枚のプリントを作れます。フォルダを消しても画像・問題は消えません。</p>
+<% if current_user.can_write? %>
+  <%= form_with model: QuestionFolder.new, scope: :question_folder, url: question_folders_path, id: "new-folder", class: "mb-6 flex flex-wrap items-center gap-3" do |f| %>
+    <%= f.text_field :name, class: "input !w-72", maxlength: 100, placeholder: "フォルダの名前", "aria-label": "フォルダの名前" %>
+    <%= f.submit "フォルダを作る", class: "btn-primary cursor-pointer" %>
+  <% end %>
+<% end %>
+<ul id="folders" class="max-w-2xl space-y-2">
+  <% @folders.each do |folder| %>
+    <li class="rounded-xl bg-surface p-3" id="folder_<%= folder.id %>"><%= link_to folder.name, question_folder_path(folder), class: "font-bold underline" %> <span class="text-base text-text-sub">画像 <%= folder.folder_uploads.size %> 枚</span></li>
+  <% end %>
+  <% if @folders.empty? %><li class="text-lg">まだフォルダがありません。</li><% end %>
+</ul>
