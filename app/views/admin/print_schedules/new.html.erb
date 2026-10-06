@@ -3,9 +3,9 @@
 <% if @stations.empty? %>
   <p class="card max-w-xl">先に<%= link_to "印刷ステーションを登録", new_admin_print_station_path, class: "link" %>してください。</p>
 <% else %>
-  <%= form_with model: [ :admin, @schedule ], multipart: true, class: "card max-w-xl space-y-4" do |f| %>
+  <%= form_with model: [ :admin, @schedule ], multipart: true, class: "card max-w-3xl space-y-4" do |f| %>
     <% if @error %><div id="error_explanation" class="alert-err" role="alert"><%= @error %></div><% end %>
-    <%= render "fields", f: f, schedule: @schedule, stations: @stations, with_pdf: true %>
+    <%= render "fields", f: f, schedule: @schedule, stations: @stations %>
     <%= f.submit "登録する", class: "btn-primary cursor-pointer" %>
   <% end %>
 <% end %>

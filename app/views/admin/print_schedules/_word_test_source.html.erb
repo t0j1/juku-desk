@@ -1,0 +1,32 @@
+<%# 単語テストのデータソース。schedule, @wordbooks %>
+<% c = PrintSchedule::WordTestPdf::DEFAULT_SOURCE.merge(schedule.word_test? ? schedule.source_config : {}) %>
+<fieldset class="space-y-3">
+  <legend class="label">単語テストの出題</legend>
+  <div><label class="label" for="word_test_wordbook">単語帳</label>
+    <%= select_tag "print_schedule[word_test_source][wordbook_id]", options_for_select((@wordbooks || []).map { |w| [ w.name, w.id ] }, c["wordbook_id"]), include_blank: "選んでください", id: "word_test_wordbook", class: "input !w-auto" %></div>
+  <div class="flex flex-wrap gap-4">
+    <div><label class="label" for="word_test_start">開始No.</label>
+      <%= number_field_tag "print_schedule[word_test_source][start_no]", c["start_no"], min: 1, id: "word_test_start", class: "input !w-32" %></div>
+    <div><label class="label" for="word_test_span">単語数</label>
+      <%= number_field_tag "print_schedule[word_test_source][span]", c["span"], min: 1, max: PrintSchedule::WordTestPdf::MAX_SPAN, list: "word_test_span_choices", id: "word_test_span", class: "input !w-32" %>
+      <datalist id="word_test_span_choices"><% PrintSchedule::WordTestPdf::SPAN_CHOICES.each do |n| %><option value="<%= n %>"><% end %></datalist></div>
+  </div>
+  <fieldset><legend class="label">出題方向</legend>
+    <div class="flex flex-wrap gap-x-6">
+      <% { "en_ja" => "英→日", "ja_en" => "日→英" }.each do |value, label| %>
+        <label class="flex items-center gap-2 min-h-11 text-[19px]"><%= radio_button_tag "print_schedule[word_test_source][direction]", value, c["direction"] == value, id: "word_test_direction_#{value}", class: "size-5 accent-primary" %><%= label %></label>
+      <% end %>
+    </div></fieldset>
+  <fieldset><legend class="label">問題数</legend>
+    <div class="flex flex-wrap items-center gap-x-6">
+      <label class="flex items-center gap-2 min-h-11 text-[19px]"><%= radio_button_tag "print_schedule[word_test_source][question_mode]", "all", c["question_mode"] == "all", id: "word_test_mode_all", class: "size-5 accent-primary" %>範囲すべて</label>
+      <label class="flex items-center gap-2 min-h-11 text-[19px]"><%= radio_button_tag "print_schedule[word_test_source][question_mode]", "random", c["question_mode"] == "random", id: "word_test_mode_random", class: "size-5 accent-primary" %>範囲から抽選</label>
+      <%= number_field_tag "print_schedule[word_test_source][count]", c["count"], min: 1, max: PrintSchedule::WordTestPdf::MAX_SPAN, id: "word_test_count", class: "input !w-28", "aria-label": "抽選する問題数" %>
+    </div></fieldset>
+  <fieldset><legend class="label">解答</legend>
+    <div class="flex flex-wrap gap-x-6">
+      <% { "separate" => "別紙", "bottom" => "同じ紙の下部", "none" => "なし" }.each do |value, label| %>
+        <label class="flex items-center gap-2 min-h-11 text-[19px]"><%= radio_button_tag "print_schedule[word_test_source][answers]", value, c["answers"] == value, id: "word_test_answers_#{value}", class: "size-5 accent-primary" %><%= label %></label>
+      <% end %>
+    </div></fieldset>
+</fieldset>

@@ -1,0 +1,23 @@
+<%# 日次出席名簿のデータソース。schedule, @grades, @students %>
+<% c = PrintSchedule::RosterPdf::DEFAULT_SOURCE.merge(schedule.roster? ? schedule.source_config : {}) %>
+<fieldset class="space-y-3">
+  <legend class="label">対象（その日の曜日に通う在籍中の生徒）</legend>
+  <div class="flex flex-wrap gap-x-6">
+    <% { "all" => "全員", "grades" => "学年でしぼる", "students" => "特定の生徒" }.each do |value, label| %>
+      <label class="flex items-center gap-2 min-h-11 text-[19px]"><%= radio_button_tag "print_schedule[roster_source][target]", value, c["target"] == value, class: "size-5 accent-primary" %><%= label %></label>
+    <% end %>
+  </div>
+  <div><span class="label">学年（「学年でしぼる」のとき）</span>
+    <div class="flex flex-wrap gap-3">
+      <% (@grades || []).each do |g| %>
+        <label class="flex items-center gap-1 min-h-11"><%= check_box_tag "print_schedule[roster_source][grades][]", g, Array(c["grades"]).include?(g), id: "roster_grade_#{g}", class: "size-5 accent-primary" %><%= g %></label>
+      <% end %>
+    </div></div>
+  <div><label class="label" for="roster_students">特定の生徒（「特定の生徒」のとき・複数選択）</label>
+    <%= select_tag "print_schedule[roster_source][student_ids][]", options_for_select(@students || [], Array(c["student_ids"]).map(&:to_i)), multiple: true, id: "roster_students", class: "input !h-40 !max-w-md" %></div>
+  <div><label class="label" for="roster_order">並び順</label>
+    <%= select_tag "print_schedule[roster_source][order]", options_for_select([ [ "学年→五十音", "grade_kana" ], [ "五十音", "kana" ], [ "学年のみ", "grade" ] ], c["order"]), id: "roster_order", class: "input !w-auto" %></div>
+  <label class="flex items-center gap-2 min-h-11"><%= hidden_field_tag "print_schedule[roster_source][attendance_box]", "0", id: nil %><%= check_box_tag "print_schedule[roster_source][attendance_box]", "1", c["attendance_box"], id: "roster_attendance_box", class: "size-5 accent-primary" %>出欠記入欄（○/× を手書きする欄）</label>
+  <label class="flex items-center gap-2 min-h-11"><%= hidden_field_tag "print_schedule[roster_source][note_box]", "0", id: nil %><%= check_box_tag "print_schedule[roster_source][note_box]", "1", c["note_box"], id: "roster_note_box", class: "size-5 accent-primary" %>備考欄</label>
+  <p class="caption">欠席・振替の記録はまだないため、名簿は「その日に通う予定の生徒」です。対象が 0 名の日は印刷せず、履歴に残ります。</p>
+</fieldset>

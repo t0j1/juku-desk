@@ -1,0 +1,27 @@
+<%# レイアウト調整（折りたたみ）。kind, schedule。変えた項目だけが保存され、未指定は既定案になる %>
+<% values, = PrintSchedule::Layout.resolve(kind, schedule.kind == kind ? schedule.layout_config : {}) %>
+<% defaults = PrintSchedule::Layout.defaults(kind) %>
+<details class="rounded-field bg-surface shadow-raise-sm p-4" id="layout_<%= kind %>">
+  <summary class="cursor-pointer text-lg font-bold">レイアウトを調整　<span class="font-normal text-base text-text-sub"><%= PrintSchedule::Layout.summary(kind, schedule.kind == kind ? schedule.layout_config : {}) %></span></summary>
+  <div class="grid grid-cols-1 min-[600px]:grid-cols-2 gap-4 mt-4">
+    <% PrintSchedule::Layout.spec_for(kind).each do |key, (default, type, allowed, label)| %>
+      <% field = "print_schedule[layout][#{key}]" %>
+      <% dom = "layout_#{kind}_#{key}" %>
+      <div>
+        <% if type == :bool %>
+          <label class="flex items-center gap-2 min-h-11"><%= hidden_field_tag field, "0", id: nil %><%= check_box_tag field, "1", values[key], id: dom, class: "size-5 accent-primary" %><%= label %></label>
+        <% else %>
+          <label class="label" for="<%= dom %>"><%= label %></label>
+          <% if type == :choice %>
+            <%= select_tag field, options_for_select(allowed.map { |v| [ { "portrait" => "縦", "landscape" => "横", "none" => "なし", "right" => "右下", "center" => "下中央", "auto" => "自動", "manual" => "手動" }.fetch(v, v), v ] }, values[key]), id: dom, class: "input !w-auto" %>
+          <% else %>
+            <%= number_field_tag field, values[key], min: allowed.min, max: allowed.max, id: dom, class: "input !w-28" %>
+          <% end %>
+        <% end %>
+        <p class="caption">既定：<%= type == :bool ? (default ? "オン" : "オフ") : default %></p>
+      </div>
+    <% end %>
+  </div>
+  <p class="caption mt-3">空にせず、範囲内の値を入れてください。既定に戻すときは、上の「既定」の値を入れます。</p>
+  <%= button_tag "プレビュー（サンプルデータで1枚）", type: "submit", formaction: preview_admin_print_schedules_path, formtarget: "_blank", formnovalidate: true, name: "_method", value: "post", class: "btn-secondary btn-sm mt-3" %>
+</details>

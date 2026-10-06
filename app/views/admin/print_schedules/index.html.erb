@@ -7,11 +7,13 @@
 <% if notice %><p id="notice" class="alert-ok mb-4"><%= notice %></p><% end %>
 <div class="overflow-x-auto">
 <table id="print_schedules" class="table-console whitespace-nowrap">
-  <thead><tr><th>名前</th><th>ステーション</th><th>曜日・時刻</th><th>部数</th><th>状態</th><th>次回の印刷</th><th></th></tr></thead>
+  <thead><tr><th>名前</th><th>雛形</th><th>データソース</th><th>ステーション</th><th>曜日・時刻</th><th>部数</th><th>状態</th><th>次回の印刷</th><th></th></tr></thead>
   <tbody>
     <% @schedules.each do |s| %>
       <tr id="print_schedule_<%= s.id %>">
         <td class="font-bold"><%= s.name %></td>
+        <td><%= tag.span(class: "pill pill-neutral") { safe_join([ tag.span(PrintSchedule::KIND_SYMBOLS[s.kind], aria: { hidden: true }), PrintSchedule::KIND_LABELS[s.kind] ]) } %></td>
+        <td class="whitespace-normal min-w-40"><%= s.source_summary %><% if s.layout_summary %><p class="caption"><%= s.layout_summary %></p><% end %></td>
         <td><%= s.print_station.name %></td>
         <td><%= s.weekdays_label %>　<%= s.time_of_day %></td>
         <td><%= s.copies %></td>
@@ -24,7 +26,7 @@
         </td>
       </tr>
     <% end %>
-    <% if @schedules.empty? %><tr><td colspan="7" class="text-center text-text-sub">雛形はまだありません</td></tr><% end %>
+    <% if @schedules.empty? %><tr><td colspan="9" class="text-center text-text-sub">雛形はまだありません</td></tr><% end %>
   </tbody>
 </table>
 </div>

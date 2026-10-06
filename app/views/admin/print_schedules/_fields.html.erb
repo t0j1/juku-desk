@@ -1,18 +1,50 @@
-<%# new / edit 共通の入力欄。local: f, schedule, stations, with_pdf %>
-    <div><%= f.label :name, "名前（印刷ジョブの名前になります）", class: "label" %><%= f.text_field :name, maxlength: PrintJob::TITLE_MAX, class: "input mt-1" %></div>
-    <% if with_pdf %>
-      <div><%= f.label :pdf, "PDF ファイル（30MBまで）", class: "label" %><span class="flex items-center min-h-11 mt-1"><%= file_field_tag "print_schedule[pdf]", id: "print_schedule_pdf", accept: "application/pdf", class: "block" %></span></div>
-    <% end %>
-    <div><%= f.label :print_station_id, "ステーション", class: "label" %>
-      <%= f.select :print_station_id, stations.map { |s| [ s.name, s.id ] }, {}, class: "input mt-1 !w-auto" %></div>
-    <fieldset><legend class="label">曜日</legend>
-      <div class="flex flex-wrap gap-3 mt-1">
-        <% PrintSchedule::WEEKDAY_NAMES.each_with_index do |name, i| %>
-          <label class="flex items-center gap-1 min-h-11"><%= check_box_tag "print_schedule[weekdays][]", i, schedule.weekdays.include?(i), id: "print_schedule_weekdays_#{i}", class: "size-5 accent-primary" %><%= name %></label>
-        <% end %>
-      </div></fieldset>
-    <div><%= f.label :time_of_day, "印刷する時刻（HH:MM）", class: "label" %><%= f.time_field :time_of_day, class: "input mt-1 !w-auto" %></div>
-    <div><%= f.label :copies, "部数", class: "label" %><%= f.number_field :copies, min: 1, max: 99, class: "input mt-1 !w-24" %></div>
-    <div><label class="flex items-center gap-2 min-h-11"><%= f.check_box :collate, class: "size-5 accent-primary" %>1 部ずつまとめる（部単位）</label></div>
-    <div><%= f.label :staple, "ホチキス（表示用）", class: "label" %><%= f.select :staple, PrintJobsHelper::STAPLES, {}, class: "input mt-1 !w-auto" %></div>
-    <div><%= f.label :driver_preset, "ドライバーの印刷設定の名前", class: "label" %><%= f.text_field :driver_preset, maxlength: 100, class: "input mt-1" %></div>
+<%# new / edit 共通の入力欄。local: f, schedule, stations（+ @wordbooks / @grades / @students）。種別を選ぶと、その種別の欄だけが出る（exec-type） %>
+<div data-controller="exec-type" class="space-y-4">
+  <div><%= f.label :name, "名前（印刷ジョブの名前になります）", class: "label" %><%= f.text_field :name, maxlength: PrintJob::TITLE_MAX, class: "input mt-1" %></div>
+
+  <fieldset>
+    <legend class="label">雛形（種別）</legend>
+    <div role="radiogroup" aria-label="雛形（種別）" class="grid grid-cols-1 min-[1200px]:grid-cols-3 gap-3 mt-1">
+      <% [ [ "fixed_pdf", "▤", "用意した PDF をそのまま刷ります" ], [ "roster", "☰", "その日に通う生徒の名簿を作って刷ります" ], [ "word_test", "A", "単語帳の範囲から問題を作って刷ります" ] ].each do |kind, symbol, description| %>
+        <label class="relative block rounded-card p-4 cursor-pointer <%= schedule.kind == kind ? "bg-bg shadow-inset border-2 border-accent-strong" : "bg-surface shadow-raise-sm border-2 border-transparent" %> has-[:checked]:bg-bg has-[:checked]:shadow-inset has-[:checked]:border-accent-strong has-[:focus-visible]:outline has-[:focus-visible]:outline-2">
+          <%= f.radio_button :kind, kind, class: "sr-only peer", id: "print_schedule_kind_#{kind}", data: { exec_type_target: "radio", action: "exec-type#update" } %>
+          <span class="flex items-center gap-2 text-[19px] font-bold"><span class="inline-flex items-center justify-center size-8 rounded-icon bg-accent-soft text-accent-text" aria-hidden="true"><%= symbol %></span><%= PrintSchedule::KIND_LABELS[kind] %></span>
+          <span class="block text-base text-text-sub mt-1"><%= description %></span>
+          <span class="hidden peer-checked:inline absolute top-2 right-3 text-base font-bold text-accent-text" aria-hidden="true">✓ 選択中</span>
+        </label>
+      <% end %>
+    </div>
+  </fieldset>
+
+  <div data-exec-type-target="section" data-type="fixed_pdf" class="space-y-4">
+    <div><%= f.label :pdf, (schedule.persisted? && schedule.fixed_pdf? ? "PDF ファイル（差し替えるときだけ選ぶ・30MBまで）" : "PDF ファイル（30MBまで）"), class: "label" %><span class="flex items-center min-h-11 mt-1"><%= file_field_tag "print_schedule[pdf]", id: "print_schedule_pdf", accept: "application/pdf", class: "block" %></span></div>
+  </div>
+
+  <div data-exec-type-target="section" data-type="roster" class="space-y-4" hidden>
+    <%= render "admin/print_schedules/roster_source", schedule: schedule %>
+    <%= render "admin/print_schedules/layout_fields", kind: "roster", schedule: schedule %>
+  </div>
+
+  <div data-exec-type-target="section" data-type="word_test" class="space-y-4" hidden>
+    <%= render "admin/print_schedules/word_test_source", schedule: schedule %>
+    <%= render "admin/print_schedules/layout_fields", kind: "word_test", schedule: schedule %>
+  </div>
+
+  <div><%= f.label :print_station_id, "ステーション", class: "label" %>
+    <%= f.select :print_station_id, stations.map { |s| [ s.name, s.id ] }, {}, class: "input mt-1 !w-auto" %></div>
+  <fieldset><legend class="label">曜日</legend>
+    <div class="flex flex-wrap gap-3 mt-1">
+      <% PrintSchedule::WEEKDAY_NAMES.each_with_index do |name, i| %>
+        <label class="flex items-center gap-1 min-h-11"><%= check_box_tag "print_schedule[weekdays][]", i, schedule.weekdays.include?(i), id: "print_schedule_weekdays_#{i}", class: "size-5 accent-primary" %><%= name %></label>
+      <% end %>
+    </div></fieldset>
+  <div><%= f.label :time_of_day, "印刷する時刻（HH:MM）", class: "label" %><%= f.time_field :time_of_day, class: "input mt-1 !w-auto" %></div>
+  <div><%= f.label :copies, "部数", class: "label" %><%= f.number_field :copies, min: 1, max: 99, class: "input mt-1 !w-24" %></div>
+  <div data-exec-type-target="section" data-type="roster">
+    <%= f.label :copies_mode, "部数の決め方", class: "label" %>
+    <%= f.select :copies_mode, [ [ "上の部数のまま", "fixed" ], [ "名簿から自動（対象人数 × 上の部数・最大99）", "roster_auto" ] ], {}, class: "input mt-1 !w-auto" %>
+  </div>
+  <div><label class="flex items-center gap-2 min-h-11"><%= f.check_box :collate, class: "size-5 accent-primary" %>1 部ずつまとめる（部単位）</label></div>
+  <div><%= f.label :staple, "ホチキス（表示用）", class: "label" %><%= f.select :staple, PrintJobsHelper::STAPLES, {}, class: "input mt-1 !w-auto" %></div>
+  <div><%= f.label :driver_preset, "ドライバーの印刷設定の名前", class: "label" %><%= f.text_field :driver_preset, maxlength: 100, class: "input mt-1" %></div>
+</div>

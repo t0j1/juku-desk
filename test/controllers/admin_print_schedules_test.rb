@@ -36,10 +36,10 @@ class AdminPrintSchedulesTest < ActionDispatch::IntegrationTest
     assert_equal [ "改名", 5, [ 2 ], "09:15", false, sha ], [ sch.name, sch.copies, sch.weekdays, sch.time_of_day, sch.active, sch.sha256 ]
     get admin_print_schedules_path
     assert_select "#print_schedule_#{sch.id}", /停止中/
-    assert_select "#print_schedule_#{sch.id} td:nth-child(6)", "—"
+    assert_select "#print_schedule_#{sch.id} td:nth-child(8)", "—"
     patch admin_print_schedule_path(sch), params: { print_schedule: { name: "改名", copies: 5, weekdays: %w[ 2 ], time_of_day: "09:15", active: "1" } }
     get admin_print_schedules_path
-    assert_select "#print_schedule_#{sch.id} td:nth-child(6)", /\d/
+    assert_select "#print_schedule_#{sch.id} td:nth-child(8)", /\d/
   end
 
   test "edit refuses a blank weekday set or a bad time" do
