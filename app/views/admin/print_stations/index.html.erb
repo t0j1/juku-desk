@@ -21,7 +21,7 @@
         <td data-label="トナー"><%= s.revoked? ? "—" : supply_pill(s.toner_status) %></td>
         <td data-label="用紙"><%= s.revoked? ? "—" : supply_pill(s.paper_status) %></td>
         <td data-label="バージョン"><%= s.agent_version.presence || "—" %></td>
-        <td class="station-actions" data-label="操作">
+        <td class="station-actions" data-label="操作" data-controller="print-station-delete">
           <% unless s.revoked? %>
             <button type="button" class="btn-secondary btn-sm" data-toggle-target="button" data-action="toggle#toggle" aria-expanded="<%= awaiting %>" aria-controls="test_print_panel_<%= s.id %>">テスト印刷 ▾</button>
           <% end %>
@@ -42,7 +42,7 @@
               削除
             </button>
             <%= render "delete_modal", station: s %>
-            <%= button_to "削除実行", admin_print_station_path(s), method: :delete, class: "hidden", id: "delete_form_<%= s.id %>" %>
+            <%= button_to "削除実行", admin_print_station_path(s), method: :delete, class: "hidden", form: { id: "delete_form_<%= s.id %>" } %>
           <% else %>
             <span class="caption w-full" id="undeletable_<%= s.id %>"><%= s.undeletable_reason %></span>
           <% end %>

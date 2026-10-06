@@ -2,11 +2,10 @@
 <%# station: PrintStation %>
 <div
   id="delete_modal_<%= station.id %>"
-  class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 min-[600px]:p-8"
+  class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 min-[600px]:p-8"
   role="dialog"
   aria-modal="true"
   aria-labelledby="delete_modal_title_<%= station.id %>"
-  data-controller="print-station-delete"
   data-print-station-delete-target="modal"
   data-print-station-delete-station-name-value="<%= station.name %>"
   data-print-station-delete-station-id-value="<%= station.id %>"
@@ -22,22 +21,19 @@
       </h2>
 
       <!-- 本文：「『{ステーション名}』を削除します。」 -->
-      <p class="text-base leading-7 text-text">「<%= station.name %>」を削除します。</p>
+      <p class="text-lg leading-7 text-text">『<%= station.name %>』を削除します。</p>
 
       <!-- 警告文 -->
-      <div class="flex items-start gap-2 text-base leading-7 text-err-fg font-bold">
-        <span aria-hidden="true">!</span>
-        <span>
-          削除すると、このプリンターとの紐づけが解除され、元に戻せません。
-          <% if station.online? %>
-            <span class="ml-1">このステーションは現在オンラインです。</span>
-          <% end %>
-        </span>
+      <div class="text-lg leading-7 text-err-fg font-bold">
+        削除すると、このプリンターとの紐づけが解除され、元に戻せません。
+        <% if station.online? %>
+          <span class="ml-1">このステーションは現在オンラインです。</span>
+        <% end %>
       </div>
 
       <!-- 対象名の表示 -->
       <div>
-        <p class="label text-base text-text-sub">対象（このとおりに入力してください）</p>
+        <p class="text-base text-text-sub">対象（このとおりに入力してください）</p>
         <div class="h-13 px-4 rounded-field bg-bg text-[19px] font-bold text-text shadow-inset flex items-center" style="border: 1px solid var(--color-field-border);">
           <%= station.name %>
         </div>
@@ -49,7 +45,7 @@
         <input
           type="text"
           id="delete_confirm_input_<%= station.id %>"
-          class="input"
+          class="input max-w-none"
           autocomplete="off"
           spellcheck="false"
           placeholder="ここに入力"
@@ -74,7 +70,7 @@
         <button
           type="button"
           class="btn-danger"
-          style="background: #B42323; color: white;"
+          style="background: #B42323; color: white; opacity: 1;"
           disabled
           data-print-station-delete-target="deleteButton"
           data-action="click->print-station-delete#_onDelete"

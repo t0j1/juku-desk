@@ -85,15 +85,24 @@ export default class extends Controller {
 
     this.deleteButtonTarget.disabled = !matches
 
-    // ヒント文の切り替え
+    // ヒント文の切り替え（色は変えない：仕様は常に --sub）
     if (matches) {
       this.hintTarget.textContent = "名前が一致しました。「削除する」を押すと削除されます。"
-      this.hintTarget.classList.remove("text-text-sub")
-      this.hintTarget.classList.add("text-ok-fg")
     } else {
       this.hintTarget.textContent = "名前が一致するまで「削除する」は押せません。"
-      this.hintTarget.classList.remove("text-ok-fg")
-      this.hintTarget.classList.add("text-text-sub")
+    }
+
+    // 無効時の見た目：opacity 40%、背景 #8E8E8E、影なし、not-allowed
+    if (matches) {
+      this.deleteButtonTarget.style.opacity = "1"
+      this.deleteButtonTarget.style.backgroundColor = "#B42323"
+      this.deleteButtonTarget.style.boxShadow = ""  // 元の shadow-raise-sm
+      this.deleteButtonTarget.style.cursor = "pointer"
+    } else {
+      this.deleteButtonTarget.style.opacity = "0.4"
+      this.deleteButtonTarget.style.backgroundColor = "#8E8E8E"
+      this.deleteButtonTarget.style.boxShadow = "none"
+      this.deleteButtonTarget.style.cursor = "not-allowed"
     }
   }
 
