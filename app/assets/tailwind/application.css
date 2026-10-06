@@ -248,3 +248,26 @@
   0% { opacity: 1; transform: translate(0, 0) rotate(0); }
   100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); }
 }
+
+/* 遅い遷移の読み込み表示（load-indicator）。画面中央のカード。バーは transform / opacity だけで動かす。文字は 16px 以上、色だけで示さない（記号＋文字） */
+.turbo-progress-bar { display: none; } /* Turbo 標準のバーは、自前の表示に置き換える */
+.load-indicator { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none; background: rgb(238 241 246 / .6); }
+.load-indicator[hidden] { display: none; }
+.load-panel { pointer-events: auto; width: min(90vw, 360px); background: var(--color-surface); border-radius: 24px; box-shadow: var(--shadow-raise); overflow: hidden; text-align: center; color: var(--color-text); }
+.load-band { height: 4px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong)); }
+.load-body { padding: 24px 24px 28px; }
+.load-icon { width: 44px; height: 44px; margin: 0 auto; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent-strong); font-size: 24px; line-height: 44px; font-weight: 700; }
+.load-title { font-size: 22px; font-weight: 700; margin: 12px 0 4px; }
+.load-elapsed, .load-reason, .load-estimate, .load-slow { font-size: 16px; color: var(--color-text-sub); }
+.load-reason { margin: 10px 0 0; }
+.load-bar { height: 4px; margin-top: 18px; border-radius: 2px; background: var(--color-line); overflow: hidden; }
+.load-fill { height: 100%; width: 100%; transform-origin: left; transform: scaleX(0); background: var(--color-accent-strong); position: relative; overflow: hidden; will-change: transform; }
+.load-stripes { display: none; position: absolute; inset: 0 -40px 0 0; background: repeating-linear-gradient(45deg, var(--color-accent) 0 6px, transparent 6px 12px); animation: load-stripes 1s linear infinite; }
+.load-indicator[data-state="estimate"] .load-stripes, .load-indicator[data-state="slow"] .load-stripes { display: block; }
+@keyframes load-stripes { to { transform: translateX(17px); } }
+.load-estimate { margin: 8px 0 0; }
+.load-slow { margin: 12px 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .load-bar { display: none; }
+  .load-stripes { animation: none; }
+}

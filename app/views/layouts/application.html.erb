@@ -25,6 +25,7 @@
   </head>
 
   <body class="min-h-screen bg-bg print:bg-white text-text font-sans text-lg">
+    <%= render "shared/load_indicator" %>
     <% if authenticated? %>
       <% if impersonating? %>
         <%= render "shared/impersonation_banner" %>
