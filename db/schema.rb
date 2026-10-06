@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_07_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_07_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -362,6 +362,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_07_000000) do
     t.index ["token_digest"], name: "index_print_stations_on_token_digest", unique: true
   end
 
+  create_table "question_folder_uploads", force: :cascade do |t|
+    t.bigint "question_folder_id", null: false
+    t.bigint "upload_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["question_folder_id", "upload_id"], name: "idx_on_question_folder_id_upload_id_68a8ba6d09", unique: true
+    t.index ["question_folder_id"], name: "index_question_folder_uploads_on_question_folder_id"
+    t.index ["upload_id"], name: "index_question_folder_uploads_on_upload_id"
+  end
+
+  create_table "question_folders", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_question_folders_on_created_by_id"
+  end
+
   create_table "questions", force: :cascade do |t|
     t.bigint "region_id", null: false
     t.string "subject"
@@ -563,6 +581,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_07_000000) do
   add_foreign_key "print_schedules", "print_stations"
   add_foreign_key "print_schedules", "users", column: "created_by_id"
   add_foreign_key "print_stations", "users", column: "created_by_id"
+  add_foreign_key "question_folder_uploads", "question_folders", on_delete: :cascade
+  add_foreign_key "question_folder_uploads", "uploads", on_delete: :cascade
+  add_foreign_key "question_folders", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "questions", "crop_regions", column: "region_id", on_delete: :cascade
   add_foreign_key "questions", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "recovery_codes", "users"

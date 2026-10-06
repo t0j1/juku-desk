@@ -1,0 +1,52 @@
+<% content_for :title, "問題フォルダ「#{@folder.name}」" %>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="page-title mr-auto">フォルダ「<%= @folder.name %>」</h1>
+  <%= link_to "フォルダ一覧", question_folders_path, class: "btn-secondary" %>
+</div>
+<% if notice %><p id="notice" class="mb-4 text-lg font-bold text-ok-fg"><%= notice %></p><% end %>
+<% if alert %><p id="alert" class="mb-4 text-lg font-bold text-err-fg"><%= alert %></p><% end %>
+<% if current_user.can_write? %>
+  <div class="mb-6 flex flex-wrap items-center gap-3">
+    <%= form_with model: @folder, scope: :question_folder, url: question_folder_path(@folder), method: :patch, id: "rename-folder", class: "flex flex-wrap items-center gap-3" do |f| %>
+      <%= f.text_field :name, class: "input !w-72", maxlength: 100, "aria-label": "フォルダの名前" %>
+      <%= f.submit "名前を変える", class: "btn-secondary cursor-pointer" %>
+    <% end %>
+    <%= button_to "フォルダを削除", question_folder_path(@folder), method: :delete, class: "btn-secondary cursor-pointer", form: { id: "delete-folder", data: { turbo_confirm: "フォルダ「#{@folder.name}」を削除しますか？（画像と問題は消えません）" } } %>
+  </div>
+  <%= form_with url: question_folder_uploads_path(@folder), id: "add-upload", class: "mb-6 flex flex-wrap items-center gap-3" do |f| %>
+    <%= f.select :upload_id, @addable.map { |u| [ "画像 ##{u.id}（#{u.created_at.strftime("%Y-%m-%d")}）", u.id ] }, { include_blank: "追加する画像を選ぶ" }, class: "input !w-auto", "aria-label": "追加する画像" %>
+    <%= f.submit "画像を入れる", class: "btn-secondary cursor-pointer" %>
+  <% end %>
+<% end %>
+<h2 class="font-bold text-xl mb-2">フォルダ内の画像（<%= @uploads.size %> 枚）</h2>
+<ul id="folder-uploads" class="mb-6 max-w-2xl space-y-2">
+  <% @uploads.each do |u| %>
+    <li class="rounded-xl bg-surface p-3 flex flex-wrap items-center gap-3" id="folder_upload_<%= u.id %>">
+      <%= link_to "画像 ##{u.id}", upload_path(u), class: "font-bold underline" %>
+      <span class="text-base text-text-sub">領域 <%= u.crop_regions.size %> 件・承認済みの問題 <%= u.crop_regions.sum { |r| r.questions.count(&:approved?) } %> 問</span>
+      <% if current_user.can_write? %><%= button_to "外す", question_folder_upload_path(@folder, u), method: :delete, class: "btn-secondary !h-9 !px-3 cursor-pointer", form: { class: "ml-auto" } %><% end %>
+    </li>
+  <% end %>
+  <% if @uploads.empty? %><li class="text-lg">画像がありません。上から追加してください。</li><% end %>
+</ul>
+<% if current_user.can_write? && @approved.any? %>
+  <h2 class="font-bold text-xl mb-2">小テストを作る（承認済みの問題 <%= @approved.size %> 問）</h2>
+  <%= form_with url: new_question_folder_random_test_path(@folder), method: :get, id: "random-test-form", class: "mb-4 flex flex-wrap items-center gap-3" do |f| %>
+    <label class="flex items-center gap-1 text-lg"><span class="label">問題数</span><%= f.number_field :count, value: 5, min: 1, max: Marking::QuestionPicker.max_count, class: "input !w-24", "aria-label": "ランダムで作る問題数" %></label>
+    <%= f.submit "ランダムで作る", class: "btn-secondary cursor-pointer" %>
+  <% end %>
+  <%= form_with url: question_folder_random_test_path(@folder), id: "manual-test-form", class: "max-w-3xl space-y-2" do |f| %>
+    <ul id="manual-questions" class="space-y-2">
+      <% @approved.each do |q| %>
+        <li class="rounded-xl bg-surface p-3"><label class="flex items-start gap-2">
+          <%= check_box_tag "question_ids[]", q.id, false, id: "question_ids_#{q.id}", class: "mt-1" %>
+          <span><%= link_to "画像 ##{q.region.upload_id}", upload_path(q.region.upload_id), class: "underline text-base", data: { origin: q.region.upload_id } %> <%= q.source_label %> <span class="whitespace-pre-wrap" data-controller="math"><%= truncate(q.question_text, length: 120) %></span></span>
+        </label></li>
+      <% end %>
+    </ul>
+    <div class="flex flex-wrap items-center gap-3">
+      <%= text_field_tag :title, "#{@folder.name}の小テスト", class: "input !w-72", maxlength: 100, "aria-label": "タイトル" %>
+      <%= f.submit "選んだ問題で小テストを作成", class: "btn-primary cursor-pointer" %>
+    </div>
+  <% end %>
+<% end %>

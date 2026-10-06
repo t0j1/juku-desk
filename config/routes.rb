@@ -94,6 +94,11 @@ Rails.application.routes.draw do
     get :print, on: :member
     post :print_job, on: :member
   end
+  # 問題フォルダ（複数の取り込み画像をまとめる）。/marking/:id より先に書く
+  resources :question_folders, path: "marking/folders", only: %i[ index create show update destroy ] do
+    resources :uploads, controller: "question_folder_uploads", only: %i[ create destroy ]
+    resource :random_test, only: %i[ new create ], controller: "folder_random_tests"
+  end
   resources :uploads, path: "marking", only: %i[ index new create show ] do
     get :image, on: :member
     post :extract, on: :member
