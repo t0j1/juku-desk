@@ -56,6 +56,16 @@ class DailyScheduleTaskTest < ActiveSupport::TestCase
     assert_equal [ "朝の印刷", 2, @station ], [ job.title, job.copies, job.print_station ]
   end
 
+  test "a print run passes the driver preset (tray set) to the PrintJob" do
+    task = print_task(driver_preset: "トレイ2・両面・ホチキス")
+    at = Time.zone.local(2026, 10, 5, 8, 0)
+
+    execution = task.run!(at, now: at + 1.minute)
+
+    assert_equal "executed", execution.status
+    assert_equal "トレイ2・両面・ホチキス", execution.print_job.driver_preset
+  end
+
   test "an offline station is skipped, not shown as success, and not printed" do
     @station.update!(last_seen_at: 1.hour.ago)
     task = print_task

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_06_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_06_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -106,6 +106,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_130000) do
     t.bigint "print_station_id"
     t.string "duplex"
     t.integer "copies", default: 1, null: false
+    t.string "driver_preset"
     t.string "r2_key"
     t.binary "pdf_data"
     t.string "sha256"
