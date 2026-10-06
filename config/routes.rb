@@ -97,6 +97,8 @@ Rails.application.routes.draw do
   resources :uploads, path: "marking", only: %i[ index new create show ] do
     get :image, on: :member
     post :extract, on: :member
+    # 画像内の承認済みの問題からランダムに小テストを作る（プレビューで確認・選び直し）
+    resource :random_test, only: %i[ new create ], controller: "upload_random_tests"
   end
   resources :crop_regions, path: "marking/regions", only: [] do
     get :image, on: :member
