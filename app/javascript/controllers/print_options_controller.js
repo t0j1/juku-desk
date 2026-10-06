@@ -7,7 +7,7 @@ const PAGE_HEIGHT_MM = 267
 const ITEM_GAP_MM = 6
 
 export default class extends Controller {
-  static targets = [ "sheet", "size", "numbering", "layout", "count", "countField" ]
+  static targets = [ "sheet", "size", "numbering", "numberingJob", "layout", "count", "countField" ]
 
   connect() {
     this.lists = Array.from(this.sheetTarget.querySelectorAll(".mt-list")).map((list) => ({ list, items: Array.from(list.children) }))
@@ -31,6 +31,8 @@ export default class extends Controller {
   // 小問番号：original=元のまま／per=大問ごとに(1)から／cont=通しで(1)から（番号の対応はサーバーが span の data に入れている）
   renumber() {
     const mode = this.numberingTarget.value
+    // 印刷ジョブ（PDF）へ渡す値も、このセレクトと同じにする
+    if (this.hasNumberingJobTarget) this.numberingJobTarget.value = mode
     this.sheetTarget.querySelectorAll(".mt-subno").forEach((span) => {
       const n = mode === "original" ? null : span.dataset[mode]
       span.textContent = n ? `${span.dataset.original.match(/^\s*/)[0]}(${n})` : span.dataset.original

@@ -154,4 +154,12 @@ class MarkingTestPrintJobTest < ActionDispatch::IntegrationTest
     get print_marking_test_path(exam)
     assert_select "form[action=?]", print_job_marking_test_path(exam)
   end
+
+  test "the print screen shows the sub-question numbering once, and the job form carries it as a hidden field synced by the screen's select" do
+    exam = make_exam
+    get print_marking_test_path(exam)
+    assert_select "select[aria-label^=?]", "小問番号", count: 1
+    assert_select "form[action=?] input[type=hidden][name=?][data-print-options-target=?]", print_job_marking_test_path(exam), "print_job[sub_numbers]", "numberingJob", count: 1
+    assert_select "form select[name=?]", "print_job[sub_numbers]", count: 0
+  end
 end
