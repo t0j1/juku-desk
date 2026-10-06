@@ -2,7 +2,7 @@
 <div id="load-indicator" data-turbo-permanent data-controller="load-indicator" class="load-indicator print:hidden" data-state="idle" aria-busy="false" hidden>
   <div class="load-indicator-bar" aria-hidden="true"><div class="load-indicator-fill" data-load-indicator-target="fill"><div class="load-indicator-stripes"></div></div></div>
   <div class="load-indicator-box" role="status">
-    <p class="load-indicator-line"><span aria-hidden="true">◔ </span>読み込み中…<span aria-hidden="true">（経過 <span data-load-indicator-target="seconds">0</span> 秒）</span><span class="load-indicator-estimate" data-load-indicator-target="estimate" hidden>（所要時間は推定できません）</span></p>
+    <p class="load-indicator-line"><span aria-hidden="true" data-load-indicator-target="icon">⟳ </span>読み込み中…<span aria-hidden="true">（経過 <span data-load-indicator-target="seconds">0</span> 秒）</span><span class="load-indicator-estimate" data-load-indicator-target="estimate" hidden>（所要時間は推定できません）</span></p>
     <p class="load-indicator-reason" data-load-indicator-target="reason" hidden>サーバーを起動しています（無料枠のため最大 1 分ほどかかります）</p>
     <p class="load-indicator-slow" data-load-indicator-target="slow" hidden>時間がかかっています。
       <button type="button" class="btn-secondary btn-sm" data-action="load-indicator#reload">再読み込み</button></p>

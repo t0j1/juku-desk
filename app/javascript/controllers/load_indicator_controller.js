@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 // 0.4 秒未満は何も出さない／3 秒で理由／15 秒で「推定」の斜線／45 秒で再読み込み。％は出さない（分母がない）ので、バーは「動いている」ことだけを示す。
 // 進み具合は単調に増え、99% を超えない（逆行・停止しない）。rAF は 1 本で、1 フレームに DOM を書くのは 1 回。
 export default class extends Controller {
-  static targets = [ "fill", "seconds", "reason", "slow", "estimate" ]
+  static targets = [ "fill", "seconds", "reason", "slow", "estimate", "icon" ]
   // しきい値（ミリ秒）。画面の既定は 0.4 秒・3 秒・15 秒・45 秒。テストで短くできるよう、data 属性で上書きできる
   static values = { showMs: { type: Number, default: 400 }, reasonMs: { type: Number, default: 3000 }, estimateMs: { type: Number, default: 15000 }, slowMs: { type: Number, default: 45000 } }
 
@@ -74,6 +74,7 @@ export default class extends Controller {
       this.element.dataset.state = next.state
       this.reasonTarget.hidden = !(next.state === "reason" || next.state === "estimate" || next.state === "slow")
       this.slowTarget.hidden = next.state !== "slow"
+      this.iconTarget.textContent = next.state === "slow" ? "⚠ " : "⟳ "
       this.estimateTarget.hidden = !(next.state === "estimate" || next.state === "slow")
     }
     if (prev.seconds !== next.seconds) this.secondsTarget.textContent = next.seconds
