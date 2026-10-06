@@ -36,6 +36,7 @@ class MarkingTestsController < ApplicationController
   def print
     @kind = params[:kind] == "answer" ? :answer : :question
     @items = @test.items.includes(:question)
+    @sub_plan = Marking::SubNumbering.plan(@items)
     @instructions = @test.section_instructions if @test.sectioned?
     AuditLog.record!(:print, @test, metadata: { kind: @kind })
     render layout: "application"
@@ -44,7 +45,7 @@ class MarkingTestsController < ApplicationController
   # 小テストの PDF をサーバーで作り、そのまま印刷ジョブにする（アップロード不要）。ステーションがオフラインのとき、PDF を作れないときは、ジョブを作らない
   def print_job
     kind = params[:kind] == "answer" ? :answer : :question
-    jp = params.fetch(:print_job, {}).permit(:print_station_id, :copies, :scheduled_at, :expires_at, :staple, :collate)
+    jp = params.fetch(:print_job, {}).permit(:print_station_id, :copies, :scheduled_at, :expires_at, :staple, :collate, :sub_numbers)
     station = PrintStation.active.find_by(id: jp[:print_station_id])
     return print_job_failed("ステーションを選んでください。", kind) unless station
     return print_job_failed("「#{station.name}」はオフラインです。起動してから、もう一度お試しください。", kind) unless station.online?
@@ -52,9 +53,10 @@ class MarkingTestsController < ApplicationController
     preset = resolved_driver_preset(:print_job)
     return print_job_failed("ドライバーの設定名を選んでください（ステーションの既定も未設定です。印刷エージェントは設定名なしでは刷れません）。", kind) if preset.blank? && station.default_driver_preset.blank?
 
-    attrs = jp.to_h.symbolize_keys.except(:print_station_id).merge(driver_preset: preset).compact_blank
+    sub_numbers = Marking::SubNumbering.mode(jp[:sub_numbers])
+    attrs = jp.to_h.symbolize_keys.except(:print_station_id, :sub_numbers).merge(driver_preset: preset).compact_blank
     title = "#{@test.title}（#{kind == :answer ? "解答用" : "問題用"}）"
-    job = Marking::ExamPdf.with_file(@test, kind: kind) do |path|
+    job = Marking::ExamPdf.with_file(@test, kind: kind, sub_numbers: sub_numbers) do |path|
       PrintJob.create_with_pdf!(path: path, station: station, title: title, created_by: current_user, **attrs)
     end
     AuditLog.record!(:create, job, metadata: { title: job.title, station: station.name, copies: job.copies, exam_id: @test.id })

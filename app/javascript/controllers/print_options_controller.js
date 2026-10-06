@@ -1,13 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
-// 小テスト印刷画面で、解答欄の広さとページ内の配置を、印刷前に切り替える（この画面を開いている間だけ有効。保存はしない）。
+// 小テスト印刷画面で、解答欄の広さ・小問番号・ページ内の配置を、印刷前に切り替える（この画面を開いている間だけ有効。保存はしない）。
 // 配置: top=上詰め（従来）／even=ページ内に等間隔／count=1ページあたりの問題数を指定。
 // 問題を 1 ページ分ずつの <ol> に分けて並べ直す（問題の途中ではページを切らない）。A4 縦・余白 15mm なので、1 ページの高さは 267mm。
 const PAGE_HEIGHT_MM = 267
 const ITEM_GAP_MM = 6
 
 export default class extends Controller {
-  static targets = [ "sheet", "size", "layout", "count", "countField" ]
+  static targets = [ "sheet", "size", "numbering", "layout", "count", "countField" ]
 
   connect() {
     this.lists = Array.from(this.sheetTarget.querySelectorAll(".mt-list")).map((list) => ({ list, items: Array.from(list.children) }))
@@ -22,9 +22,19 @@ export default class extends Controller {
 
   apply() {
     this.sheetTarget.dataset.answerSize = this.sizeTarget.value
+    this.renumber()
     this.countFieldTarget.hidden = this.layoutTarget.value !== "count"
     this.reset()
     if (this.layoutTarget.value !== "top") this.paginate()
+  }
+
+  // 小問番号：original=元のまま／per=大問ごとに(1)から／cont=通しで(1)から（番号の対応はサーバーが span の data に入れている）
+  renumber() {
+    const mode = this.numberingTarget.value
+    this.sheetTarget.querySelectorAll(".mt-subno").forEach((span) => {
+      const n = mode === "original" ? null : span.dataset[mode]
+      span.textContent = n ? `${span.dataset.original.match(/^\s*/)[0]}(${n})` : span.dataset.original
+    })
   }
 
   mm(value) {

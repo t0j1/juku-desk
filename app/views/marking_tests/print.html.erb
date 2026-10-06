@@ -21,6 +21,10 @@
         <select class="input !w-auto" data-print-options-target="layout" data-action="print-options#apply" aria-label="ページ内の配置">
           <option value="top" selected>上詰め</option><option value="even">ページ内に等間隔</option><option value="count">1ページあたりの問題数を指定</option>
         </select></label>
+      <label class="flex items-center gap-1"><span class="caption">小問番号</span>
+        <select class="input !w-auto" data-print-options-target="numbering" data-action="print-options#apply" aria-label="小問番号">
+          <option value="original" selected>元のまま</option><option value="per">大問ごとに(1)から振り直す</option><option value="cont">通しで(1)から振り直す</option>
+        </select></label>
       <label class="flex items-center gap-1" data-print-options-target="countField" hidden><span class="caption">問題数</span>
         <input type="number" min="1" max="30" value="5" class="input !w-20" data-print-options-target="count" data-action="input->print-options#apply" aria-label="1ページあたりの問題数"></label>
       <span class="caption">この画面を開いている間だけ有効です（保存されません）。</span>
@@ -34,6 +38,7 @@
           <%= f.number_field :copies, min: 1, max: 99, value: 1, class: "input !w-24", "aria-label": "部数" %>
           <label class="flex items-center gap-1"><span class="caption">印刷する時刻</span><%= f.datetime_field :scheduled_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "input !w-auto", "aria-label": "印刷する時刻" %></label>
           <label class="flex items-center gap-1"><span class="caption">締め切り</span><%= f.datetime_field :expires_at, class: "input !w-auto", "aria-label": "締め切り（空なら 2 時間後）" %></label>
+          <label class="flex items-center gap-1"><span class="caption">小問番号</span><%= f.select :sub_numbers, [ [ "元のまま", "original" ], [ "大問ごとに(1)から振り直す", "per" ], [ "通しで(1)から振り直す", "cont" ] ], {}, class: "input !w-auto", "aria-label": "小問番号（PDF）" %></label>
           <%= driver_preset_select "print_job", blank_label: "（ステーションの既定を使う）", input_class: "input" %>
           <%= f.submit "印刷ジョブを作成", class: "btn-primary cursor-pointer" %>
         <% end %>
