@@ -134,7 +134,9 @@ class AdminPrintStationTestPrintTest < ActionDispatch::IntegrationTest
 
   test "the form offers sheets (default 2) and duplex" do
     get admin_print_stations_path
-    assert_select "input[name='test_print[sheets]'][value='2'][min='1'][max='20']"
-    assert_select "select[name='test_print[duplex]'] option", count: 3
+    # 一覧はステーションごとにフォームを出す。他のステーションの有無で数が変わらないよう、このパネルに絞る
+    panel = "#test_print_panel_#{@station.id}"
+    assert_select "#{panel} input[name='test_print[sheets]'][value='2'][min='1'][max='20']"
+    assert_select "#{panel} select[name='test_print[duplex]'] option", count: 3
   end
 end
