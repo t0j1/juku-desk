@@ -4,6 +4,8 @@ class Upload < ApplicationRecord
 
   belongs_to :user, optional: true
   has_many :crop_regions, dependent: :destroy
+  has_many :question_folder_uploads, dependent: :delete_all
+  has_many :question_folders, through: :question_folder_uploads
 
   validates :sha256, presence: true, uniqueness: true, format: { with: /\A\h{64}\z/ }
   validates :r2_key, :content_type, presence: true
