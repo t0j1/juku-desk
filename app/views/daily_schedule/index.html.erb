@@ -6,7 +6,10 @@
   <h1 class="page-title">1日のスケジュール</h1>
   <nav class="flex items-center gap-2 ml-auto" aria-label="日付の切り替え">
     <%= link_to "‹", daily_schedule_path_for(@date - 1), class: "btn-secondary btn-sm", aria: { label: "前の日" } %>
-    <span id="daily-date" class="text-[19px] font-bold tnum min-w-[7.5em] text-center"><%= day_label %></span>
+    <%= form_with url: daily_schedule_path, method: :get, local: true, id: "daily-date-form", class: "relative", data: { controller: "date-jump" } do %>
+      <button type="button" id="daily-date" class="text-[19px] font-bold tnum min-w-[7.5em] text-center cursor-pointer rounded-field px-2 py-1 hover:bg-bg" aria-label="<%= day_label %>（日付を選ぶ）" aria-haspopup="dialog" data-action="date-jump#open"><%= day_label %></button>
+      <input type="date" name="date" value="<%= @date.iso8601 %>" required tabindex="-1" aria-label="日付を選ぶ" class="absolute left-0 top-full w-px h-px opacity-0 pointer-events-none" data-date-jump-target="input" data-action="change->date-jump#go">
+    <% end %>
     <%= link_to "›", daily_schedule_path_for(@date + 1), class: "btn-secondary btn-sm", aria: { label: "次の日" } %>
     <%= link_to "今日", daily_schedule_path_for(today), class: "btn-secondary btn-sm" %>
   </nav>
