@@ -6,12 +6,25 @@
   </style>
   <%= stylesheet_link_tag "katex/katex" %>
 <% end %>
-<div data-controller="page-print" class="marking-print">
+<div data-controller="page-print print-options" class="marking-print">
   <div id="print-toolbar" class="card !py-4 flex flex-wrap items-center gap-3 mb-6 print:hidden">
     <button type="button" class="btn-primary" data-action="page-print#print"><%= console_icon(:printer) %>印刷</button>
     <%= link_to "もう一方（#{@kind == :answer ? "問題用" : "解答用"}）", print_marking_test_path(@test, kind: @kind == :answer ? "question" : "answer"), class: "btn-secondary" %>
     <%= link_to "戻る", marking_test_path(@test), class: "btn-secondary" %>
     <span class="caption">印刷ダイアログで「PDF として保存」もできます。</span>
+    <div id="print-options" class="flex flex-wrap items-center gap-3 w-full">
+      <label class="flex items-center gap-1"><span class="caption">解答欄の広さ</span>
+        <select class="input !w-auto" data-print-options-target="size" data-action="print-options#apply" aria-label="解答欄の広さ">
+          <option value="narrow">狭い</option><option value="normal" selected>ふつう</option><option value="wide">広い</option>
+        </select></label>
+      <label class="flex items-center gap-1"><span class="caption">ページ内の配置</span>
+        <select class="input !w-auto" data-print-options-target="layout" data-action="print-options#apply" aria-label="ページ内の配置">
+          <option value="top" selected>上詰め</option><option value="even">ページ内に等間隔</option><option value="count">1ページあたりの問題数を指定</option>
+        </select></label>
+      <label class="flex items-center gap-1" data-print-options-target="countField" hidden><span class="caption">問題数</span>
+        <input type="number" min="1" max="30" value="5" class="input !w-20" data-print-options-target="count" data-action="input->print-options#apply" aria-label="1ページあたりの問題数"></label>
+      <span class="caption">この画面を開いている間だけ有効です（保存されません）。</span>
+    </div>
     <% if current_user.system_admin? %>
       <% stations = PrintStation.active.order(:name).to_a %>
       <% if stations.any? %>
@@ -27,7 +40,7 @@
       <% end %>
     <% end %>
   </div>
-  <article class="mt-sheet" data-controller="math">
+  <article class="mt-sheet" data-controller="math" data-print-options-target="sheet" data-answer-size="normal">
     <header class="mt-head">
       <div class="mt-title"><%= @test.title %><span class="mt-kind"><%= @kind == :answer ? "【解答】" : "" %></span></div>
       <div class="mt-meta">
