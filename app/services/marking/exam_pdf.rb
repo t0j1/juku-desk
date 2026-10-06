@@ -12,14 +12,15 @@ class Marking::ExamPdf
   MARGIN = 15 * 72 / 25.4 # 15mm（pt）
   MIN_ROOM = 90 # この高さ（pt）より下に来たら、次の問題は次のページから
 
-  def self.with_file(exam, kind: :question)
+  def self.with_file(exam, kind: :question, sub_numbers: "original")
     Tempfile.create([ "exam-", ".pdf" ]) do |file|
-      new(exam, kind: kind).render_to(file.path)
+      new(exam, kind: kind, sub_numbers: sub_numbers).render_to(file.path)
       yield file.path
     end
   end
 
-  def initialize(exam, kind: :question)
+  def initialize(exam, kind: :question, sub_numbers: "original")
+    @sub_numbers = Marking::SubNumbering.mode(sub_numbers)
     @exam = exam
     @kind = kind == :answer ? :answer : :question
   end
@@ -27,6 +28,7 @@ class Marking::ExamPdf
   def render_to(path)
     items = @exam.items.includes(:question).to_a
     raise Unsupported, "問題がありません" if items.empty?
+    @sub_plan = Marking::SubNumbering.plan(items)
 
     @pdf = Prawn::Document.new(page_size: "A4", margin: MARGIN, info: { Title: @exam.title.to_s })
     @pdf.font_families.update("J" => { normal: FONT_PATH.to_s, bold: FONT_PATH.to_s })
@@ -74,18 +76,18 @@ class Marking::ExamPdf
       top = @pdf.cursor
       @pdf.bounding_box([ 0, top ], width: 26) { @pdf.text item.number_label }
       @pdf.move_cursor_to top
-      @pdf.indent(26) { @kind == :answer ? answer_body(q) : question_body(q) }
+      @pdf.indent(26) { @kind == :answer ? answer_body(q, item) : question_body(q, item) }
       @pdf.move_down 10
     end
 
-    def question_body(q)
+    def question_body(q, item)
       p = q.payload || {}
       case layout(q)
       when "reorder"
         para p["ja"]
         para reorder_line(p)
       when "passage"
-        para q.math_text(q.question_text) if q.question_text.present? && ![ p["body"] ].include?(q.question_text)
+        para numbered(q, q.question_text, item) if q.question_text.present? && ![ p["body"] ].include?(q.question_text)
         para strip_markup(p["body"])
         subs = Array(p["sub_questions"]).grep(Hash)
         if subs.any?
@@ -100,7 +102,7 @@ class Marking::ExamPdf
         para p["source"]
         ruled(3)
       else
-        para q.math_text(q.question_text)
+        para numbered(q, q.question_text, item)
         if q.options.any?
           q.options.each.with_index(1) { |o, i| para "#{i}　#{q.math_text(o)}" }
         else
@@ -109,15 +111,19 @@ class Marking::ExamPdf
       end
     end
 
-    def answer_body(q)
+    def answer_body(q, item)
       p = q.payload || {}
       subs = Array(p["sub_questions"]).grep(Hash)
       if layout(q) == "passage" && subs.any? { |sq| sq["answer"].present? }
         subs.each.with_index(1) { |sq, i| para "(#{i}) #{sq["answer"]}" }
       else
-        para q.math_text(q.answer_text)
+        para numbered(q, q.answer_text, item)
       end
-      para "解説：#{q.math_text(q.explanation)}", size: 9 if q.explanation.present?
+      para "解説：#{numbered(q, q.explanation, item)}", size: 9 if q.explanation.present?
+    end
+
+    def numbered(q, text, item)
+      Marking::SubNumbering.text(text, @sub_plan[item.id], @sub_numbers) { |seg| q.math_text(seg) }
     end
 
     def para(text, **opts)

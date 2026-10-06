@@ -4,10 +4,10 @@
 module Marking::MathAutoWrap
   SPAN = /\$\$.+?\$\$|\$.+?\$/m
   FUNC = "(?:sin|cos|tan|log|ln)(?![A-Za-z])"
-  ATOM = "(?:#{FUNC}|(?<![A-Za-z])[A-Za-z](?![A-Za-z])|\\d+(?:\\.\\d+)?|[πθ]|\\\\[A-Za-z]+(?:\\{[^{}]*\\})*|\\((?:[^()$\\s][^()$]*)\\))"
+  ATOM = "(?:sqrt\\([^()]*\\)|√(?:\\d+|[A-Za-z]|\\([^()]*\\))|#{FUNC}|(?<![A-Za-z])[A-Za-z](?![A-Za-z])|\\d+(?:\\.\\d+)?|[πθ]|\\\\[A-Za-z]+(?:\\{[^{}]*\\})*|\\((?:[^()$\\s][^()$]*)\\))"
   OP = "(?:[+\\-−=×÷·/^_]|\\s)*"
   RUN = /#{ATOM}(?:#{OP}#{ATOM})*/
-  TRIGGER = %r{\^|[π\\]|(?:\d|\))/|/(?:\d|\()}
+  TRIGGER = %r{\^|[π√\\]|sqrt\(|(?:\d|\))/|/(?:\d|\()}
 
   module_function
 
@@ -42,7 +42,10 @@ module Marking::MathAutoWrap
   end
 
   def latex(expr)
-    expr.gsub(/\((\d+)\/(\d+)\)/, '\frac{\1}{\2}')
+    expr.gsub(/sqrt\(([^()]*)\)/, '\\sqrt{\\1}')
+        .gsub(/√(\d+|[A-Za-z])/, '\\sqrt{\\1}')
+        .gsub(/√\(([^()]*)\)/, '\\sqrt{\\1}')
+        .gsub(/\((\d+)\/(\d+)\)/, '\frac{\1}{\2}')
         .gsub(%r{(?<![\d.])(\d+(?:\.\d+)?|π|[A-Za-z])/(\d+(?:\.\d+)?π?|π|[A-Za-z])}, '\frac{\1}{\2}')
         .gsub(/(?<!\\)\b(sin|cos|tan|log|ln)(?![A-Za-z])/, '\\\\\1')
         .tr("−", "-")
