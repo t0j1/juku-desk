@@ -130,4 +130,18 @@ class DailyScheduleTest < ActionDispatch::IntegrationTest
     get daily_schedule_path
     assert_select "#app-sidebar a[href='/schedule/daily'][aria-current='page']"
   end
+
+  test "the date label opens a date picker that goes to the chosen day by the date param, and the arrows and today link stay" do
+    get daily_schedule_path(date: "2026-10-05")
+    assert_select "form#daily-date-form[method=get][action=?]", daily_schedule_path do
+      assert_select "button#daily-date", /10\/5/
+      assert_select "input[type=date][name=date][value=?]", "2026-10-05"
+    end
+    assert_select "a[aria-label='前の日'][href=?]", daily_schedule_path(date: "2026-10-04")
+    assert_select "a[aria-label='次の日'][href=?]", daily_schedule_path(date: "2026-10-06")
+    assert_select "a", text: "今日"
+    get daily_schedule_path(date: "2026-12-29")
+    assert_response :success
+    assert_select "#daily-date", /12\/29/
+  end
 end
