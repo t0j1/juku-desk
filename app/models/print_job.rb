@@ -22,7 +22,8 @@ class PrintJob < ApplicationRecord
   validates :title, presence: true, length: { maximum: TITLE_MAX }
   validates :duplex, inclusion: { in: DUPLEX_VALUES }, allow_nil: true
   validates :copies, numericality: { only_integer: true, in: 1..99 }
-  validates :scheduled_at, :expires_at, :sha256, :byte_size, presence: true
+  validates :scheduled_at, :expires_at, presence: true
+  validates :sha256, :byte_size, presence: true, unless: :generate_on_lease # 貸し出しの直前に作るジョブは、作るまで PDF がない
   validate :deadline_after_schedule
 
   scope :unfinished, -> { where(status: %i[ pending leased ]) }
@@ -78,12 +79,45 @@ class PrintJob < ApplicationRecord
   end
 
   # このステーションの、刷る時刻になった pending を 1 件貸し出す。なければ nil
+  # 名簿・単語テストのジョブ（generate_on_lease）は、ここで PDF を作る。作れなかった・対象 0 名のものは failed にして、次のジョブを探す
   def self.lease_next_for!(station, now = Time.current)
     transaction do
       sweep!(now)
-      job = station.print_jobs.pending.where(scheduled_at: ..now).order(:scheduled_at, :id).lock("FOR UPDATE SKIP LOCKED").first
-      job&.tap { |j| j.update!(status: :leased, lease_until: now + LEASE_FOR, lease_count: j.lease_count + 1) }
+      loop do
+        job = station.print_jobs.pending.where(scheduled_at: ..now).order(:scheduled_at, :id).lock("FOR UPDATE SKIP LOCKED").first
+        break unless job
+        next unless job.generate_pdf!(now)
+
+        job.update!(status: :leased, lease_until: now + LEASE_FOR, lease_count: job.lease_count + 1)
+        break job
+      end
     end
+  end
+
+  # generate_on_lease のジョブの PDF を、いまのデータで作って保存する。刷れる状態になれば true。
+  # 失敗したときは、古い PDF では刷らず、理由を残して failed にする（false）。
+  def generate_pdf!(now = Time.current)
+    return true unless generate_on_lease
+
+    document = print_schedule&.build_document(scheduled_for || now.to_date)
+    return fail_generation!("定例印刷の雛形が削除されたため、印刷していません", now) unless document
+    return fail_generation!("対象が 0 件のため、印刷していません（スキップ）", now) if document.empty?
+
+    # 生成の途中でデータベースのエラーが出ても、外側のトランザクション（貸し出し）を壊さないよう savepoint で囲む
+    self.class.transaction(requires_new: true) do
+      data = Tempfile.create([ "generated-", ".pdf" ]) do |file|
+        document.render_to(file.path)
+        File.binread(file.path)
+      end
+      store_generated_pdf!(data)
+      updates = { generate_on_lease: false }
+      updates[:copies] = [ document.count * print_schedule.copies, 99 ].min if print_schedule.copies_mode == "roster_auto"
+      update!(updates)
+    end
+    true
+  rescue StandardError => e
+    Rails.logger.error("PrintJob##{id}: PDF の生成に失敗: #{e.class}: #{e.message}")
+    fail_generation!("PDF の生成に失敗しました（#{e.class}）。印刷していません", now)
   end
 
   # エージェントの報告（spooled | failed | expired）を受ける。すでに終わっているジョブへの同じ報告は、そのまま受理する（報告のやり直し）。
@@ -148,6 +182,29 @@ class PrintJob < ApplicationRecord
   end
 
   private
+    def fail_generation!(message, now)
+      update!(status: :failed, finished_at: now, lease_until: nil, result_message: message)
+      false
+    end
+
+    # 生成した PDF を保存する（R2 が使えるときは R2 に置き、DB には入れない）
+    def store_generated_pdf!(data)
+      raise ArgumentError, "PDF が大きすぎます" if data.bytesize > MAX_PDF_BYTES
+
+      if PdfStorage.r2?
+        key = "print/#{SecureRandom.hex(16)}.pdf"
+        result = PdfStorage.r2.put_string(key, data)
+        begin
+          update!(r2_key: key, pdf_data: nil, sha256: result.checksum, byte_size: result.size)
+        rescue StandardError
+          PdfStorage.r2.delete(key)
+          raise
+        end
+      else
+        update!(pdf_data: data, sha256: Digest::SHA256.hexdigest(data), byte_size: data.bytesize)
+      end
+    end
+
     def default_deadline
       self.expires_at ||= scheduled_at + DEFAULT_DEADLINE if scheduled_at
     end

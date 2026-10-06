@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_06_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_06_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -262,8 +262,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_120000) do
     t.string "driver_preset"
     t.string "r2_key"
     t.binary "pdf_data"
-    t.string "sha256", null: false
-    t.integer "byte_size", null: false
+    t.string "sha256"
+    t.integer "byte_size"
     t.text "result_message"
     t.datetime "finished_at"
     t.datetime "created_at", null: false
@@ -271,6 +271,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_120000) do
     t.bigint "print_schedule_id"
     t.date "scheduled_for"
     t.string "duplex"
+    t.boolean "generate_on_lease", default: false, null: false
     t.index ["created_by_id"], name: "index_print_jobs_on_created_by_id"
     t.index ["print_schedule_id", "scheduled_for"], name: "index_print_jobs_on_schedule_and_day", unique: true, where: "(print_schedule_id IS NOT NULL)"
     t.index ["print_schedule_id"], name: "index_print_jobs_on_print_schedule_id"
@@ -303,10 +304,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_120000) do
     t.boolean "active", default: true, null: false
     t.string "r2_key"
     t.binary "pdf_data"
-    t.string "sha256", null: false
-    t.integer "byte_size", null: false
+    t.string "sha256"
+    t.integer "byte_size"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "kind", default: "fixed_pdf", null: false
+    t.jsonb "source_config", default: {}, null: false
+    t.jsonb "layout_config", default: {}, null: false
+    t.string "copies_mode", default: "fixed", null: false
     t.index ["created_by_id"], name: "index_print_schedules_on_created_by_id"
     t.index ["print_station_id"], name: "index_print_schedules_on_print_station_id"
     t.index ["r2_key"], name: "index_print_schedules_on_r2_key", unique: true
