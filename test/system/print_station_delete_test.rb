@@ -1,3 +1,5 @@
+require "application_system_test_case"
+
 # 印刷ステーションの削除確認モーダル（名前を打たないと削除できない）。仕様＝§6-4-9
 class PrintStationDeleteTest < ApplicationSystemTestCase
   NAME = "碩学館1F大部屋 A-bizhub551i".freeze
