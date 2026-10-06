@@ -30,3 +30,4 @@ WordbookSeed.run
 # プリンタープリセット（開発・テスト・本番すべてで同じ初期セット）
 require Rails.root.join("db/seeds/print_preset_seed")
 PrintPresetSeed.run
+
