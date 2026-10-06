@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_06_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_06_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -118,6 +118,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_150000) do
     t.index ["created_by_id"], name: "index_daily_schedule_tasks_on_created_by_id"
     t.index ["print_station_id"], name: "index_daily_schedule_tasks_on_print_station_id"
     t.index ["r2_key"], name: "index_daily_schedule_tasks_on_r2_key", unique: true
+  end
+
+  create_table "driver_presets", force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_driver_presets_on_name", unique: true
   end
 
   create_table "gemini_quotas", force: :cascade do |t|

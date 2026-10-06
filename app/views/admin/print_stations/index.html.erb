@@ -26,8 +26,8 @@
             <button type="button" class="btn-secondary btn-sm" data-toggle-target="button" data-action="toggle#toggle" aria-expanded="<%= awaiting %>" aria-controls="test_print_panel_<%= s.id %>">テスト印刷 ▾</button>
           <% end %>
           <% unless s.revoked? %>
-            <%= form_with model: s, url: admin_print_station_path(s), method: :patch, class: "flex items-center gap-2 w-full" do |f| %>
-              <%= f.text_field :default_driver_preset, maxlength: 100, placeholder: "既定のドライバー設定名", class: "input !w-48", "aria-label": "既定のドライバー設定名" %>
+            <%= form_with model: s, url: admin_print_station_path(s), method: :patch, class: "flex flex-wrap items-center gap-2 w-full min-w-0" do |f| %>
+              <%= driver_preset_select "print_station", selected: s.default_driver_preset, blank_label: "（未設定）", field: :default_driver_preset, input_class: "input !w-40" %>
               <%= f.submit "保存", class: "btn-secondary btn-sm cursor-pointer" %>
             <% end %>
           <% end %>

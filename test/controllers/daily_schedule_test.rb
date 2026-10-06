@@ -78,6 +78,18 @@ class DailyScheduleTest < ActionDispatch::IntegrationTest
     assert_equal "トレイ2・両面・ホチキス", DailyScheduleTask.last.driver_preset
   end
 
+  test "a free-typed tray name is refused and an existing value is kept on edit" do
+    base = { name: "朝", execution_time: "08:00", repeat_type: "weekdays", execution_type: "print", print_station_id: @station.id, copies: 1, pdf: pdf_upload }
+    assert_no_difference -> { DailyScheduleTask.count } do
+      post daily_schedule_tasks_path, params: { date: @day.iso8601, daily_schedule_task: base.merge(driver_preset: "デフォルト") }
+      assert_response :unprocessable_entity
+    end
+    task = DailyScheduleTask.create!(draft_params)
+    task.update_columns(driver_preset: "bizhub-551i")
+    patch daily_schedule_task_path(task), params: { date: @day.iso8601, daily_schedule_task: { name: "改名", driver_preset: "bizhub-551i" } }
+    assert_equal "bizhub-551i", task.reload.driver_preset
+  end
+
   test "toggle, duplicate and delete (with audit)" do
     task = DailyScheduleTask.create!(draft_params)
     post toggle_daily_schedule_task_path(task, date: @day.iso8601)

@@ -16,6 +16,19 @@ class AdminPrintSchedulesTest < ActionDispatch::IntegrationTest
     post admin_print_schedules_path, params: { print_schedule: { name: "週テスト", print_station_id: @station.id, copies: 2, weekdays: %w[ 1 3 ], time_of_day: "08:00", driver_preset: "A4両面", pdf: pdf_upload }.merge(attrs) }
   end
 
+  test "an existing preset that is not in the list is kept on edit; a new free-typed one is refused" do
+    register
+    sch = PrintSchedule.last
+    sch.update_columns(driver_preset: "bizhub-551i")
+    get edit_admin_print_schedule_path(sch)
+    assert_select "select[name=?] option[selected][value=?]", "print_schedule[driver_preset]", "bizhub-551i"
+    patch admin_print_schedule_path(sch), params: { print_schedule: { name: "改名", driver_preset: "bizhub-551i" } }
+    assert_equal "bizhub-551i", sch.reload.driver_preset
+    patch admin_print_schedule_path(sch), params: { print_schedule: { name: "改名", driver_preset: "デフォルト" } }
+    assert_response :unprocessable_entity
+    assert_equal "bizhub-551i", sch.reload.driver_preset
+  end
+
   test "only system_admin can use it" do
     sign_in_as users(:staff)
     get admin_print_schedules_path

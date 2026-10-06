@@ -1,6 +1,8 @@
 module Admin
   # 定例印刷の雛形（曜日と時刻に、翌日分の印刷ジョブを自動で作る）。作る側は PrintScheduleJob。
   class PrintSchedulesController < BaseController
+    include DriverPresetParam
+
     before_action :set_schedule, only: %i[ edit update destroy toggle ]
 
     def index
@@ -15,7 +17,7 @@ module Admin
     def create
       load_choices
       upload = params.dig(:print_schedule, :pdf)
-      attrs = schedule_params.to_h.symbolize_keys.compact_blank
+      attrs = schedule_params.to_h.symbolize_keys.merge(driver_preset: resolved_driver_preset(:print_schedule)).compact_blank
       attrs[:print_station] = @stations.find_by(id: attrs.delete(:print_station_id))
       attrs.merge!(config_attrs(attrs[:kind]))
       @schedule = PrintSchedule.new(attrs)
@@ -40,7 +42,7 @@ module Admin
 
     # 固定PDFは、PDF を選べば差し替わる。種別は変えられる（変えると不要な PDF は手放す）。ステーションは有効なものから選び直せる
     def update
-      attrs = schedule_params.to_h.symbolize_keys
+      attrs = schedule_params.to_h.symbolize_keys.merge(driver_preset_attrs(:print_schedule, keep: @schedule.driver_preset))
       attrs[:weekdays] = Array(attrs[:weekdays]).compact_blank # 全部外したら空にして、検証で止める
       station = PrintStation.active.find_by(id: attrs.delete(:print_station_id)) || @schedule.print_station
       attrs.merge!(config_attrs(attrs[:kind] || @schedule.kind))
@@ -96,7 +98,7 @@ module Admin
       end
 
       def schedule_params
-        params.fetch(:print_schedule, {}).permit(:name, :kind, :print_station_id, :copies, :copies_mode, :collate, :staple, :driver_preset, :time_of_day, :active, weekdays: [])
+        params.fetch(:print_schedule, {}).permit(:name, :kind, :print_station_id, :copies, :copies_mode, :collate, :staple, :time_of_day, :active, weekdays: [])
       end
 
       # 種別に合わせた source_config / layout_config（固定PDFは持たない）
