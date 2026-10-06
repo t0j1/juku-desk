@@ -25,6 +25,12 @@
           <% unless s.revoked? %>
             <button type="button" class="btn-secondary btn-sm" data-toggle-target="button" data-action="toggle#toggle" aria-expanded="<%= awaiting %>" aria-controls="test_print_panel_<%= s.id %>">テスト印刷 ▾</button>
           <% end %>
+          <% unless s.revoked? %>
+            <%= form_with model: s, url: admin_print_station_path(s), method: :patch, class: "flex items-center gap-2 w-full" do |f| %>
+              <%= f.text_field :default_driver_preset, maxlength: 100, placeholder: "既定のドライバー設定名", class: "input !w-48", "aria-label": "既定のドライバー設定名" %>
+              <%= f.submit "保存", class: "btn-secondary btn-sm cursor-pointer" %>
+            <% end %>
+          <% end %>
           <%# トークンの画面は 200 で直接返す（URL に残さない）。Turbo は 200 の POST 応答を捨てるので、Turbo を切って通常の送信にする。確認ダイアログは onsubmit で出す %>
           <%= button_to "再発行", reissue_admin_print_station_path(s), class: "btn-secondary btn-sm", form: { data: { turbo: false }, onsubmit: "return confirm('新しいトークンを発行します。古いトークンはすぐ使えなくなります。よろしいですか？')" } %>
           <% unless s.revoked? %>

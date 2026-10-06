@@ -119,7 +119,16 @@ class AdminPrintStationsTest < ActionDispatch::IntegrationTest
     PrintJob.create_with_pdf!(station: station, title: "宿題", data: "%PDF-1.4\n%%EOF")
     get admin_print_stations_path
     assert_select "#undeletable_#{station.id}", /履歴があるため削除できません/
-    assert_select "form[action=?]", admin_print_station_path(station), false
+    assert_select "form[action=?] input[name=_method][value=delete]", admin_print_station_path(station), false
+  end
+
+  test "the default driver preset can be saved and is used for jobs without one" do
+    station, = PrintStation.register!(name: "既定あり")
+    patch admin_print_station_path(station), params: { print_station: { default_driver_preset: " bizhub-A4 " } }
+    assert_redirected_to admin_print_stations_path
+    assert_equal "bizhub-A4", station.reload.default_driver_preset
+    job = PrintJob.create_with_pdf!(station: station, title: "宿題", data: "%PDF-1.4\n%%EOF")
+    assert_equal "bizhub-A4", job.driver_preset
   end
 
   test "a station with a leased test job is not deleted yet" do

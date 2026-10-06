@@ -19,7 +19,7 @@
           <%= hidden_field_tag :kind, @kind %>
           <%= f.select :print_station_id, stations.map { |s| [ "#{s.name}#{"（オフライン）" unless s.online?}", s.id ] }, {}, class: "input !w-auto", "aria-label": "ステーション" %>
           <%= f.number_field :copies, min: 1, max: 99, value: 1, class: "input !w-24", "aria-label": "部数" %>
-          <%= f.text_field :driver_preset, maxlength: 100, required: true, placeholder: "ドライバーの設定名（例：A4両面）", class: "input !w-64", "aria-label": "ドライバーの設定名" %>
+          <%= f.text_field :driver_preset, maxlength: 100, placeholder: "ドライバーの設定名（空ならステーションの既定）", class: "input !w-64", "aria-label": "ドライバーの設定名" %>
           <%= f.submit "印刷ジョブを作成", class: "btn-primary cursor-pointer" %>
         <% end %>
       <% end %>

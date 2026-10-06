@@ -7,6 +7,8 @@ class PrintStation < ApplicationRecord
   has_many :print_jobs, dependent: :restrict_with_error
 
   validates :name, presence: true, length: { maximum: 60 }, uniqueness: true
+  validates :default_driver_preset, length: { maximum: 100 }
+  before_validation { self.default_driver_preset = default_driver_preset.to_s.strip.presence }
 
   TEST_ANSWERS = %w[ yes no ].freeze
   TEST_FIELDS = %w[ tray duplex staple ].freeze # テスト印刷で確かめる 3 点（トレイ／両面／ホチキス）
