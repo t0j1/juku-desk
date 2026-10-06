@@ -1,0 +1,28 @@
+<%# 削除の確認モーダル（ステーション名を打たないと「削除する」が押せない）。local: station。仕様＝§6-4-9 %>
+<div data-controller="delete-confirm" data-delete-confirm-name-value="<%= station.name %>"
+     data-delete-confirm-matched-value="名前が一致しました。「削除する」を押すと削除されます。"
+     data-delete-confirm-unmatched-value="名前が一致するまで「削除する」は押せません。">
+  <button type="button" class="btn-danger btn-sm" data-delete-confirm-target="opener" data-action="delete-confirm#open">削除</button>
+  <dialog id="delete_dialog_<%= station.id %>" role="dialog" aria-modal="true" aria-labelledby="delete_title_<%= station.id %>"
+          class="m-auto w-[min(560px,calc(100vw-32px))] rounded-card bg-surface p-8 text-text shadow-raise backdrop:bg-black/40 open:block"
+          data-delete-confirm-target="dialog" data-action="close->delete-confirm#closed click->delete-confirm#backdrop">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="inline-flex items-center justify-center size-8 rounded-field bg-err-bg text-err-fg font-bold" aria-hidden="true">!</span>
+      <h2 id="delete_title_<%= station.id %>" class="text-[22px] font-bold">印刷ステーションを削除</h2>
+    </div>
+    <p class="text-lg leading-7 mb-2">『<%= station.name %>』を削除します。</p>
+    <p class="text-lg leading-7 font-bold text-err-fg mb-4">削除すると、このプリンターとの紐づけが解除され、元に戻せません。<%= "このステーションは現在オンラインです。" if station.online? %></p>
+    <p class="text-base text-text-sub mb-1">対象（このとおりに入力してください）</p>
+    <p class="rounded-field bg-bg shadow-inset px-4 py-3 text-[19px] font-bold break-all mb-4"><%= station.name %></p>
+    <%= form_with url: admin_print_station_path(station), method: :delete, data: { action: "submit->delete-confirm#submit" } do %>
+      <label class="block text-lg font-bold mb-1" for="delete_name_<%= station.id %>">確認のため、ステーション名を入力してください</label>
+      <input type="text" id="delete_name_<%= station.id %>" class="input !max-w-none" placeholder="ここに入力" autocomplete="off" spellcheck="false"
+             data-delete-confirm-target="input" data-action="input->delete-confirm#update">
+      <p class="text-base text-text-sub mt-2 mb-4" data-delete-confirm-target="hint" aria-live="polite">名前が一致するまで「削除する」は押せません。</p>
+      <div class="flex justify-end gap-3">
+        <button type="button" class="btn-secondary" data-action="delete-confirm#cancel">キャンセル</button>
+        <button type="submit" class="btn-primary !bg-err-fg disabled:!bg-[#8E8E8E] disabled:!opacity-40 disabled:!shadow-none" data-delete-confirm-target="submit" disabled>削除する</button>
+      </div>
+    <% end %>
+  </dialog>
+</div>
