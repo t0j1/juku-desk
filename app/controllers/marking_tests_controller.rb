@@ -52,7 +52,7 @@ class MarkingTestsController < ApplicationController
     new_preset = process_new_preset_if_any(:print_job)
     driver_preset = new_preset if new_preset
 
-    jp = params.fetch(:print_job, {}).permit(:print_station_id, :copies, :scheduled_at, :staple, :collate)
+    jp = params.fetch(:print_job, {}).permit(:print_station_id, :copies, :scheduled_at, :expires_at, :staple, :collate)
     station = PrintStation.active.find_by(id: jp[:print_station_id])
     return print_job_failed("ステーションを選んでください。", kind) unless station
     return print_job_failed("「#{station.name}」はオフラインです。起動してから、もう一度お試しください。", kind) unless station.online?
