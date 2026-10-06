@@ -1,7 +1,7 @@
 module Admin
   # 教室PCの自動印刷エージェントの登録と、トークンの失効・再発行。トークンは発行した直後の画面で 1 度だけ見せる。
   class PrintStationsController < BaseController
-    before_action :set_station, only: %i[ revoke reissue destroy test_print test_result ]
+    before_action :set_station, only: %i[ update revoke reissue destroy test_print test_result ]
 
     def index
       @stations = PrintStation.order(:name)
@@ -18,6 +18,15 @@ module Admin
     rescue ActiveRecord::RecordInvalid => e
       @station = e.record
       render :new, status: :unprocessable_entity
+    end
+
+    # 既定のドライバー設定名（ジョブで空のときに使う）を変える
+    def update
+      @station.update!(default_driver_preset: params.expect(print_station: [ :default_driver_preset ])[:default_driver_preset])
+      AuditLog.record!(:print_station_update, @station, metadata: { name: @station.name, default_driver_preset: @station.default_driver_preset })
+      redirect_to admin_print_stations_path, notice: "「#{@station.name}」の既定のドライバー設定名を保存しました。", status: :see_other
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to admin_print_stations_path, alert: e.record.errors.full_messages.to_sentence, status: :see_other
     end
 
     def revoke

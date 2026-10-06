@@ -34,6 +34,7 @@ class PrintJob < ApplicationRecord
   scope :on_lost_stations, ->(now = Time.current) { unfinished.where(print_station_id: PrintStation.heartbeat_lost(now).select(:id)) }
 
   before_validation :default_deadline
+  before_validation :default_driver_preset_from_station
   before_validation { self.duplex = duplex.presence }
 
   # PDF を保存してジョブを作る。data か path のどちらかを渡す。R2 モードでは R2 に置き、DB には入れない
@@ -213,6 +214,11 @@ class PrintJob < ApplicationRecord
       else
         update!(pdf_data: data, sha256: Digest::SHA256.hexdigest(data), byte_size: data.bytesize)
       end
+    end
+
+    # ドライバー設定名が空なら、ステーションの既定で補う（エージェントは空だと刷れない）
+    def default_driver_preset_from_station
+      self.driver_preset = driver_preset.presence || print_station&.default_driver_preset
     end
 
     def default_deadline

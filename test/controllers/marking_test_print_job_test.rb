@@ -63,6 +63,18 @@ class MarkingTestPrintJobTest < ActionDispatch::IntegrationTest
     assert leased.leased?
   end
 
+  test "a blank driver preset is filled from the station default" do
+    @station.update!(default_driver_preset: "bizhub-A4")
+    create_job(make_exam, driver_preset: "")
+    assert_equal "bizhub-A4", PrintJob.order(:id).last.driver_preset
+  end
+
+  test "an explicit driver preset wins over the station default" do
+    @station.update!(default_driver_preset: "bizhub-A4")
+    create_job(make_exam, driver_preset: "other")
+    assert_equal "other", PrintJob.order(:id).last.driver_preset
+  end
+
   test "an offline station gets no job" do
     @station.update_columns(last_seen_at: 1.hour.ago)
     exam = make_exam
