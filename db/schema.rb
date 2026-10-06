@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_06_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_07_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -299,6 +299,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_160000) do
     t.index ["token"], name: "index_print_links_on_token", unique: true
   end
 
+  create_table "print_schedule_groups", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "print_station_id", null: false
+    t.bigint "created_by_id"
+    t.integer "weekdays", default: [], null: false, array: true
+    t.string "start_time", null: false
+    t.integer "interval_minutes", default: 2, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_print_schedule_groups_on_created_by_id"
+    t.index ["print_station_id"], name: "index_print_schedule_groups_on_print_station_id"
+  end
+
   create_table "print_schedules", force: :cascade do |t|
     t.string "name", null: false
     t.bigint "print_station_id", null: false
@@ -320,7 +334,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_160000) do
     t.jsonb "source_config", default: {}, null: false
     t.jsonb "layout_config", default: {}, null: false
     t.string "copies_mode", default: "fixed", null: false
+    t.bigint "print_schedule_group_id"
+    t.integer "position", default: 0, null: false
     t.index ["created_by_id"], name: "index_print_schedules_on_created_by_id"
+    t.index ["print_schedule_group_id"], name: "index_print_schedules_on_print_schedule_group_id"
     t.index ["print_station_id"], name: "index_print_schedules_on_print_station_id"
     t.index ["r2_key"], name: "index_print_schedules_on_r2_key", unique: true
   end
@@ -540,6 +557,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_160000) do
   add_foreign_key "print_jobs", "print_stations"
   add_foreign_key "print_jobs", "users", column: "created_by_id"
   add_foreign_key "print_links", "users", column: "created_by_id"
+  add_foreign_key "print_schedule_groups", "print_stations"
+  add_foreign_key "print_schedule_groups", "users", column: "created_by_id"
+  add_foreign_key "print_schedules", "print_schedule_groups", on_delete: :nullify
   add_foreign_key "print_schedules", "print_stations"
   add_foreign_key "print_schedules", "users", column: "created_by_id"
   add_foreign_key "print_stations", "users", column: "created_by_id"

@@ -1,9 +1,23 @@
 <% content_for :title, "定例印刷" %>
 <div class="flex items-center mb-6">
   <h1 class="page-title">定例印刷</h1>
-  <%= link_to "雛形を登録", new_admin_print_schedule_path, class: "btn-primary ml-auto" %>
+  <%= link_to "セットを作る", new_admin_print_schedule_group_path, class: "btn-secondary ml-auto" %>
+  <%= link_to "雛形を登録", new_admin_print_schedule_path, class: "btn-primary ml-3" %>
 </div>
 <p class="caption mb-4 max-w-3xl">曜日と時刻を決めた雛形から、毎日 18:00 に翌日分の印刷ジョブを「待機中」で作ります。1 日に作る上限は <%= PrintSchedule::DAILY_LIMIT %> 件です。</p>
+<% if (over = PrintSchedule.over_limit_on(Time.zone.tomorrow)) > 0 %><p id="over_limit" class="alert-err mb-4" role="alert">明日は上限（<%= PrintSchedule::DAILY_LIMIT %> 件）を超えるため、<%= over %> 件は作られません。</p><% end %>
+<% @groups.each do |g| %>
+  <div id="print_schedule_group_<%= g.id %>" class="card !py-3 mb-3 flex flex-wrap items-center gap-3">
+    <span class="font-bold">セット：<%= g.name %></span>
+    <span><%= g.print_station.name %>　<%= g.weekdays_label %>　<%= g.start_time %> から <%= g.interval_minutes %> 分おき・<%= g.print_schedules.size %> 件</span>
+    <%= g.active ? status_pill("有効", :ok) : status_pill("停止中", :neutral) %>
+    <span class="ml-auto flex items-center gap-2">
+      <%= link_to "編集", edit_admin_print_schedule_group_path(g), class: "btn-secondary btn-sm" %>
+      <%= button_to (g.active ? "停止" : "再開"), toggle_admin_print_schedule_group_path(g), class: "btn-secondary btn-sm" %>
+      <%= button_to "削除", admin_print_schedule_group_path(g), method: :delete, class: "btn-danger btn-sm", data: { turbo_confirm: "このセットを削除します（中の雛形は残ります）。よろしいですか？" } %>
+    </span>
+  </div>
+<% end %>
 <% if notice %><p id="notice" class="alert-ok mb-4"><%= notice %></p><% end %>
 <div class="overflow-x-auto">
 <table id="print_schedules" class="table-console whitespace-nowrap">
@@ -15,7 +29,7 @@
         <td><%= tag.span(class: "pill pill-neutral") { safe_join([ tag.span(PrintSchedule::KIND_SYMBOLS[s.kind], aria: { hidden: true }), PrintSchedule::KIND_LABELS[s.kind] ]) } %></td>
         <td class="whitespace-normal min-w-40"><%= s.source_summary %><% if s.layout_summary %><p class="caption"><%= s.layout_summary %></p><% end %></td>
         <td><%= s.print_station.name %></td>
-        <td><%= s.weekdays_label %>　<%= s.time_of_day %></td>
+        <td><%= s.weekdays_label %>　<%= s.print_schedule_group ? s.scheduled_at_on(Time.zone.today).strftime("%H:%M") : s.time_of_day %><% if s.print_schedule_group %><p class="caption">セット：<%= s.print_schedule_group.name %></p><% end %></td>
         <td><%= s.copies %></td>
         <td><%= s.active ? status_pill("有効", :ok) : status_pill("停止中", :neutral) %></td>
         <td><%= (t = s.next_print_at) ? l(t, format: :short) : "—" %></td>

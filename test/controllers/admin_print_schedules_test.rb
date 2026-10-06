@@ -104,4 +104,32 @@ class AdminPrintSchedulesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name='print_schedule[weekdays][]']", 7
   end
+
+  test "a group can be created, edited, stopped and reordered from the admin screens" do
+    assert_difference -> { PrintScheduleGroup.count }, 1 do
+      post admin_print_schedule_groups_path, params: { print_schedule_group: { name: "朝", print_station_id: @station.id, weekdays: %w[ 1 3 ], start_time: "08:00", interval_minutes: 3 } }
+    end
+    group = PrintScheduleGroup.last
+    assert_redirected_to edit_admin_print_schedule_group_path(group)
+    register(print_schedule_group_id: group.id, name: "A")
+    register(print_schedule_group_id: group.id, name: "B")
+    a, b = group.print_schedules.to_a
+    post move_admin_print_schedule_group_path(group), params: { schedule_id: b.id, direction: "up" }
+    assert_equal [ b, a ], group.print_schedules.reload.to_a
+    get edit_admin_print_schedule_group_path(group)
+    assert_select "#member_#{b.id}", /08:00/
+    post toggle_admin_print_schedule_group_path(group)
+    assert_not group.reload.active
+    get admin_print_schedules_path
+    assert_select "#print_schedule_group_#{group.id}", /朝/
+    patch admin_print_schedule_group_path(group), params: { print_schedule_group: { name: "朝2", weekdays: %w[ 2 ], start_time: "09:00", interval_minutes: 5 } }
+    assert_equal [ "朝2", [ 2 ], "09:00" ], [ group.reload.name, group.weekdays, a.reload.time_of_day ]
+  end
+
+  test "an invalid group is refused with a message" do
+    assert_no_difference -> { PrintScheduleGroup.count } do
+      post admin_print_schedule_groups_path, params: { print_schedule_group: { name: "", print_station_id: @station.id, weekdays: [], start_time: "08:00", interval_minutes: 0 } }
+    end
+    assert_response :unprocessable_entity
+  end
 end

@@ -30,6 +30,9 @@
     <%= render "admin/print_schedules/layout_fields", kind: "word_test", schedule: schedule %>
   </div>
 
+  <div><%= f.label :print_schedule_group_id, "セット（同じ時刻に順番に刷る）", class: "label" %>
+    <%= f.select :print_schedule_group_id, [ [ "セットに入れない", "" ] ] + @groups.map { |g| [ g.name, g.id ] }, {}, class: "input mt-1 !w-auto" %>
+    <p class="caption mt-1">セットに入れると、ステーション・曜日・時刻はセットの設定になります（下の入力は使いません）。</p></div>
   <div><%= f.label :print_station_id, "ステーション", class: "label" %>
     <%= f.select :print_station_id, stations.map { |s| [ s.name, s.id ] }, {}, class: "input mt-1 !w-auto" %></div>
   <fieldset><legend class="label">曜日</legend>
