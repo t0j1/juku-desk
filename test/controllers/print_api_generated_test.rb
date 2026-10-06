@@ -103,7 +103,8 @@ class PrintApiGeneratedTest < ActionDispatch::IntegrationTest
     end
 
     job = PrintJob.where(print_schedule: empty).first
-    assert job.failed?
+    assert job.failed?, "status=#{job.status} message=#{job.result_message.inspect} jobs=#{PrintJob.where(print_schedule: empty).count} " \
+                        "sched=#{job.scheduled_at.inspect} expires=#{job.expires_at.inspect} lease=#{job.lease_until.inspect} gen=#{job.generate_on_lease}"
     assert_match(/0 件のため.*スキップ/, job.result_message)
     assert_nil job.pdf_data
     refute job.lease_until
