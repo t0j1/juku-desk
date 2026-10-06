@@ -51,7 +51,7 @@ class MarkingTestPrintJobTest < ActionDispatch::IntegrationTest
 
   test "the answer sheet has its own title and the answers" do
     exam = make_exam
-    post print_job_marking_test_path(exam), params: { kind: "answer", print_job: { print_station_id: @station.id } }
+    post print_job_marking_test_path(exam), params: { kind: "answer", print_job: { print_station_id: @station.id, driver_preset: "A4両面" } }
     job = PrintJob.order(:id).last
     assert_equal "第1回 小テスト（解答用）", job.title
     assert_includes PDF::Reader.new(StringIO.new(job.pdf_bytes)).pages.map(&:text).join, "答え"
@@ -76,7 +76,7 @@ class MarkingTestPrintJobTest < ActionDispatch::IntegrationTest
   test "math is typeset in the PDF, never printed as LaTeX source (question and answer sheets)" do
     exam = make_exam(question_text: 'cos を求めなさい。$\\cos^2 x$ と $\\frac{\\sqrt{3}}{2}$', answer_text: '$-\\sqrt{3}$、$\\frac{7}{6}\\pi$、$x^2$', explanation: '$\\frac{1}{2}$')
     create_job(exam)
-    post print_job_marking_test_path(exam), params: { kind: "answer", print_job: { print_station_id: @station.id } }
+    post print_job_marking_test_path(exam), params: { kind: "answer", print_job: { print_station_id: @station.id, driver_preset: "A4両面" } }
     PrintJob.order(:id).last(2).each do |job|
       text = PDF::Reader.new(StringIO.new(job.pdf_bytes)).pages.map(&:text).join
       assert_no_match(/\\|\$|\^|frac|sqrt|\{/, text, job.title)

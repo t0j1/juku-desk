@@ -47,6 +47,8 @@ class MarkingTestsController < ApplicationController
     return print_job_failed("ステーションを選んでください。", kind) unless station
     return print_job_failed("「#{station.name}」はオフラインです。起動してから、もう一度お試しください。", kind) unless station.online?
 
+    return print_job_failed("ドライバーの設定名を入力してください（印刷エージェントが設定名なしでは刷れないため）。", kind) if jp[:driver_preset].blank?
+
     attrs = jp.to_h.symbolize_keys.except(:print_station_id).compact_blank
     title = "#{@test.title}（#{kind == :answer ? "解答用" : "問題用"}）"
     job = Marking::ExamPdf.with_file(@test, kind: kind) do |path|
