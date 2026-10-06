@@ -4,7 +4,7 @@
      data-delete-confirm-unmatched-value="名前が一致するまで「削除する」は押せません。">
   <button type="button" class="btn-danger btn-sm" data-delete-confirm-target="opener" data-action="delete-confirm#open">削除</button>
   <dialog id="delete_dialog_<%= station.id %>" role="dialog" aria-modal="true" aria-labelledby="delete_title_<%= station.id %>"
-          class="m-auto w-[min(560px,calc(100vw-32px))] rounded-card bg-surface p-8 text-text shadow-raise backdrop:bg-black/40 open:block"
+          class="m-auto w-[min(560px,calc(100vw-32px))] rounded-card bg-surface p-8 text-text shadow-raise backdrop:bg-slate-700/45 open:block"
           data-delete-confirm-target="dialog" data-action="close->delete-confirm#closed click->delete-confirm#backdrop">
     <div class="flex items-center gap-3 mb-4">
       <span class="inline-flex items-center justify-center size-8 rounded-field bg-err-bg text-err-fg font-bold" aria-hidden="true">!</span>
