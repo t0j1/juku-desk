@@ -48,7 +48,7 @@ class DailyScheduleTest < ActionDispatch::IntegrationTest
   end
 
   test "creates a print task with a PDF; rejects a missing PDF and a non-PDF" do
-    base = { name: "朝", execution_time: "08:00", repeat_type: "weekdays", execution_type: "print", print_station_id: @station.id, copies: 2, duplex: "long", tray: "tray1" }
+    base = { name: "朝", execution_time: "08:00", repeat_type: "weekdays", execution_type: "print", print_station_id: @station.id, copies: 2, duplex: "long" }
     assert_no_difference -> { DailyScheduleTask.count } do
       post daily_schedule_tasks_path, params: { date: @day.iso8601, daily_schedule_task: base }
       assert_response :unprocessable_entity
@@ -62,7 +62,7 @@ class DailyScheduleTest < ActionDispatch::IntegrationTest
     assert_difference -> { DailyScheduleTask.count }, 1 do
       post daily_schedule_tasks_path, params: { date: @day.iso8601, daily_schedule_task: base.merge(pdf: pdf_upload) }
     end
-    assert_equal [ 2, "long", "tray1", "weekdays" ], DailyScheduleTask.last.then { |t| [ t.copies, t.duplex, t.tray, t.repeat_type ] }
+    assert_equal [ 2, "long", "weekdays" ], DailyScheduleTask.last.then { |t| [ t.copies, t.duplex, t.repeat_type ] }
   end
 
   test "toggle, duplicate and delete (with audit)" do

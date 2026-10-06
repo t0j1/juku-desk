@@ -35,8 +35,6 @@
           <%= f.select :print_station_id, stations.map { |s| [ s.name, s.id ] }, { include_blank: "選んでください" }, class: "input !w-auto" %></div>
         <div><%= f.label :pdf, persisted && task.print? ? "PDF ファイル（変えるときだけ選ぶ・30MBまで）" : "PDF ファイル（30MBまで）", class: "label" %>
           <span class="flex items-center min-h-11"><%= file_field_tag "daily_schedule_task[pdf]", id: "daily_schedule_task_pdf", accept: "application/pdf", class: "block" %></span></div>
-        <div><%= f.label :tray, "トレイ", class: "label" %><%= f.select :tray, DailyScheduleTask::TRAYS, {}, class: "input !w-auto" %>
-          <p class="caption mt-1">トレイの指定は今は記録のみで、印刷エージェントには渡されません。</p></div>
         <div><%= f.label :duplex, "両面", class: "label" %>
           <%= f.select :duplex, [ [ "片面", "" ], [ "両面（長辺とじ）", "long" ], [ "両面（短辺とじ）", "short" ] ], {}, class: "input !w-auto" %></div>
         <div><%= f.label :copies, "部数", class: "label" %><%= f.number_field :copies, min: 1, max: 99, class: "input !w-24" %></div>

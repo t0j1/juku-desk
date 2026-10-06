@@ -8,7 +8,6 @@ class DailyScheduleTask < ApplicationRecord
   EXECUTION_LABELS = { "print" => "印刷する", "create_draft" => "書類の原案を作成する" }.freeze
   WEEKDAY_NAMES = PrintSchedule::WEEKDAY_NAMES
   TIME_FORMAT = PrintSchedule::TIME_FORMAT
-  TRAYS = [ [ "指定なし（プリンターの既定）", "" ], [ "トレイ1", "tray1" ], [ "トレイ2", "tray2" ], [ "手差し", "bypass" ] ].freeze
   # 原案のテンプレート（種類は確認中のため仮の一覧）。保存先も今は「下書き」だけ
   DRAFT_TEMPLATES = { "daily_report" => "日報", "notice" => "お知らせ", "monthly_report" => "月次報告" }.freeze
   SAVE_DESTINATIONS = { "drafts" => "下書き" }.freeze
@@ -22,7 +21,6 @@ class DailyScheduleTask < ApplicationRecord
   validates :repeat_type, inclusion: { in: REPEAT_TYPES }
   validates :execution_type, inclusion: { in: EXECUTION_TYPES }
   validates :duplex, inclusion: { in: PrintJob::DUPLEX_VALUES }, allow_nil: true
-  validates :tray, inclusion: { in: TRAYS.map(&:last) - [ "" ] }, allow_nil: true
   validates :custom_weekdays, presence: { message: "を 1 つ以上選んでください" }, if: -> { repeat_type == "custom" }
   validates :once_date, presence: { message: "を選んでください" }, if: -> { repeat_type == "once" }
   with_options if: :print? do
@@ -40,7 +38,6 @@ class DailyScheduleTask < ApplicationRecord
     self.custom_weekdays = [] unless repeat_type == "custom"
     self.once_date = nil unless repeat_type == "once"
     self.duplex = duplex.presence
-    self.tray = tray.presence
   end
   after_destroy_commit { PdfStorage.r2.delete(r2_key) if r2_key.present? }
   after_save_commit do

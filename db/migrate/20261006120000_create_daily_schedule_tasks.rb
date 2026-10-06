@@ -12,7 +12,7 @@ class CreateDailyScheduleTasks < ActiveRecord::Migration[8.1]
       t.references :created_by, foreign_key: { to_table: :users }
       # 印刷する
       t.references :print_station, foreign_key: true
-      t.string :tray
+      # トレイは未対応（印刷エージェントは driver_preset 経由で扱うため）。必要になったら追加する
       t.string :duplex # long / short / NULL
       t.integer :copies, default: 1, null: false
       t.string :r2_key

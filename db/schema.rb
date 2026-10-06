@@ -104,7 +104,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_120000) do
     t.boolean "enabled", default: true, null: false
     t.bigint "created_by_id"
     t.bigint "print_station_id"
-    t.string "tray"
     t.string "duplex"
     t.integer "copies", default: 1, null: false
     t.string "r2_key"
@@ -355,9 +354,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_120000) do
     t.index ["reviewed_by_id"], name: "index_questions_on_reviewed_by_id"
     t.index ["subject"], name: "index_questions_on_subject"
     t.index ["tags"], name: "index_questions_on_tags", using: :gin
-    t.check_constraint "answer_source::text = ANY (ARRAY['material'::character varying, 'ai'::character varying]::text[])", name: "questions_answer_source_values"
+    t.check_constraint "answer_source::text = ANY (ARRAY['material'::character varying::text, 'ai'::character varying::text])", name: "questions_answer_source_values"
     t.check_constraint "difficulty IS NULL OR difficulty >= 1 AND difficulty <= 5", name: "questions_difficulty_range"
-    t.check_constraint "question_type IS NULL OR (question_type::text = ANY (ARRAY['reorder'::character varying, 'translate_en_ja'::character varying, 'compose_ja_en'::character varying, 'passage'::character varying, 'fill_blank'::character varying, 'choice'::character varying, 'free'::character varying]::text[]))", name: "questions_question_type_values"
+    t.check_constraint "question_type IS NULL OR (question_type::text = ANY (ARRAY['reorder'::character varying::text, 'translate_en_ja'::character varying::text, 'compose_ja_en'::character varying::text, 'passage'::character varying::text, 'fill_blank'::character varying::text, 'choice'::character varying::text, 'free'::character varying::text]))", name: "questions_question_type_values"
   end
 
   create_table "recovery_codes", force: :cascade do |t|
@@ -449,7 +448,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_120000) do
     t.datetime "updated_at", null: false
     t.jsonb "sections", default: [], null: false
     t.index ["created_by_id"], name: "index_tests_on_created_by_id"
-    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying, 'by_tag'::character varying]::text[])", name: "tests_mode_values"
+    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying::text, 'by_tag'::character varying::text])", name: "tests_mode_values"
   end
 
   create_table "uploads", force: :cascade do |t|

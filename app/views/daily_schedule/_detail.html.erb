@@ -8,7 +8,6 @@
     <dt class="text-text-sub">対象</dt><dd class="break-words"><%= task.target_label %></dd>
     <% if task.print? %>
       <dt class="text-text-sub">部数・両面</dt><dd><%= task.copies %>部・<%= task.duplex_label %></dd>
-      <dt class="text-text-sub">トレイ</dt><dd><%= DailyScheduleTask::TRAYS.find { |_, v| v == task.tray.to_s }&.first %></dd>
     <% end %>
     <dt class="text-text-sub">有効</dt><dd><%= task.enabled ? "有効" : "停止中" %></dd>
   </dl>
