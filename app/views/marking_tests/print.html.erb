@@ -11,36 +11,46 @@
     <button type="button" class="btn-primary" data-action="page-print#print"><%= console_icon(:printer) %>印刷</button>
     <%= link_to "もう一方（#{@kind == :answer ? "問題用" : "解答用"}）", print_marking_test_path(@test, kind: @kind == :answer ? "question" : "answer"), class: "btn-secondary" %>
     <%= link_to "戻る", marking_test_path(@test), class: "btn-secondary" %>
-    <span class="caption">印刷ダイアログで「PDF として保存」もできます。</span>
-    <div id="print-options" class="flex flex-wrap items-center gap-3 w-full">
-      <label class="flex items-center gap-1"><span class="caption">解答欄の広さ</span>
-        <select class="input !w-auto" data-print-options-target="size" data-action="print-options#apply" aria-label="解答欄の広さ">
-          <option value="narrow">狭い</option><option value="normal" selected>ふつう</option><option value="wide">広い</option><option value="none">線なし</option>
-        </select></label>
-      <label class="flex items-center gap-1"><span class="caption">ページ内の配置</span>
-        <select class="input !w-auto" data-print-options-target="layout" data-action="print-options#apply" aria-label="ページ内の配置">
-          <option value="top" selected>上詰め</option><option value="even">ページ内に等間隔</option><option value="count">1ページあたりの問題数を指定</option>
-        </select></label>
-      <label class="flex items-center gap-1"><span class="caption">小問番号</span>
-        <select class="input !w-auto" data-print-options-target="numbering" data-action="print-options#apply" aria-label="小問番号">
-          <option value="original" selected>元のまま</option><option value="per">大問ごとに(1)から振り直す</option><option value="cont">通しで(1)から振り直す</option>
-        </select></label>
-      <label class="flex items-center gap-1" data-print-options-target="countField" hidden><span class="caption">問題数</span>
-        <input type="number" min="1" max="30" value="5" class="input !w-20" data-print-options-target="count" data-action="input->print-options#apply" aria-label="1ページあたりの問題数"></label>
-      <span class="caption">この画面を開いている間だけ有効です（保存されません）。</span>
+    <span class="caption sm:ml-auto">PDF として保存も可</span>
+    <div id="print-options" class="w-full border-t border-gray-200 pt-3">
+      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
+        <h2 class="text-[14px] font-semibold">① プレビュー設定</h2>
+        <span class="caption">この画面内だけ有効（保存されません）</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <label class="flex items-center gap-1"><span class="caption whitespace-nowrap">解答欄の広さ</span>
+          <select class="input !w-auto" data-print-options-target="size" data-action="print-options#apply" aria-label="解答欄の広さ">
+            <option value="narrow">狭い</option><option value="normal" selected>ふつう</option><option value="wide">広い</option><option value="none">線なし</option>
+          </select></label>
+        <label class="flex items-center gap-1"><span class="caption whitespace-nowrap">ページ内の配置</span>
+          <select class="input !w-auto" data-print-options-target="layout" data-action="print-options#apply" aria-label="ページ内の配置">
+            <option value="top" selected>上詰め</option><option value="even">ページ内に等間隔</option><option value="count">1ページあたりの問題数を指定</option>
+          </select></label>
+        <label class="flex items-center gap-1"><span class="caption whitespace-nowrap">小問番号</span>
+          <select class="input !w-auto" data-print-options-target="numbering" data-action="print-options#apply" aria-label="小問番号（プレビューと PDF 共通）">
+            <option value="original" selected>元のまま</option><option value="per">大問ごとに(1)から振り直す</option><option value="cont">通しで(1)から振り直す</option>
+          </select></label>
+        <label class="flex items-center gap-1" data-print-options-target="countField" hidden><span class="caption whitespace-nowrap">問題数</span>
+          <input type="number" min="1" max="30" value="5" class="input !w-20" data-print-options-target="count" data-action="input->print-options#apply" aria-label="1ページあたりの問題数"></label>
+      </div>
     </div>
     <% if current_user.system_admin? %>
       <% stations = PrintStation.active.order(:name).to_a %>
       <% if stations.any? %>
-        <%= form_with url: print_job_marking_test_path(@test), scope: :print_job, class: "flex flex-wrap items-center gap-3 w-full" do |f| %>
+        <%= form_with url: print_job_marking_test_path(@test), scope: :print_job, class: "w-full border-t border-gray-200 pt-3" do |f| %>
           <%= hidden_field_tag :kind, @kind %>
-          <%= f.select :print_station_id, stations.map { |s| [ "#{s.name}#{"（オフライン）" unless s.online?}", s.id ] }, {}, class: "input !w-auto", "aria-label": "ステーション" %>
-          <%= f.number_field :copies, min: 1, max: 99, value: 1, class: "input !w-24", "aria-label": "部数" %>
-          <label class="flex items-center gap-1"><span class="caption">印刷する時刻</span><%= f.datetime_field :scheduled_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "input !w-auto", "aria-label": "印刷する時刻" %></label>
-          <label class="flex items-center gap-1"><span class="caption">締め切り</span><%= f.datetime_field :expires_at, class: "input !w-auto", "aria-label": "締め切り（空なら 2 時間後）" %></label>
-          <label class="flex items-center gap-1"><span class="caption">小問番号</span><%= f.select :sub_numbers, [ [ "元のまま", "original" ], [ "大問ごとに(1)から振り直す", "per" ], [ "通しで(1)から振り直す", "cont" ] ], {}, class: "input !w-auto", "aria-label": "小問番号（PDF）" %></label>
-          <%= driver_preset_select "print_job", blank_label: "（ステーションの既定を使う）", input_class: "input" %>
-          <%= f.submit "印刷ジョブを作成", class: "btn-primary cursor-pointer" %>
+          <%= f.hidden_field :sub_numbers, value: "original", data: { print_options_target: "numberingJob" } %>
+          <h2 class="text-[14px] font-semibold mb-2">② 印刷ジョブ作成 <span class="caption font-normal">管理者のみ</span></h2>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <label class="flex items-center gap-1"><span class="caption whitespace-nowrap">ステーション</span><%= f.select :print_station_id, stations.map { |s| [ "#{s.name}#{"（オフライン）" unless s.online?}", s.id ] }, {}, class: "input !w-auto", "aria-label": "ステーション" %></label>
+            <label class="flex items-center gap-1"><span class="caption whitespace-nowrap">部数</span><%= f.number_field :copies, min: 1, max: 99, value: 1, class: "input !w-24", "aria-label": "部数" %></label>
+            <label class="flex items-center gap-1"><span class="caption whitespace-nowrap">印刷する時刻</span><%= f.datetime_field :scheduled_at, value: Time.current.strftime("%Y-%m-%dT%H:%M"), class: "input !w-auto", "aria-label": "印刷する時刻" %></label>
+            <label class="flex items-center gap-1"><span class="caption whitespace-nowrap">締め切り</span><%= f.datetime_field :expires_at, class: "input !w-auto", "aria-label": "締め切り（空なら 2 時間後）" %></label>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2">
+            <span class="flex items-center gap-1 min-w-0"><span class="caption whitespace-nowrap">ドライバ</span><%= driver_preset_select "print_job", blank_label: "（ステーションの既定を使う）", input_class: "input" %></span>
+            <%= f.submit "印刷ジョブを作成", class: "btn-primary cursor-pointer ml-auto" %>
+          </div>
         <% end %>
       <% end %>
     <% end %>
