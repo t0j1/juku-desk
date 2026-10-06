@@ -107,7 +107,7 @@ export default class extends Controller {
     layer.style.top = `${rect.top + rect.height / 2}px`
     layer.style.left = `${rect.left + rect.width / 2}px`
     layer.style.width = "0"
-    const colors = [ "#5B4BE0", "#F2A93B", "#F6B4C4", "#2A4E9A", "#7C5CF0", "#DCE6FA" ]
+    const colors = [ "#17789F", "#3FB6DC", "#F2A93B", "#F6B4C4", "#D9EEF6", "#12688C" ]
     for (let i = 0; i < 28; i++) {
       const piece = document.createElement("i")
       const angle = (Math.PI * 2 * i) / 28 + Math.random() * 0.4

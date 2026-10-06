@@ -5,6 +5,13 @@ class StudentsController < ApplicationController
   def index
     @students = Student.includes(:student_weekdays).order(:left_on, :name)
     @students = @students.attending_on(params[:weekday].to_i) if params[:weekday].present?
+    # 画面上部の統計カード（実データのみ。欠席・振替と小テスト作成中はデータ源が無いため出さない）
+    @stats = {
+      enrolled: Student.enrolled.count,
+      print_waiting: PrintJob.unfinished.count,
+      pdf_active: PdfSplitJob.where(status: %i[uploaded analyzing splitting]).count,
+      wordbooks: Wordbook.count
+    }
     AuditLog.record!(:view, nil, metadata: { resource: "Student", scope: "index", weekday: params[:weekday] }.compact)
   end
 
