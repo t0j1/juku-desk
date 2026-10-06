@@ -36,7 +36,11 @@ end
 class PrintStationConcurrentRegistrationTest < ActiveSupport::TestCase
   self.use_transactional_tests = false
 
-  teardown { PrintStation.where(name: "同時登録").delete_all }
+  # 非トランザクションなので、このクラスが作った行はここで消す。名前を列挙するのではなく、
+  # 開始時に無かった行を消す（テストを足しても消し忘れない）。消し忘れると、この後に走る
+  # テスト（一覧の select の数を数える等）が実行順に依存して落ちる。
+  setup { @station_ids_before = PrintStation.pluck(:id) }
+  teardown { PrintStation.where.not(id: @station_ids_before).delete_all }
 
   test "of the same name registered at once, exactly one succeeds and the rest are ordinary validation errors" do
     start = Queue.new
