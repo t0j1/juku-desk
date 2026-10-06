@@ -38,7 +38,7 @@
         <div><%= f.label :duplex, "両面", class: "label" %>
           <%= f.select :duplex, [ [ "片面", "" ], [ "両面（長辺とじ）", "long" ], [ "両面（短辺とじ）", "short" ] ], {}, class: "input !w-auto" %></div>
         <div><%= f.label :driver_preset, "トレイ（ドライバーの印刷設定の名前）", class: "label" %>
-          <%= f.text_field :driver_preset, maxlength: 100, class: "input", placeholder: "例）トレイ2・両面・ホチキス。空欄ならドライバーの既定" %>
+          <%= driver_preset_select "daily_schedule_task", selected: f.object.driver_preset, blank_label: "（既定を使う）", input_class: "input" %>
           <p class="text-base text-text-sub mt-1">用紙トレイはプリンターの印刷設定で決まります。使う設定の名前を入れてください。</p></div>
         <div><%= f.label :copies, "部数", class: "label" %><%= f.number_field :copies, min: 1, max: 99, class: "input !w-24" %></div>
       </div>

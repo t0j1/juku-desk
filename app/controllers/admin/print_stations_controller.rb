@@ -1,6 +1,8 @@
 module Admin
   # 教室PCの自動印刷エージェントの登録と、トークンの失効・再発行。トークンは発行した直後の画面で 1 度だけ見せる。
   class PrintStationsController < BaseController
+    include DriverPresetParam
+
     before_action :set_station, only: %i[ update revoke reissue destroy test_print test_result ]
 
     def index
@@ -22,11 +24,11 @@ module Admin
 
     # 既定のドライバー設定名（ジョブで空のときに使う）を変える
     def update
-      @station.update!(default_driver_preset: params.expect(print_station: [ :default_driver_preset ])[:default_driver_preset])
+      @station.update!(default_driver_preset: resolved_driver_preset(:print_station, field: :default_driver_preset, keep: @station.default_driver_preset))
       AuditLog.record!(:print_station_update, @station, metadata: { name: @station.name, default_driver_preset: @station.default_driver_preset })
       redirect_to admin_print_stations_path, notice: "「#{@station.name}」の既定のドライバー設定名を保存しました。", status: :see_other
-    rescue ActiveRecord::RecordInvalid => e
-      redirect_to admin_print_stations_path, alert: e.record.errors.full_messages.to_sentence, status: :see_other
+    rescue ActiveRecord::RecordInvalid, ArgumentError => e
+      redirect_to admin_print_stations_path, alert: e.respond_to?(:record) ? e.record.errors.full_messages.to_sentence : e.message, status: :see_other
     end
 
     def revoke
@@ -51,8 +53,8 @@ module Admin
 
     # サンプルを刷るジョブを作る。刷れたら、トレイ・両面・ホチキスの結果を test_result で入力する
     def test_print
-      attrs = params.fetch(:test_print, {}).permit(:driver_preset, :staple, :sheets, :duplex)
-      job = @station.start_test_print!(created_by: current_user, **attrs.to_h.symbolize_keys)
+      attrs = params.fetch(:test_print, {}).permit(:staple, :sheets, :duplex).to_h.symbolize_keys
+      job = @station.start_test_print!(created_by: current_user, driver_preset: resolved_driver_preset(:test_print), **attrs)
       AuditLog.record!(:print_station_test_print, @station, metadata: { name: @station.name, job_id: job.id })
       redirect_to admin_print_stations_path, notice: "「#{@station.name}」にテスト印刷のジョブを作りました。刷れたら、結果を入力してください。", status: :see_other
     rescue ArgumentError, ActiveRecord::RecordInvalid => e

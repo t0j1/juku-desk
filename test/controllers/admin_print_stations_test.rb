@@ -122,6 +122,28 @@ class AdminPrintStationsTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?] input[name=_method][value=delete]", admin_print_station_path(station), false
   end
 
+  test "the test print form offers the listed presets and a way to add a new one" do
+    station, = PrintStation.register!(name: "選択肢")
+    get admin_print_stations_path
+    assert_select "form[action=?] select[name=?]", test_print_admin_print_station_path(station), "test_print[driver_preset]" do
+      assert_select "option", text: "bizhub-551i-staple-duplex-tray2"
+      assert_select "option[value=__new__]"
+    end
+  end
+
+  test "a free-typed preset name is refused, and one added through the new-name field joins the list" do
+    station, = PrintStation.register!(name: "追加")
+    assert_no_difference -> { PrintJob.count } do
+      post test_print_admin_print_station_path(station), params: { test_print: { driver_preset: "デフォルト", sheets: 1 } }
+    end
+    assert_match "一覧から選ぶ", flash[:alert]
+    assert_difference -> { DriverPreset.count }, 1 do
+      post test_print_admin_print_station_path(station), params: { test_print: { driver_preset: "__new__", driver_preset_new: "新しい設定", sheets: 1 } }
+    end
+    get admin_print_stations_path
+    assert_select "select[name=?] option", "test_print[driver_preset]", text: "新しい設定"
+  end
+
   test "the default driver preset can be saved and is used for jobs without one" do
     station, = PrintStation.register!(name: "既定あり")
     patch admin_print_station_path(station), params: { print_station: { default_driver_preset: " bizhub-A4 " } }

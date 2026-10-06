@@ -1,0 +1,12 @@
+bizhub:
+  name: bizhub-551i-staple-duplex-tray2
+a4_duplex:
+  name: A4両面
+a4_duplex_staple:
+  name: A4両面・左上ホチキス
+tray2:
+  name: トレイ2・両面・ホチキス
+bizhub_a4:
+  name: bizhub-A4
+other:
+  name: other

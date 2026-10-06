@@ -1,13 +1,15 @@
 # 定時タスクの追加・編集・削除・複製・有効切り替え（画面は DailyScheduleController#index のモーダル）
 class DailyScheduleTasksController < ApplicationController
   include DailySchedulePage
+  include DriverPresetParam
 
-  PERMITTED = %i[ name execution_time repeat_type once_date execution_type enabled print_station_id duplex copies driver_preset template_key save_destination ].freeze
+  PERMITTED = %i[ name execution_time repeat_type once_date execution_type enabled print_station_id duplex copies template_key save_destination ].freeze
 
   before_action :set_task, only: %i[ update destroy toggle duplicate ]
 
   def create
     @task = DailyScheduleTask.new(task_params.merge(created_by: current_user))
+    @task.driver_preset = resolved_driver_preset(:daily_schedule_task)
     save_task(@task)
     AuditLog.record!(:create, @task, metadata: audit_metadata(@task))
     redirect_to_task(@task, "「#{@task.name}」を追加しました。")
@@ -16,7 +18,7 @@ class DailyScheduleTasksController < ApplicationController
   end
 
   def update
-    @task.assign_attributes(task_params)
+    @task.assign_attributes(task_params.merge(driver_preset_attrs(:daily_schedule_task, keep: @task.driver_preset)))
     save_task(@task)
     AuditLog.record!(:update, @task, metadata: audit_metadata(@task))
     redirect_to_task(@task, "「#{@task.name}」を更新しました。")

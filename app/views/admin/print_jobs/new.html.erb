@@ -19,7 +19,7 @@
     <div><%= f.label :duplex, "とじ方（両面の長辺・短辺）", class: "label" %><%= f.select :duplex, PrintJobsHelper::DUPLEXES, {}, class: "input mt-1 !w-auto" %>
       <p class="caption mt-1">教室PCで両面の向きを指定します。指定なしならドライバーの設定のままです。</p></div>
     <div><%= f.label :staple, "ホチキス（表示用）", class: "label" %><%= f.select :staple, PrintJobsHelper::STAPLES, { include_blank: false }, class: "input mt-1 !w-auto" %></div>
-    <div><%= f.label :driver_preset, "ドライバーの印刷設定の名前", class: "label" %><%= f.text_field :driver_preset, maxlength: 100, class: "input mt-1" %>
+    <div><%= f.label :driver_preset, "ドライバーの印刷設定の名前", class: "label" %><%= driver_preset_select "print_job", selected: @job.driver_preset, blank_label: "（既定を使う）" %>
       <p class="caption mt-1">教室PCのプリンターに作っておいた設定（例：A4両面・左上ホチキス）。ホチキスは、この設定で指定します。</p></div>
     <%= f.submit "作る", class: "btn-primary cursor-pointer" %>
   <% end %>
