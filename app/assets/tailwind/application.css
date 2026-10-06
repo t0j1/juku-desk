@@ -227,6 +227,8 @@
 .mt-sheet[data-answer-size="wide"] .mt-ruled { height: 32mm; }
 .mt-sheet[data-answer-size="wide"] .mt-ruled-translate { height: 40mm; }
 .mt-sheet[data-answer-size="wide"] .mt-ruled-1 { height: 14mm; }
+/* 線なし: 高さは「ふつう」のまま、罫線だけ消す（穴埋めの下線・名前欄は対象外） */
+.mt-sheet[data-answer-size="none"] .mt-ruled { background-image: none; }
 /* ページ内の配置：問題を 1 ページ分ずつに分けた <ol>。「等間隔」は 1 ページの高さに広げて、問題の間をそろえて空ける */
 .mt-page { display: flex; flex-direction: column; }
 .mt-page[data-even] { justify-content: space-between; }
