@@ -15,6 +15,7 @@
 
 <div class="grid grid-cols-1 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
   <section id="timeline" class="card !px-6 min-w-0" aria-label="タイムライン">
+    <%= render "daily_schedule/annual", annual: @annual if @annual && (@annual.error || @annual.events.any?) %>
     <% if @tasks.empty? %>
       <div class="py-10 text-center">
         <p class="text-[19px] font-bold mb-4"><%= @date == today ? "今日" : "この日" %>のタスクはありません</p>
