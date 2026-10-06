@@ -22,8 +22,13 @@
   <% elsif job %>
     <p class="caption mb-2">前回のテスト印刷：<%= print_job_pill(job) %>（もう一度刷れます）</p>
   <% end %>
-  <%= form_with url: test_print_admin_print_station_path(station), scope: :test_print, class: "flex flex-wrap items-center gap-2" do |f| %>
-    <%= f.text_field :driver_preset, maxlength: 100, placeholder: "ドライバーの設定名", class: "input !w-40", "aria-label": "ドライバーの設定名" %>
+  <%= form_with url: test_print_admin_print_station_path(station), scope: :test_print, class: "flex flex-wrap items-center gap-2", data: { controller: "driver-preset" } do |f| %>
+    <div class="relative" data-driver-preset-target="select">
+      <%# テスト印刷は新規作成のみなので current_value は不要 %>
+      <%= f.select :driver_preset, PrintPreset.for_select, { include_blank: false }, class: "input !w-40", "aria-label": "ドライバーの設定名", data: { driver_preset_target: "select", action: "driver-preset#handleChange" } %>
+      <%= f.text_field :driver_preset, maxlength: PrintPreset::MAX_NAME_LENGTH, placeholder: "新しいプリセット名", class: "input !w-40 mt-1", hidden: true, "aria-label": "新しいプリセット名", data: { driver_preset_target: "input" } %>
+      <%= f.hidden_field :driver_preset, data: { driver_preset_target: "hidden" } %>
+    </div>
     <%= f.number_field :sheets, min: 1, max: PrintTestSheet::MAX_SHEETS, value: PrintTestSheet::DEFAULT_SHEETS, class: "input !w-20", "aria-label": "枚数（用紙の枚数。ホチキスの確認には 2 枚以上）" %><span class="caption">枚</span>
     <%= f.select :duplex, PrintJobsHelper::DUPLEXES, {}, class: "input !w-auto min-w-64", "aria-label": "とじ方" %>
     <%= f.select :staple, PrintJobsHelper::STAPLES, {}, class: "input !w-auto min-w-40", "aria-label": "ホチキス" %>

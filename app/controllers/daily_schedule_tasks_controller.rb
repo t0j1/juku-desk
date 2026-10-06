@@ -1,13 +1,22 @@
 # 定時タスクの追加・編集・削除・複製・有効切り替え（画面は DailyScheduleController#index のモーダル）
 class DailyScheduleTasksController < ApplicationController
   include DailySchedulePage
+  include DriverPresetHandling
 
   PERMITTED = %i[ name execution_time repeat_type once_date execution_type enabled print_station_id duplex copies driver_preset template_key save_destination ].freeze
 
   before_action :set_task, only: %i[ update destroy toggle duplicate ]
 
   def create
-    @task = DailyScheduleTask.new(task_params.merge(created_by: current_user))
+    driver_preset, error = resolve_driver_preset(:daily_schedule_task)
+    if error
+      return render_form(nil, error)
+    end
+
+    new_preset = process_new_preset_if_any(:daily_schedule_task)
+    driver_preset = new_preset if new_preset
+
+    @task = DailyScheduleTask.new(task_params.merge(created_by: current_user, driver_preset: driver_preset.presence))
     save_task(@task)
     AuditLog.record!(:create, @task, metadata: audit_metadata(@task))
     redirect_to_task(@task, "「#{@task.name}」を追加しました。")
@@ -16,7 +25,15 @@ class DailyScheduleTasksController < ApplicationController
   end
 
   def update
-    @task.assign_attributes(task_params)
+    driver_preset, error = resolve_driver_preset(:daily_schedule_task)
+    if error
+      return render_form(@task, error)
+    end
+
+    new_preset = process_new_preset_if_any(:daily_schedule_task)
+    driver_preset = new_preset if new_preset
+
+    @task.assign_attributes(task_params.merge(driver_preset: driver_preset.presence))
     save_task(@task)
     AuditLog.record!(:update, @task, metadata: audit_metadata(@task))
     redirect_to_task(@task, "「#{@task.name}」を更新しました。")
@@ -74,7 +91,7 @@ class DailyScheduleTasksController < ApplicationController
     end
 
     def render_form(task, error)
-      load_day(parse_date(params[:date]), selected_id: task.id)
+      load_day(parse_date(params[:date]), selected_id: task&.id)
       @form_task = task
       @form_error = error.respond_to?(:record) ? error.record.errors.full_messages.to_sentence : error.message
       render "daily_schedule/index", status: :unprocessable_entity

@@ -1,6 +1,7 @@
 module Admin
   # 教室PCの自動印刷エージェントの登録と、トークンの失効・再発行。トークンは発行した直後の画面で 1 度だけ見せる。
   class PrintStationsController < BaseController
+    include DriverPresetHandling
     before_action :set_station, only: %i[ update revoke reissue destroy test_print test_result ]
 
     def index
@@ -51,8 +52,19 @@ module Admin
 
     # サンプルを刷るジョブを作る。刷れたら、トレイ・両面・ホチキスの結果を test_result で入力する
     def test_print
-      attrs = params.fetch(:test_print, {}).permit(:driver_preset, :staple, :sheets, :duplex)
-      job = @station.start_test_print!(created_by: current_user, **attrs.to_h.symbolize_keys)
+      driver_preset, error = resolve_driver_preset_from_nested(:test_print, :driver_preset)
+      if error
+        return redirect_to admin_print_stations_path, alert: error, status: :see_other
+      end
+
+      # 新しいプリセット名が hidden_field 経由で送られてきたら追加
+      new_preset = process_new_preset_if_any(:test_print)
+      driver_preset = new_preset if new_preset
+
+      attrs = params.fetch(:test_print, {}).permit(:staple, :sheets, :duplex).to_h.symbolize_keys
+      attrs[:driver_preset] = driver_preset.presence
+
+      job = @station.start_test_print!(created_by: current_user, **attrs)
       AuditLog.record!(:print_station_test_print, @station, metadata: { name: @station.name, job_id: job.id })
       redirect_to admin_print_stations_path, notice: "「#{@station.name}」にテスト印刷のジョブを作りました。刷れたら、結果を入力してください。", status: :see_other
     rescue ArgumentError, ActiveRecord::RecordInvalid => e
