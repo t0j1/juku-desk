@@ -1,6 +1,5 @@
 # 承認済みの問題から小テストを作って、問題用・解答用の印刷画面（HTML + 印刷用 CSS。PDF はブラウザで保存）を出す。
 class MarkingTestsController < ApplicationController
-  include DriverPresetHandling
   before_action :set_test, only: %i[ show print print_job ]
   before_action :require_system_admin!, only: :print_job
 
@@ -43,16 +42,7 @@ class MarkingTestsController < ApplicationController
   # 小テストの PDF をサーバーで作り、そのまま印刷ジョブにする（アップロード不要）。ステーションがオフラインのとき、PDF を作れないときは、ジョブを作らない
   def print_job
     kind = params[:kind] == "answer" ? :answer : :question
-
-    driver_preset, error = resolve_driver_preset(:print_job)
-    if error
-      return print_job_failed(error, kind)
-    end
-
-    new_preset = process_new_preset_if_any(:print_job)
-    driver_preset = new_preset if new_preset
-
-    jp = params.fetch(:print_job, {}).permit(:print_station_id, :copies, :scheduled_at, :staple, :collate)
+    jp = params.fetch(:print_job, {}).permit(:print_station_id, :copies, :scheduled_at, :driver_preset, :staple, :collate)
     station = PrintStation.active.find_by(id: jp[:print_station_id])
     return print_job_failed("ステーションを選んでください。", kind) unless station
     return print_job_failed("「#{station.name}」はオフラインです。起動してから、もう一度お試しください。", kind) unless station.online?
@@ -60,7 +50,6 @@ class MarkingTestsController < ApplicationController
     return print_job_failed("ドライバーの設定名を入力してください（ステーションの既定も未設定です。印刷エージェントは設定名なしでは刷れません）。", kind) if jp[:driver_preset].blank? && station.default_driver_preset.blank?
 
     attrs = jp.to_h.symbolize_keys.except(:print_station_id).compact_blank
-    attrs[:driver_preset] = driver_preset.presence
     title = "#{@test.title}（#{kind == :answer ? "解答用" : "問題用"}）"
     job = Marking::ExamPdf.with_file(@test, kind: kind) do |path|
       PrintJob.create_with_pdf!(path: path, station: station, title: title, created_by: current_user, **attrs)

@@ -1,7 +1,6 @@
 module Admin
   # 定例印刷の雛形（曜日と時刻に、翌日分の印刷ジョブを自動で作る）。作る側は PrintScheduleJob。
   class PrintSchedulesController < BaseController
-    include DriverPresetHandling
     before_action :set_schedule, only: %i[ edit update destroy toggle ]
 
     def index
@@ -16,17 +15,7 @@ module Admin
     def create
       load_choices
       upload = params.dig(:print_schedule, :pdf)
-
-      driver_preset, error = resolve_driver_preset(:print_schedule)
-      if error
-        return render_new(error)
-      end
-
-      new_preset = process_new_preset_if_any(:print_schedule)
-      driver_preset = new_preset if new_preset
-
       attrs = schedule_params.to_h.symbolize_keys.compact_blank
-      attrs[:driver_preset] = driver_preset.presence
       attrs[:print_station] = @stations.find_by(id: attrs.delete(:print_station_id))
       attrs.merge!(config_attrs(attrs[:kind]))
       @schedule = PrintSchedule.new(attrs)
@@ -54,19 +43,7 @@ module Admin
       attrs = schedule_params.to_h.symbolize_keys
       attrs[:weekdays] = Array(attrs[:weekdays]).compact_blank # 全部外したら空にして、検証で止める
       station = PrintStation.active.find_by(id: attrs.delete(:print_station_id)) || @schedule.print_station
-
-      driver_preset, error = resolve_driver_preset(:print_schedule)
-      if error
-        @schedule.discard_uploaded_pdf
-        @error = error
-        return render :edit, status: :unprocessable_entity
-      end
-
-      new_preset = process_new_preset_if_any(:print_schedule)
-      driver_preset = new_preset if new_preset
-
       attrs.merge!(config_attrs(attrs[:kind] || @schedule.kind))
-      attrs[:driver_preset] = driver_preset.presence
       @schedule.assign_attributes(attrs.merge(print_station: station))
       upload = params.dig(:print_schedule, :pdf)
       @schedule.attach_pdf(upload.read(PrintJob::MAX_PDF_BYTES + 1)) if upload.respond_to?(:read) && @schedule.fixed_pdf?
@@ -119,7 +96,7 @@ module Admin
       end
 
       def schedule_params
-        params.fetch(:print_schedule, {}).permit(:name, :kind, :print_station_id, :copies, :copies_mode, :collate, :staple, :time_of_day, :active, weekdays: [])
+        params.fetch(:print_schedule, {}).permit(:name, :kind, :print_station_id, :copies, :copies_mode, :collate, :staple, :driver_preset, :time_of_day, :active, weekdays: [])
       end
 
       # 種別に合わせた source_config / layout_config（固定PDFは持たない）

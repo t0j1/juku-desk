@@ -15,15 +15,11 @@
     <% if current_user.system_admin? %>
       <% stations = PrintStation.active.order(:name).to_a %>
       <% if stations.any? %>
-        <%= form_with url: print_job_marking_test_path(@test), scope: :print_job, class: "flex flex-wrap items-center gap-3 w-full", data: { controller: "driver-preset" } do |f| %>
+        <%= form_with url: print_job_marking_test_path(@test), scope: :print_job, class: "flex flex-wrap items-center gap-3 w-full" do |f| %>
           <%= hidden_field_tag :kind, @kind %>
           <%= f.select :print_station_id, stations.map { |s| [ "#{s.name}#{"（オフライン）" unless s.online?}", s.id ] }, {}, class: "input !w-auto", "aria-label": "ステーション" %>
           <%= f.number_field :copies, min: 1, max: 99, value: 1, class: "input !w-24", "aria-label": "部数" %>
-          <div class="relative" data-driver-preset-target="select">
-            <%= f.select :driver_preset, PrintPreset.for_select(with_default: true), { include_blank: false }, class: "input !w-64", "aria-label": "ドライバーの設定名", required: true, data: { driver_preset_target: "select", action: "driver-preset#handleChange" } %>
-            <%= f.text_field :driver_preset, maxlength: PrintPreset::MAX_NAME_LENGTH, placeholder: "新しいプリセット名", class: "input !w-64 mt-1", hidden: true, "aria-label": "新しいプリセット名", data: { driver_preset_target: "input" } %>
-            <%= f.hidden_field :driver_preset, data: { driver_preset_target: "hidden" } %>
-          </div>
+          <%= f.text_field :driver_preset, maxlength: 100, placeholder: "ドライバーの設定名（空ならステーションの既定）", class: "input !w-64", "aria-label": "ドライバーの設定名" %>
           <%= f.submit "印刷ジョブを作成", class: "btn-primary cursor-pointer" %>
         <% end %>
       <% end %>

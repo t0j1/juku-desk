@@ -1,7 +1,6 @@
 module Admin
   # 印刷ジョブの一覧と作成。通知は管理画面だけ（失敗・期限切れ・オフラインは一覧の上に出す）。
   class PrintJobsController < BaseController
-    include DriverPresetHandling
     before_action :set_job, only: %i[ cancel print_now ]
 
     # 一覧の絞り込み。problems=1（失敗＋期限切れ）は既存の赤バナーからのリンク用に残す
@@ -40,17 +39,7 @@ module Admin
       output = @outputs.find { |o| o.id == params.dig(:print_job, :output_id).to_i } unless upload
       station = PrintStation.active.find_by(id: params.dig(:print_job, :print_station_id))
       title = upload ? File.basename(upload.original_filename.to_s, ".*").presence : output&.display_name
-
-      driver_preset, error = resolve_driver_preset(:print_job)
-      if error
-        return render_new(error)
-      end
-
-      new_preset = process_new_preset_if_any(:print_job)
-      driver_preset = new_preset if new_preset
-
       attrs = job_params.to_h.symbolize_keys.compact_blank
-      attrs[:driver_preset] = driver_preset.presence
       @job = PrintJob.new(attrs.merge(print_station: station, title: title))
       return render_new("印刷する PDF を選ぶか、PDF ファイルをアップロードしてください。") unless upload || output
       return render_new("ステーションを選んでください。") unless station
@@ -119,7 +108,7 @@ module Admin
       end
 
       def job_params
-        params.fetch(:print_job, {}).permit(:scheduled_at, :expires_at, :copies, :collate, :staple, :duplex)
+        params.fetch(:print_job, {}).permit(:scheduled_at, :expires_at, :copies, :collate, :staple, :duplex, :driver_preset)
       end
   end
 end

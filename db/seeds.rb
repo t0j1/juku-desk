@@ -26,8 +26,3 @@ end
 # 小テスト用の単語帳（CSV は WORDBOOK_SEED_PATH / WORDBOOK_SEED_URL で渡す。無ければスキップ、登録済みなら何もしない）
 require Rails.root.join("db/seeds/wordbook_seed")
 WordbookSeed.run
-
-# プリンタープリセット（開発・テスト・本番すべてで同じ初期セット）
-require Rails.root.join("db/seeds/print_preset_seed")
-PrintPresetSeed.run
-
