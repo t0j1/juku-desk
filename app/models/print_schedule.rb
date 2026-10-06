@@ -54,7 +54,7 @@ class PrintSchedule < ApplicationRecord
   # date の分のジョブを作る。すでに作ってあるものは作らない。1 日の上限（DAILY_LIMIT）に達したら、残りは作らず skipped に数える。
   # { created:, skipped: }
   def self.generate_for!(date, limit: DAILY_LIMIT)
-    made = PrintJob.where(scheduled_for: date).where.not(print_schedule_id: nil).count
+    made = PrintJob.where(scheduled_for: date).where.not(print_schedule_id: nil).where.not(status: :cancelled).count
     result = { created: 0, skipped: 0 }
     active.includes(:print_station).order(:id).each do |schedule|
       next unless schedule.runs_on?(date) && !schedule.print_station.revoked?

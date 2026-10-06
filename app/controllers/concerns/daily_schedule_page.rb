@@ -2,13 +2,21 @@
 module DailySchedulePage
   extend ActiveSupport::Concern
 
-  included { helper_method :daily_schedule_path_for }
+  class InvalidDate < StandardError; end
+
+  included do
+    helper_method :daily_schedule_path_for
+    rescue_from(InvalidDate) { redirect_to daily_schedule_path, alert: "日付の形式が正しくありません（例：2026-10-05）。今日の画面に戻しました。", status: :see_other }
+  end
 
   private
+    # 空なら今日。形式が不正な日付は今日に丸めず、InvalidDate にする（画面側で知らせる）
     def parse_date(value)
+      return Time.zone.today if value.blank?
+
       Date.iso8601(value.to_s)
     rescue ArgumentError
-      Time.zone.today
+      raise InvalidDate
     end
 
     def daily_schedule_path_for(date, **extra)
