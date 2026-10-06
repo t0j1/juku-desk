@@ -1,6 +1,7 @@
 <% content_for :title, "マーキング検出" %>
 <div class="flex flex-wrap items-center gap-3 mb-6">
   <h1 class="page-title mr-auto">マーキング検出</h1>
+  <%= link_to "問題フォルダ", question_folders_path, class: "btn-secondary" %>
   <%= link_to "問題のレビュー", questions_path, class: "btn-secondary" %>
   <%= link_to new_upload_path, class: "btn-primary" do %><%= console_icon(:upload) %>画像を取り込む<% end if current_user.can_write? %>
 </div>
