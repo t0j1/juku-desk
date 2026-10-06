@@ -31,7 +31,18 @@
             <%= button_to "失効", revoke_admin_print_station_path(s), class: "btn-danger btn-sm", data: { turbo_confirm: "トークンを失効します。このステーションは印刷できなくなります。よろしいですか？" } %>
           <% end %>
           <% if s.deletable? %>
-            <%= button_to "削除", admin_print_station_path(s), method: :delete, class: "btn-danger btn-sm", data: { turbo_confirm: "「#{s.name}」を削除します。テスト印刷のジョブも消えます。元に戻せません。よろしいですか？" } %>
+            <button
+              type="button"
+              class="btn-danger btn-sm"
+              data-action="click->print-station-delete#open"
+              data-print-station-delete-station-name-value="<%= s.name %>"
+              data-print-station-delete-station-id-value="<%= s.id %>"
+              data-print-station-delete-is-online-value="<%= s.online? %>"
+            >
+              削除
+            </button>
+            <%= render "delete_modal", station: s %>
+            <%= button_to "削除実行", admin_print_station_path(s), method: :delete, class: "hidden", id: "delete_form_<%= s.id %>" %>
           <% else %>
             <span class="caption w-full" id="undeletable_<%= s.id %>"><%= s.undeletable_reason %></span>
           <% end %>

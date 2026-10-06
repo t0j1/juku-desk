@@ -1,0 +1,87 @@
+<%# 印刷ステーション削除確認モーダル（仕様 v1.7 §6-4-9） %>
+<%# station: PrintStation %>
+<div
+  id="delete_modal_<%= station.id %>"
+  class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 min-[600px]:p-8"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="delete_modal_title_<%= station.id %>"
+  data-controller="print-station-delete"
+  data-print-station-delete-target="modal"
+  data-print-station-delete-station-name-value="<%= station.name %>"
+  data-print-station-delete-station-id-value="<%= station.id %>"
+  data-print-station-delete-is-online-value="<%= station.online? %>"
+  style="display: none;"
+>
+  <div class="card w-full max-w-xl my-auto">
+    <div class="space-y-5">
+      <!-- タイトル：警告アイコン + 「印刷ステーションを削除」 -->
+      <h2 id="delete_modal_title_<%= station.id %>" class="section-title flex items-center gap-3">
+        <span class="inline-flex items-center justify-center size-10 rounded-icon bg-err-bg text-err-fg shrink-0" aria-hidden="true">!</span>
+        印刷ステーションを削除
+      </h2>
+
+      <!-- 本文：「『{ステーション名}』を削除します。」 -->
+      <p class="text-base leading-7 text-text">「<%= station.name %>」を削除します。</p>
+
+      <!-- 警告文 -->
+      <div class="flex items-start gap-2 text-base leading-7 text-err-fg font-bold">
+        <span aria-hidden="true">!</span>
+        <span>
+          削除すると、このプリンターとの紐づけが解除され、元に戻せません。
+          <% if station.online? %>
+            <span class="ml-1">このステーションは現在オンラインです。</span>
+          <% end %>
+        </span>
+      </div>
+
+      <!-- 対象名の表示 -->
+      <div>
+        <p class="label text-base text-text-sub">対象（このとおりに入力してください）</p>
+        <div class="h-13 px-4 rounded-field bg-bg text-[19px] font-bold text-text shadow-inset flex items-center" style="border: 1px solid var(--color-field-border);">
+          <%= station.name %>
+        </div>
+      </div>
+
+      <!-- 入力欄 -->
+      <div>
+        <label class="label" for="delete_confirm_input_<%= station.id %>">確認のため、ステーション名を入力してください</label>
+        <input
+          type="text"
+          id="delete_confirm_input_<%= station.id %>"
+          class="input"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="ここに入力"
+          data-print-station-delete-target="input"
+          aria-describedby="delete_hint_<%= station.id %>"
+        >
+      </div>
+
+      <!-- ヒント -->
+      <p id="delete_hint_<%= station.id %>" class="caption text-text-sub" data-print-station-delete-target="hint">名前が一致するまで「削除する」は押せません。</p>
+
+      <!-- ボタン -->
+      <div class="flex flex-wrap gap-3 pt-2 justify-end">
+        <button
+          type="button"
+          class="btn-secondary"
+          data-print-station-delete-target="cancelButton"
+          data-action="click->print-station-delete#_onCancel"
+        >
+          キャンセル
+        </button>
+        <button
+          type="button"
+          class="btn-danger"
+          style="background: #B42323; color: white;"
+          disabled
+          data-print-station-delete-target="deleteButton"
+          data-action="click->print-station-delete#_onDelete"
+        >
+          削除する
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
