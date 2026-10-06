@@ -56,7 +56,7 @@ class MarkingPrintOptionsTest < ApplicationSystemTestCase
   test "no-lines keeps the normal height and only drops the ruled background, and going back restores it" do
     open_print do
       normal = ruled_height
-      bg = ->{ find(".mt-ruled", match: :first).evaluate_script("getComputedStyle(this).backgroundImage") }
+      bg = -> { find(".mt-ruled", match: :first).evaluate_script("getComputedStyle(this).backgroundImage") }
       assert_match(/repeating-linear-gradient/, bg.call)
       select "線なし", from: "解答欄の広さ"
       assert_equal "none", find(".mt-sheet")["data-answer-size"]
