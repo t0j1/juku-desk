@@ -1,0 +1,4 @@
+<% content_for :title, "セットを作る" %>
+<h1 class="page-title mb-6">定例印刷のセットを作る</h1>
+<% if @error %><p id="error" class="alert-err mb-4" role="alert"><%= @error %></p><% end %>
+<%= render "form", group: @group, url: admin_print_schedule_groups_path %>

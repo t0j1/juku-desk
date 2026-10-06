@@ -8,6 +8,7 @@ class PrintSchedule < ApplicationRecord
 
   belongs_to :print_station
   belongs_to :created_by, class_name: "User", optional: true
+  belongs_to :print_schedule_group, optional: true
   has_many :print_jobs, dependent: :nullify
 
   validates :name, presence: true, length: { maximum: PrintJob::TITLE_MAX }
@@ -25,6 +26,7 @@ class PrintSchedule < ApplicationRecord
 
   scope :active, -> { where(active: true) }
 
+  before_validation :adopt_group_settings
   before_validation { self.weekdays = Array(weekdays).map(&:to_i).uniq.sort.select { |d| d.between?(0, 6) } }
   after_destroy_commit { PdfStorage.r2.delete(r2_key) if r2_key.present? }
   before_validation :release_pdf_unless_fixed
@@ -56,8 +58,10 @@ class PrintSchedule < ApplicationRecord
   def self.generate_for!(date, limit: DAILY_LIMIT)
     made = PrintJob.where(scheduled_for: date).where.not(print_schedule_id: nil).where.not(status: :cancelled).count
     result = { created: 0, skipped: 0 }
-    active.includes(:print_station).order(:id).each do |schedule|
+    # セットの中は position の順（上限で切れるときは、後ろの分から作らない）
+    active.includes(:print_station, :print_schedule_group).sort_by { |s| [ s.print_schedule_group_id.to_i, s.position, s.id ] }.each do |schedule|
       next unless schedule.runs_on?(date) && !schedule.print_station.revoked?
+      next if schedule.print_schedule_group && !schedule.print_schedule_group.active
       next if schedule.print_jobs.exists?(scheduled_for: date)
 
       if made >= limit
@@ -84,6 +88,8 @@ class PrintSchedule < ApplicationRecord
   def runs_on?(date) = weekdays.include?(date.wday)
 
   def scheduled_at_on(date)
+    return print_schedule_group.scheduled_at_for(self, date) if print_schedule_group
+
     hour, min = time_of_day.split(":").map(&:to_i)
     Time.zone.local(date.year, date.month, date.day, hour, min)
   end
@@ -153,7 +159,20 @@ class PrintSchedule < ApplicationRecord
 
   def weekdays_label = weekdays.map { |d| WEEKDAY_NAMES[d] }.join("・")
 
+  # date に、上限のため作られない見込みの件数（画面の注意書き用）
+  def self.over_limit_on(date, limit: DAILY_LIMIT)
+    due = active.includes(:print_station, :print_schedule_group).count { |s| s.runs_on?(date) && !s.print_station.revoked? && (s.print_schedule_group.nil? || s.print_schedule_group.active) }
+    [ due - limit, 0 ].max
+  end
+
   private
+    # セットに入れた雛形は、ステーション・曜日・開始時刻をセットに合わせ、末尾の順番にする
+    def adopt_group_settings
+      group = print_schedule_group or return
+      assign_attributes(print_station: group.print_station, weekdays: group.weekdays, time_of_day: group.start_time)
+      self.position = (group.print_schedules.maximum(:position).to_i + 1) if position.to_i.zero? || print_schedule_group_id_changed?
+    end
+
     # 種別を固定PDF以外に変えたら、要らなくなった PDF を手放す（R2 のオブジェクトは保存できたあとに消す）
     def release_pdf_unless_fixed
       return if fixed_pdf? || (pdf_data.nil? && r2_key.blank?)

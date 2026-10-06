@@ -1,0 +1,17 @@
+<% content_for :title, "セットの編集" %>
+<h1 class="page-title mb-6">セット「<%= @group.name %>」の編集</h1>
+<% if @error %><p id="error" class="alert-err mb-4" role="alert"><%= @error %></p><% end %>
+<%= render "form", group: @group, url: admin_print_schedule_group_path(@group) %>
+<h2 class="text-xl font-bold mt-8 mb-2">刷る順番</h2>
+<p class="caption mb-3">雛形は、それぞれの編集画面で「セット」から入れます。</p>
+<ol id="group_members" class="space-y-2 max-w-2xl">
+  <% @group.print_schedules.each_with_index do |s, i| %>
+    <li id="member_<%= s.id %>" class="card !py-3 flex items-center gap-3">
+      <span class="font-bold w-8"><%= i + 1 %></span><span class="grow"><%= s.name %><%= "（停止中）" unless s.active %></span>
+      <span class="caption"><%= @group.scheduled_at_for(s, Time.zone.today).strftime("%H:%M") if s.active %></span>
+      <%= button_to "↑", move_admin_print_schedule_group_path(@group), params: { schedule_id: s.id, direction: "up" }, class: "btn-secondary btn-sm", form_class: "inline", disabled: i.zero?, "aria-label": "上へ" %>
+      <%= button_to "↓", move_admin_print_schedule_group_path(@group), params: { schedule_id: s.id, direction: "down" }, class: "btn-secondary btn-sm", form_class: "inline", disabled: i == @group.print_schedules.size - 1, "aria-label": "下へ" %>
+    </li>
+  <% end %>
+  <% if @group.print_schedules.empty? %><li class="caption">まだ雛形がありません。</li><% end %>
+</ol>

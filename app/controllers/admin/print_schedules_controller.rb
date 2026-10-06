@@ -6,7 +6,8 @@ module Admin
     before_action :set_schedule, only: %i[ edit update destroy toggle ]
 
     def index
-      @schedules = PrintSchedule.includes(:print_station).order(:id)
+      @schedules = PrintSchedule.includes(:print_station, :print_schedule_group).order(:id)
+      @groups = PrintScheduleGroup.includes(:print_station, :print_schedules).order(:id)
     end
 
     def new
@@ -98,7 +99,7 @@ module Admin
       end
 
       def schedule_params
-        params.fetch(:print_schedule, {}).permit(:name, :kind, :print_station_id, :copies, :copies_mode, :collate, :staple, :time_of_day, :active, weekdays: [])
+        params.fetch(:print_schedule, {}).permit(:name, :kind, :print_station_id, :copies, :copies_mode, :collate, :staple, :time_of_day, :active, :print_schedule_group_id, weekdays: [])
       end
 
       # 種別に合わせた source_config / layout_config（固定PDFは持たない）
@@ -122,6 +123,7 @@ module Admin
 
       def load_choices
         @stations = PrintStation.active.order(:name)
+        @groups = PrintScheduleGroup.order(:name)
         @wordbooks = Wordbook.order(:name)
         @grades = Student.enrolled.where.not(grade: [ nil, "" ]).distinct.pluck(:grade).sort_by { |g| PrintSchedule::Document::GRADE_ORDER.index(g) || 99 }
         @students = Student.enrolled.order(:name).pluck(:name, :id)
