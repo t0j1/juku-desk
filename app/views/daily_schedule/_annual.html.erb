@@ -1,14 +1,14 @@
-<%# その日の年間スケジュール（読み取り専用）。annual: AnnualSchedule::Result。定時タスクの行とは、色の帯と「年間」ラベルで区別する %>
+<%# 時刻なしの年間スケジュール（読み取り専用）、または取得失敗の案内。annual: AnnualSchedule::Result。時刻つきはタイムライン側（_annual_row） %>
 <div id="annual-events" class="pb-4 mb-2 border-b border-row-line" aria-label="年間スケジュール">
   <h2 class="text-base font-bold text-text-sub mb-2">年間スケジュール<span class="font-normal">（読み取り専用）</span></h2>
   <% if annual.error %>
     <p class="text-base text-text-sub">年間スケジュールを取得できません。</p>
   <% else %>
     <ul class="flex flex-col gap-2">
-      <% annual.events.each do |event| %>
+      <% annual.untimed.each do |event| %>
         <li class="annual-event flex items-center gap-3 rounded-field bg-bg px-3 py-2 border-l-4" style="border-left-color: <%= AnnualSchedule.color_for(event.type) %>">
-          <span class="text-base font-bold tnum shrink-0 min-w-[6.5em]"><%= event.time_label || "時間なし" %></span>
-          <span class="text-sm font-bold shrink-0" style="color: <%= AnnualSchedule.color_for(event.type) %>"><%= event.type %></span>
+          <span class="text-base font-bold tnum shrink-0 min-w-[6.5em]">時間なし</span>
+          <span class="text-base font-bold shrink-0" style="color: <%= AnnualSchedule.color_for(event.type) %>"><%= event.type %></span>
           <span class="min-w-0 truncate text-base text-text"><%= event.title %></span>
         </li>
       <% end %>
