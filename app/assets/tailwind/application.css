@@ -237,3 +237,21 @@
   0% { opacity: 1; transform: translate(0, 0) rotate(0); }
   100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); }
 }
+
+/* 遅い遷移の読み込み表示（load-indicator）。バーは transform / opacity だけで動かす。文字は 16px 以上、色だけで示さない（記号＋文字） */
+.turbo-progress-bar { display: none; } /* Turbo 標準のバーは、自前の表示に置き換える */
+.load-indicator { position: fixed; inset: 0 0 auto 0; z-index: 60; pointer-events: none; }
+.load-indicator[hidden] { display: none; }
+.load-indicator-bar { height: 4px; overflow: hidden; background: var(--color-line); }
+.load-indicator-fill { height: 100%; width: 100%; transform-origin: left; transform: scaleX(0); background: var(--color-accent-strong); overflow: hidden; position: relative; will-change: transform; }
+.load-indicator-stripes { display: none; position: absolute; inset: 0 -40px 0 0; background: repeating-linear-gradient(135deg, rgb(255 255 255 / .55) 0 6px, transparent 6px 12px); animation: load-indicator-stripes 1s linear infinite; }
+.load-indicator[data-state="estimate"] .load-indicator-stripes, .load-indicator[data-state="slow"] .load-indicator-stripes { display: block; }
+@keyframes load-indicator-stripes { to { transform: translateX(17px); } }
+.load-indicator-box { position: absolute; top: 4.25rem; right: .75rem; max-width: min(92vw, 26rem); padding: .6rem .9rem; border-radius: 14px; background: var(--color-bg); color: var(--color-text); box-shadow: var(--shadow-raise-sm); font-size: 16px; line-height: 1.5; pointer-events: auto; }
+.load-indicator-line { font-weight: 700; }
+.load-indicator-reason, .load-indicator-slow { margin-top: .25rem; color: var(--color-text-sub); }
+.load-indicator-estimate { font-weight: 400; color: var(--color-text-sub); }
+@media (prefers-reduced-motion: reduce) {
+  .load-indicator-bar { display: none; }
+  .load-indicator-stripes { animation: none; }
+}
