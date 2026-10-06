@@ -78,10 +78,11 @@ class AdminPrintStationsTest < ActionDispatch::IntegrationTest
     assert_select "form[data-turbo=false][action=?]", reissue_admin_print_station_path(station)
   end
 
-  test "an unused station can be deleted with a confirmation, and is audited" do
+  test "an unused station can be deleted through a name-confirmation dialog, and is audited" do
     station, = PrintStation.register!(name: "まちがい")
     get admin_print_stations_path
-    assert_select "button[data-turbo-confirm*=?]", "元に戻せません"
+    assert_select "dialog#delete_dialog_#{station.id}[role=dialog][aria-modal=true] button[type=submit][disabled]", text: "削除する"
+    assert_select "[data-delete-confirm-name-value=?]", "まちがい"
     assert_difference -> { PrintStation.count } => -1, -> { AuditLog.where(action: "print_station_destroy").count } => 1 do
       delete admin_print_station_path(station)
     end
