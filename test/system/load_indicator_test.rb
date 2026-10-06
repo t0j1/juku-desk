@@ -75,7 +75,7 @@ class LoadIndicatorTest < ApplicationSystemTestCase
     thresholds(show: 200, reason: 400, estimate: 800, slow: 1600)
     click_on "小テスト作成"
     assert_selector "#load-indicator[data-state=estimate]", text: "所要時間は推定できません", wait: 3
-    assert_equal "block", find(".load-indicator-stripes", visible: :all).evaluate_script("getComputedStyle(this).display")
+    assert_equal "block", find(".load-stripes", visible: :all).evaluate_script("getComputedStyle(this).display")
     assert_selector "#load-indicator[data-state=slow] button", text: "再読み込み", wait: 3
     assert_current_path new_quiz_path, wait: 8
   end
@@ -88,8 +88,8 @@ class LoadIndicatorTest < ApplicationSystemTestCase
     thresholds(show: 200, estimate: 400)
     click_on "小テスト作成"
     assert_selector "#load-indicator[data-state=estimate]", wait: 3
-    assert_no_selector ".load-indicator-bar", visible: :visible
-    assert_equal "none", find(".load-indicator-stripes", visible: :all).evaluate_script("getComputedStyle(this).animationName")
+    assert_no_selector ".load-bar", visible: :visible
+    assert_equal "none", find(".load-stripes", visible: :all).evaluate_script("getComputedStyle(this).animationName")
     assert_empty JSON.parse(page.evaluate_script("sessionStorage.getItem('liProgress')"))
     assert_current_path new_quiz_path, wait: 5
   end
