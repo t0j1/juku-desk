@@ -1,5 +1,5 @@
 module ConsoleHelper
-  PILL_SYMBOLS = { ok: "●", busy: "◐", ng: "✕", neutral: "○" }.freeze
+  PILL_SYMBOLS = { ok: "●", busy: "◐", warn: "!", ng: "✕", neutral: "○" }.freeze
 
   # Status pill: meaning is carried by symbol + text, not color alone.
   def status_pill(label, kind)
@@ -14,6 +14,18 @@ module ConsoleHelper
   def supply_pill(status)
     label, kind = SUPPLY_PILLS[status]
     label ? status_pill(label, kind) : "—"
+  end
+
+  # 1日のスケジュール: 記録のある回はその状態。記録がなければ、まだ時刻前なら「待機」、過ぎていれば「未実行」（動いていない事実をそのまま出す）
+  def daily_status_pill(task, execution, at, now)
+    return daily_execution_pill(execution) if execution
+    return status_pill("停止中", :neutral) unless task.enabled
+    at > now ? status_pill("待機", :neutral) : status_pill("未実行", :warn)
+  end
+
+  def daily_execution_pill(execution)
+    label, kind = execution.pill
+    status_pill(label, kind)
   end
 
   def pdf_job_pill_kind(job)
@@ -46,6 +58,7 @@ module ConsoleHelper
     pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     minus: '<path d="M5 12h14"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     calendar: '<rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/>',
     car: '<path d="M5 17h14M6 17l1.5-6.5A2 2 0 0 1 9.4 9h5.2a2 2 0 0 1 1.9 1.5L18 17"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>',

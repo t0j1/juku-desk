@@ -19,12 +19,15 @@ class NavigationMenu
 
   def groups
     @config.fetch(:groups).filter_map do |group|
-      base = nil
-      if group[:env]
-        base = schedule_base_url(group[:env]) or next # 未設定・不正なら、グループごと出さない
+      items = group.fetch(:items).filter_map do |item|
+        env_name = item[:env] || group[:env]
+        base = nil
+        if env_name
+          base = schedule_base_url(env_name) or next # 未設定・不正なら、その項目は出さない
+        end
+        build_item(item, base)
       end
-      items = group.fetch(:items).map { |item| build_item(item, base) }
-      Group.new(label: group.fetch(:label), items:)
+      Group.new(label: group.fetch(:label), items:) if items.any?
     end
   end
 

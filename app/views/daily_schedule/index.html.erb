@@ -1,0 +1,52 @@
+<% content_for :title, "1日のスケジュール" %>
+<% today = Time.zone.today %>
+<% now = Time.current %>
+<% day_label = "#{@date.month}/#{@date.day}（#{DailyScheduleTask::WEEKDAY_NAMES[@date.wday]}）" %>
+<div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+  <h1 class="page-title">1日のスケジュール</h1>
+  <nav class="flex items-center gap-2 ml-auto" aria-label="日付の切り替え">
+    <%= link_to "‹", daily_schedule_path_for(@date - 1), class: "btn-secondary btn-sm", aria: { label: "前の日" } %>
+    <span id="daily-date" class="text-[19px] font-bold tnum min-w-[7.5em] text-center"><%= day_label %></span>
+    <%= link_to "›", daily_schedule_path_for(@date + 1), class: "btn-secondary btn-sm", aria: { label: "次の日" } %>
+    <%= link_to "今日", daily_schedule_path_for(today), class: "btn-secondary btn-sm" %>
+  </nav>
+  <%= link_to "タスクを追加", daily_schedule_path_for(@date, new: 1), class: "btn-primary" %>
+</div>
+
+<div class="grid grid-cols-1 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
+  <section id="timeline" class="card !px-6 min-w-0" aria-label="タイムライン">
+    <% if @tasks.empty? %>
+      <div class="py-10 text-center">
+        <p class="text-[19px] font-bold mb-4"><%= @date == today ? "今日" : "この日" %>のタスクはありません</p>
+        <%= link_to "タスクを追加", daily_schedule_path_for(@date, new: 1), class: "btn-secondary" %>
+      </div>
+    <% else %>
+      <% now_line_done = (@date != today) %>
+      <ol class="divide-y divide-row-line">
+        <% @tasks.each do |task| %>
+          <% at = task.scheduled_at_on(@date) %>
+          <% if !now_line_done && at > now %>
+            <% now_line_done = true %>
+            <li id="now-line" class="flex items-center gap-3 py-2 text-primary font-bold tnum" aria-label="現在時刻 <%= now.strftime("%H:%M") %>">
+              <span>いま <%= now.strftime("%H:%M") %></span><span class="flex-1 h-0.5 bg-primary rounded-full" aria-hidden="true"></span>
+            </li>
+          <% end %>
+          <%= render "daily_schedule/row", task: task, at: at, execution: @executions[task.id], now: now %>
+        <% end %>
+        <% unless now_line_done %>
+          <li id="now-line" class="flex items-center gap-3 py-2 text-primary font-bold tnum" aria-label="現在時刻 <%= now.strftime("%H:%M") %>">
+            <span>いま <%= now.strftime("%H:%M") %></span><span class="flex-1 h-0.5 bg-primary rounded-full" aria-hidden="true"></span>
+          </li>
+        <% end %>
+      </ol>
+    <% end %>
+  </section>
+
+  <% if @selected %>
+    <%= render "daily_schedule/detail", task: @selected, date: @date, execution: @executions[@selected.id] %>
+  <% end %>
+</div>
+
+<% if @form_task %>
+  <%= render "daily_schedule/form", task: @form_task, stations: @stations, date: @date, error: @form_error %>
+<% end %>

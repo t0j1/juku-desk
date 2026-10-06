@@ -1,0 +1,25 @@
+<%# タイムラインの 1 行。task, at（予定時刻）, execution（この日の実行記録 or nil）, now %>
+<% selected = (task.id == @selected&.id) %>
+<li id="task_<%= task.id %>" class="flex items-center gap-4 py-4 <%= "bg-bg shadow-inset rounded-field px-3 -mx-3" if selected %>">
+  <%= link_to daily_schedule_path_for(@date, task: task.id), class: "flex-1 min-w-0 flex flex-col min-[1200px]:flex-row min-[1200px]:items-baseline gap-x-5 gap-y-1", aria: { current: (selected ? "true" : nil) } do %>
+    <span class="text-[19px] font-bold tnum shrink-0"><%= task.execution_time %></span>
+    <span class="min-w-0 flex-1">
+      <span class="flex flex-col min-[1400px]:flex-row min-[1400px]:items-center gap-x-3 gap-y-1">
+        <span class="flex items-center gap-2 min-w-0 text-[19px] font-bold text-text">
+          <%= console_icon(task.print? ? :printer : :pencil) %><span class="truncate"><%= task.name %></span>
+        </span>
+        <span class="self-start"><%= daily_status_pill(task, execution, at, now) %></span>
+      </span>
+      <span class="block text-base text-text-sub mt-1">
+        <%= [ task.repeat_label, task.target_label, (task.print? ? "#{task.copies}部" : nil) ].compact.join("　／　") %>
+        <span class="block tnum">予定 <%= at.strftime("%H:%M") %>　実際 <%= execution&.executed_at ? execution.executed_at.strftime("%H:%M") : "—" %></span>
+      </span>
+    </span>
+  <% end %>
+  <%= button_to toggle_daily_schedule_task_path(task, date: @date.iso8601), method: :post, role: "switch",
+        aria: { checked: task.enabled.to_s, label: "#{task.name} を#{task.enabled ? "停止" : "有効に"}する" },
+        class: "relative shrink-0 w-14 h-8 rounded-pill cursor-pointer #{task.enabled ? "bg-accent-strong" : "bg-neu-bg shadow-inset"}" do %>
+    <span class="absolute top-1 size-6 rounded-full bg-white shadow-raise-sm <%= task.enabled ? "right-1" : "left-1" %>" aria-hidden="true"></span>
+    <span class="sr-only"><%= task.enabled ? "有効" : "停止中" %></span>
+  <% end %>
+</li>

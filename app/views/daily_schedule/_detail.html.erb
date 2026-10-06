@@ -1,0 +1,44 @@
+<%# 右カラム: 選んだタスクの詳細。task, date, execution %>
+<aside id="task-detail" class="card min-w-0 space-y-5" aria-label="タスクの詳細">
+  <h2 class="text-[22px] font-bold break-words"><%= task.name %></h2>
+  <dl class="grid grid-cols-[7em_minmax(0,1fr)] gap-x-3 gap-y-2 text-[18px]">
+    <dt class="text-text-sub">実行時刻</dt><dd class="font-bold tnum"><%= task.execution_time %></dd>
+    <dt class="text-text-sub">繰り返し</dt><dd><%= task.repeat_label %></dd>
+    <dt class="text-text-sub">実行内容</dt><dd><%= DailyScheduleTask::EXECUTION_LABELS[task.execution_type] %></dd>
+    <dt class="text-text-sub">対象</dt><dd class="break-words"><%= task.target_label %></dd>
+    <% if task.print? %>
+      <dt class="text-text-sub">部数・両面</dt><dd><%= task.copies %>部・<%= task.duplex_label %></dd>
+    <% end %>
+    <dt class="text-text-sub">有効</dt><dd><%= task.enabled ? "有効" : "停止中" %></dd>
+  </dl>
+  <% if task.create_draft? %>
+    <p class="alert-warn">書類の原案は、下書きに保存するところまでを自動で行います。送信・確定・公開は自動では行いません。</p>
+  <% end %>
+  <% if task.past_due_once? && task.enabled && task.executions.none? %>
+    <p class="alert-warn">この時刻は過ぎています（1回だけのタスクは、過ぎた時刻の分は実行されません）。</p>
+  <% end %>
+  <div>
+    <h3 class="text-lg font-bold mb-2">直近の実行</h3>
+    <% recent = task.recent_executions %>
+    <% if recent.empty? %>
+      <p class="text-base text-text-sub">まだ実行されていません。</p>
+    <% else %>
+      <ul class="divide-y divide-row-line">
+        <% recent.each do |e| %>
+          <li class="py-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span class="tnum text-[18px]"><%= l(e.scheduled_at, format: "%-m/%-d %H:%M") %> 予定</span>
+            <%= daily_execution_pill(e) %>
+            <span class="basis-full text-base text-text-sub tnum">実際 <%= e.executed_at ? l(e.executed_at, format: "%-m/%-d %H:%M") : "—" %>　<%= e.message %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+    <p class="text-base text-text-sub mt-3">スキップ・失敗した回は、自動では再実行しません（印刷は 1 回だけです）。成功とは表示しません。</p>
+  </div>
+  <div class="flex flex-wrap gap-2 pt-2">
+    <%= link_to "編集", daily_schedule_path_for(date, task: task.id, edit: task.id), class: "btn-secondary btn-sm" %>
+    <%= button_to "複製", duplicate_daily_schedule_task_path(task, date: date.iso8601), class: "btn-secondary btn-sm" %>
+    <%= button_to "削除", daily_schedule_task_path(task, date: date.iso8601), method: :delete, class: "btn-danger btn-sm",
+          data: { turbo_confirm: "「#{task.name}」を削除します。実行の履歴も消え、元に戻せません。よろしいですか？" } %>
+  </div>
+</aside>

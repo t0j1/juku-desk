@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_06_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_06_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -77,6 +77,46 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_100000) do
     t.boolean "generate_answers", default: true, null: false
     t.index ["status"], name: "index_crop_regions_on_status"
     t.index ["upload_id"], name: "index_crop_regions_on_upload_id"
+  end
+
+  create_table "daily_schedule_executions", force: :cascade do |t|
+    t.bigint "daily_schedule_task_id", null: false
+    t.datetime "scheduled_at", null: false
+    t.datetime "executed_at"
+    t.string "status", null: false
+    t.text "message"
+    t.bigint "print_job_id"
+    t.text "draft_text"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["daily_schedule_task_id", "scheduled_at"], name: "index_daily_schedule_executions_once", unique: true
+    t.index ["daily_schedule_task_id"], name: "index_daily_schedule_executions_on_daily_schedule_task_id"
+    t.index ["print_job_id"], name: "index_daily_schedule_executions_on_print_job_id"
+  end
+
+  create_table "daily_schedule_tasks", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "execution_time", null: false
+    t.string "repeat_type", null: false
+    t.integer "custom_weekdays", default: [], null: false, array: true
+    t.date "once_date"
+    t.string "execution_type", null: false
+    t.boolean "enabled", default: true, null: false
+    t.bigint "created_by_id"
+    t.bigint "print_station_id"
+    t.string "duplex"
+    t.integer "copies", default: 1, null: false
+    t.string "r2_key"
+    t.binary "pdf_data"
+    t.string "sha256"
+    t.integer "byte_size"
+    t.string "template_key"
+    t.string "save_destination"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_daily_schedule_tasks_on_created_by_id"
+    t.index ["print_station_id"], name: "index_daily_schedule_tasks_on_print_station_id"
+    t.index ["r2_key"], name: "index_daily_schedule_tasks_on_r2_key", unique: true
   end
 
   create_table "gemini_quotas", force: :cascade do |t|
@@ -314,9 +354,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_100000) do
     t.index ["reviewed_by_id"], name: "index_questions_on_reviewed_by_id"
     t.index ["subject"], name: "index_questions_on_subject"
     t.index ["tags"], name: "index_questions_on_tags", using: :gin
-    t.check_constraint "answer_source::text = ANY (ARRAY['material'::character varying, 'ai'::character varying]::text[])", name: "questions_answer_source_values"
+    t.check_constraint "answer_source::text = ANY (ARRAY['material'::character varying::text, 'ai'::character varying::text])", name: "questions_answer_source_values"
     t.check_constraint "difficulty IS NULL OR difficulty >= 1 AND difficulty <= 5", name: "questions_difficulty_range"
-    t.check_constraint "question_type IS NULL OR (question_type::text = ANY (ARRAY['reorder'::character varying, 'translate_en_ja'::character varying, 'compose_ja_en'::character varying, 'passage'::character varying, 'fill_blank'::character varying, 'choice'::character varying, 'free'::character varying]::text[]))", name: "questions_question_type_values"
+    t.check_constraint "question_type IS NULL OR (question_type::text = ANY (ARRAY['reorder'::character varying::text, 'translate_en_ja'::character varying::text, 'compose_ja_en'::character varying::text, 'passage'::character varying::text, 'fill_blank'::character varying::text, 'choice'::character varying::text, 'free'::character varying::text]))", name: "questions_question_type_values"
   end
 
   create_table "recovery_codes", force: :cascade do |t|
@@ -408,7 +448,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_100000) do
     t.datetime "updated_at", null: false
     t.jsonb "sections", default: [], null: false
     t.index ["created_by_id"], name: "index_tests_on_created_by_id"
-    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying, 'by_tag'::character varying]::text[])", name: "tests_mode_values"
+    t.check_constraint "mode::text = ANY (ARRAY['random'::character varying::text, 'by_tag'::character varying::text])", name: "tests_mode_values"
   end
 
   create_table "uploads", force: :cascade do |t|
@@ -469,6 +509,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_100000) do
   add_foreign_key "audit_logs", "users"
   add_foreign_key "audit_logs", "users", column: "impersonator_id"
   add_foreign_key "crop_regions", "uploads", on_delete: :cascade
+  add_foreign_key "daily_schedule_executions", "daily_schedule_tasks"
+  add_foreign_key "daily_schedule_executions", "print_jobs"
+  add_foreign_key "daily_schedule_tasks", "print_stations"
+  add_foreign_key "daily_schedule_tasks", "users", column: "created_by_id"
   add_foreign_key "job_progresses", "users", on_delete: :nullify
   add_foreign_key "login_events", "users", on_delete: :nullify
   add_foreign_key "mail_templates", "users", column: "updated_by_id", on_delete: :nullify

@@ -1,0 +1,56 @@
+<%# 追加・編集のモーダル。task, stations, date, error %>
+<% persisted = task.persisted? %>
+<div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 min-[600px]:p-8" role="dialog" aria-modal="true" aria-labelledby="task-form-title">
+  <div class="card w-full max-w-xl my-auto">
+    <h2 id="task-form-title" class="text-[24px] font-bold mb-5"><%= persisted ? "タスクを編集" : "タスクを追加" %></h2>
+    <% if error %><p class="alert-err mb-4" role="alert"><%= error %></p><% end %>
+    <% if task.past_due_once? %><p class="alert-warn mb-4">この時刻は過ぎています（保存はできますが、過ぎた時刻の分は実行されません）。</p><% end %>
+    <%= form_with model: task, url: (persisted ? daily_schedule_task_path(task) : daily_schedule_tasks_path), method: (persisted ? :patch : :post),
+          scope: :daily_schedule_task, multipart: true, class: "space-y-5", data: { controller: "exec-type repeat-type" } do |f| %>
+      <%= hidden_field_tag :date, date.iso8601 %>
+      <div><%= f.label :name, "名前（必須）", class: "label" %><%= f.text_field :name, maxlength: 100, required: true, class: "input" %></div>
+      <div><%= f.label :execution_time, "実行時刻", class: "label" %><%= f.time_field :execution_time, required: true, class: "input !w-auto" %></div>
+      <div>
+        <%= f.label :repeat_type, "繰り返し", class: "label" %>
+        <%= f.select :repeat_type, DailyScheduleTask::REPEAT_LABELS.map { |k, v| [ v, k ] }, {}, class: "input !w-auto", data: { repeat_type_target: "select", action: "repeat-type#update" } %>
+        <div data-repeat-type-target="weekdays" class="flex flex-wrap gap-3 mt-2" hidden>
+          <% DailyScheduleTask::WEEKDAY_NAMES.each_with_index do |name, i| %>
+            <label class="flex items-center gap-1 min-h-11"><%= check_box_tag "daily_schedule_task[custom_weekdays][]", i, task.custom_weekdays.include?(i), id: "daily_schedule_task_custom_weekdays_#{i}", class: "size-5 accent-primary" %><%= name %></label>
+          <% end %>
+        </div>
+        <div data-repeat-type-target="date" class="mt-2" hidden>
+          <%= f.label :once_date, "日付", class: "label" %><%= f.date_field :once_date, class: "input !w-auto" %>
+        </div>
+      </div>
+      <fieldset>
+        <legend class="label">実行内容</legend>
+        <div class="flex flex-wrap gap-x-6">
+          <% DailyScheduleTask::EXECUTION_LABELS.each do |value, label| %>
+            <label class="flex items-center gap-2 min-h-11 text-[19px]"><%= f.radio_button :execution_type, value, class: "size-5 accent-primary", data: { exec_type_target: "radio", action: "exec-type#update" } %><%= label %></label>
+          <% end %>
+        </div>
+      </fieldset>
+      <div data-exec-type-target="section" data-type="print" class="space-y-4">
+        <div><%= f.label :print_station_id, "対象の印刷ステーション", class: "label" %>
+          <%= f.select :print_station_id, stations.map { |s| [ s.name, s.id ] }, { include_blank: "選んでください" }, class: "input !w-auto" %></div>
+        <div><%= f.label :pdf, persisted && task.print? ? "PDF ファイル（変えるときだけ選ぶ・30MBまで）" : "PDF ファイル（30MBまで）", class: "label" %>
+          <span class="flex items-center min-h-11"><%= file_field_tag "daily_schedule_task[pdf]", id: "daily_schedule_task_pdf", accept: "application/pdf", class: "block" %></span></div>
+        <div><%= f.label :duplex, "両面", class: "label" %>
+          <%= f.select :duplex, [ [ "片面", "" ], [ "両面（長辺とじ）", "long" ], [ "両面（短辺とじ）", "short" ] ], {}, class: "input !w-auto" %></div>
+        <div><%= f.label :copies, "部数", class: "label" %><%= f.number_field :copies, min: 1, max: 99, class: "input !w-24" %></div>
+      </div>
+      <div data-exec-type-target="section" data-type="create_draft" class="space-y-4" hidden>
+        <div><%= f.label :template_key, "テンプレート（種類は確認中の仮の一覧です）", class: "label" %>
+          <%= f.select :template_key, DailyScheduleTask::DRAFT_TEMPLATES.map { |k, v| [ v, k ] }, { include_blank: "選んでください" }, class: "input !w-auto" %></div>
+        <div><%= f.label :save_destination, "保存先", class: "label" %>
+          <%= f.select :save_destination, DailyScheduleTask::SAVE_DESTINATIONS.map { |k, v| [ v, k ] }, {}, class: "input !w-auto" %></div>
+        <p class="alert-warn">原案は下書きに保存するところまでを自動で行います。送信・確定・公開は自動では行いません。</p>
+      </div>
+      <label class="flex items-center gap-2 min-h-11 text-[19px]"><%= f.check_box :enabled, class: "size-5 accent-primary" %>有効にする</label>
+      <div class="flex flex-wrap gap-3 pt-2">
+        <%= f.submit "保存", class: "btn-primary" %>
+        <%= link_to "キャンセル", daily_schedule_path_for(date, task: task.id), class: "btn-secondary" %>
+      </div>
+    <% end %>
+  </div>
+</div>
