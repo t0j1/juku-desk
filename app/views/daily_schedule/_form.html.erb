@@ -37,13 +37,9 @@
           <span class="flex items-center min-h-11"><%= file_field_tag "daily_schedule_task[pdf]", id: "daily_schedule_task_pdf", accept: "application/pdf", class: "block" %></span></div>
         <div><%= f.label :duplex, "両面", class: "label" %>
           <%= f.select :duplex, [ [ "片面", "" ], [ "両面（長辺とじ）", "long" ], [ "両面（短辺とじ）", "short" ] ], {}, class: "input !w-auto" %></div>
-        <div data-controller="driver-preset"><%= f.label :driver_preset, "トレイ（ドライバーの印刷設定の名前）", class: "label" %>
-          <div class="relative" data-driver-preset-target="select">
-            <%= f.select :driver_preset, PrintPreset.for_select(with_default: true, current_value: task.driver_preset), { include_blank: false }, class: "input", "aria-label": "トレイ（ドライバーの印刷設定の名前）", data: { driver_preset_target: "select", action: "driver-preset#handleChange" } %>
-            <%= f.text_field :driver_preset, maxlength: PrintPreset::MAX_NAME_LENGTH, placeholder: "新しいプリセット名", class: "input mt-1", hidden: true, "aria-label": "新しいプリセット名", data: { driver_preset_target: "input" } %>
-            <%= f.hidden_field :driver_preset, data: { driver_preset_target: "hidden" } %>
-          </div>
-          <p class="text-base text-text-sub mt-1">用紙トレイはプリンターの印刷設定で決まります。使う設定の名前を入れてください。空欄ならドライバーの既定。</p></div>
+        <div><%= f.label :driver_preset, "トレイ（ドライバーの印刷設定の名前）", class: "label" %>
+          <%= f.text_field :driver_preset, maxlength: 100, class: "input", placeholder: "例）トレイ2・両面・ホチキス。空欄ならドライバーの既定" %>
+          <p class="text-base text-text-sub mt-1">用紙トレイはプリンターの印刷設定で決まります。使う設定の名前を入れてください。</p></div>
         <div><%= f.label :copies, "部数", class: "label" %><%= f.number_field :copies, min: 1, max: 99, class: "input !w-24" %></div>
       </div>
       <div data-exec-type-target="section" data-type="create_draft" class="space-y-4" hidden>
