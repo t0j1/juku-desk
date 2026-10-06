@@ -28,6 +28,16 @@ module PrintLayoutHelper
   end
 
   # 形式別のレイアウトに必要なデータがそろっているか（足りなければ従来の表示にする）
+  # 小問番号（行頭・「。」の直後の 〔n〕）を <span> にして、印刷画面の「小問番号」の選択で振り直せるようにする。元の番号は span の中身のまま
+  def print_numbered_text(question, text, item_plan)
+    safe_join(Marking::SubNumbering.split(text).map do |kind, str, n|
+      next ERB::Util.h(question.math_text(str)) if kind == :text
+
+      numbers = item_plan && item_plan[n]
+      content_tag(:span, str, class: "mt-subno", data: { original: str, per: numbers&.first, cont: numbers&.last }.compact)
+    end)
+  end
+
   def print_layout_for(question)
     p = question.payload || {}
     case question.question_type

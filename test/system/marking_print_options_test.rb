@@ -54,6 +54,7 @@ class MarkingPrintOptionsTest < ApplicationSystemTestCase
   end
 
   test "bare math in the answer print is rendered with KaTeX (superscripts and fractions); wrapped math and dollar prose are unchanged" do
+    Question.delete_all # setup の 5 問のうち 1 問だけが選ばれると、数式の問題が出ないことがある
     region = make_regions(1, status: :extracted).first
     region.questions.create!(question_text: "三角関数の問題", answer_text: "$a^2$ と cos^2 x、7/6π", explanation: "(1/2) sin 2x = 1/4 で、価格は $5 です。",
                              answer_source: "material", subject: "数学", reviewed_at: Time.current)
@@ -79,6 +80,32 @@ class MarkingPrintOptionsTest < ApplicationSystemTestCase
       assert_match(/repeating-linear-gradient/, bg.call)
       assert_equal false, page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")
     end
+  end
+
+  test "sub-question numbers can be renumbered per question or continuously, in the question and the answer print alike, without touching the stored text" do
+    Question.delete_all
+    texts = [ "〔1〕Aを求めよ。\n〔2〕Bを求めよ。", "〔12〕cos(x + π/3) を求めよ。〔13〕Cを求めよ。\n〔14〕Dを求めよ。", "〔7〕Eを求めよ。〔8〕Fを求めよ。" ]
+    make_regions(3, status: :extracted).zip(texts).each do |region, text|
+      region.questions.create!(question_text: text, answer_text: text.gsub("を求めよ", "=1"), answer_source: "material", subject: "数学", reviewed_at: Time.current)
+    end
+    nos = -> { all(".mt-subno").map(&:text) }
+    [ "問題用を印刷", "解答用を印刷" ].each do |label|
+      open_print(label) do
+        original = nos.call
+        assert_equal 7, original.size
+        assert_equal %w[ 〔1〕 〔2〕 〔7〕 〔8〕 〔12〕 〔13〕 〔14〕 ], original.sort_by { |n| n.delete("〔〕").to_i }
+        select "大問ごとに(1)から振り直す", from: "小問番号"
+        per = all(".mt-item").map { |li| li.all(".mt-subno").map(&:text) }
+        assert_equal [ [ "(1)", "(2)" ], [ "(1)", "(2)", "(3)" ], [ "(1)", "(2)" ] ].sort_by(&:size), per.sort_by(&:size)
+        select "通しで(1)から振り直す", from: "小問番号"
+        assert_equal (1..7).map { |n| "(#{n})" }, nos.call
+        assert_text "cos"
+        assert_equal 7, nos.call.size
+        select "元のまま", from: "小問番号"
+        assert_equal original, nos.call
+      end
+    end
+    assert_equal texts.sort, Question.pluck(:question_text).sort
   end
 
   test "layout by count splits the questions into pages that break after each page, never in the middle of a question" do
