@@ -15,6 +15,13 @@
     <% end %>
   <% end %>
 </div>
+<% if current_user.can_write? %>
+  <%= form_with url: new_upload_random_test_path(@upload), method: :get, id: "random-test-form", class: "mb-4 flex flex-wrap items-center gap-3" do |f| %>
+    <label class="flex items-center gap-1 text-lg"><span class="label">問題数</span><%= f.number_field :count, value: 5, min: 1, max: Marking::QuestionPicker.max_count, class: "input !w-24", "aria-label": "ランダムで作る問題数" %></label>
+    <%= f.submit "ランダムで作る", class: "btn-secondary cursor-pointer" %>
+    <span class="caption">この画像の承認済みの問題から選びます。</span>
+  <% end %>
+<% end %>
 <div class="flex flex-col gap-6 lg:flex-row">
   <div class="relative self-start max-w-full lg:basis-2/3">
     <img src="<%= image_upload_path(@upload) %>" alt="取り込んだ画像" class="block max-w-full h-auto">

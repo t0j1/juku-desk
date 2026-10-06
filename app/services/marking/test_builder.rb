@@ -24,6 +24,8 @@ module Marking
     validate :check_count_limit, :check_tags_for_mode, :check_difficulty_order
 
     attr_reader :test
+    # 画像のランダム作成など、問題を先に決めて作るとき（承認済みの問題 id）。指定が無ければ条件から選ぶ
+    attr_accessor :question_ids
 
     def tags = tags_text.to_s.split(/[,、\s]+/).map(&:strip).reject(&:empty?).uniq
 
@@ -31,7 +33,7 @@ module Marking
     def save(user)
       return false unless valid?
 
-      picked = picker.pick
+      picked = question_ids.nil? ? picker.pick : pick_by_ids
       if picked.empty?
         errors.add(:base, "条件に合う承認済みの問題がありません")
         return false
@@ -62,6 +64,13 @@ module Marking
         entries.uniq(&:section).map do |e|
           { "section" => e.section, "question_type" => e.question_type, "instruction" => instructions.fetch(e.question_type) }
         end
+      end
+
+      # 指定された問題のうち承認済みのものを、指定の順で
+      def pick_by_ids
+        ids = Array(question_ids).map(&:to_i)
+        found = Question.approved.where(id: ids).index_by(&:id)
+        ids.filter_map { |id| found[id] }
       end
 
       def picker
