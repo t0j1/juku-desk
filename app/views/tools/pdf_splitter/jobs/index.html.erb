@@ -20,21 +20,18 @@
   <p class="caption">ファイルは<%= PdfBlob.retention_days %>日後にサーバーから自動で消えます。</p>
 </div>
 <table id="jobs" class="table-console">
-  <thead><tr><th>ファイル</th><th>ページ</th><th>状態</th><th aria-sort="descending">作成 ↓</th></tr></thead>
+  <thead><tr><th>ファイル</th><th>ページ</th><th>状態</th><th aria-sort="descending">作成 ↓</th><th>操作</th></tr></thead>
   <tbody>
     <% @jobs.each do |job| %>
       <tr>
-        <td><%= link_to job.original_filename, tools_pdf_splitter_job_path(job), class: "font-bold text-text hover:text-primary hover:underline" %></td>
+        <td><%= link_to job.original_filename, tools_pdf_splitter_job_path(job), class: "font-bold text-accent-text hover:underline" %></td>
         <td class="tnum"><%= job.page_count %></td>
-        <td>
-          <div class="flex items-center gap-2">
-            <%= status_pill t("pdf_splitter.status.#{job.status}"), pdf_job_pill_kind(job) %>
-            <% if job.failed? %><%= button_to "再試行", analyze_tools_pdf_splitter_job_path(job), class: "btn-secondary btn-sm", form_class: "inline" %><% end %>
-          </div>
-        </td>
-        <td class="tnum text-text-sub"><time datetime="<%= job.created_at.iso8601 %>"><%= l job.created_at, format: "%Y/%m/%d %H:%M" %></time></td>
+        <td><%= status_pill t("pdf_splitter.status.#{job.status}"), pdf_job_pill_kind(job) %></td>
+        <td class="tnum text-text-sub"><time datetime="<%= job.created_at.iso8601 %>"><%= l job.created_at, format: "%m/%d %H:%M" %></time></td>
+        <td><% if job.failed? %><%= button_to "再試行", analyze_tools_pdf_splitter_job_path(job), class: "btn-secondary btn-sm", form_class: "inline" %><% end %></td>
       </tr>
     <% end %>
+    <% if @jobs.empty? %><tr><td colspan="5" class="text-center text-text-sub">まだファイルはありません</td></tr><% end %>
   </tbody>
 </table>
 </div>

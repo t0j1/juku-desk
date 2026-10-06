@@ -1,26 +1,37 @@
 @import "tailwindcss";
 
-/* ソフト・ニューモーフィズム v2 のトークン（塾日報ステーションと碩学館で共通）。色・影・角丸はここ 1 か所で決め、画面側では直書きしない。
+/* ニューモーフィズム（juku-nippo-ui-spec v1.7 §3）のトークン（塾日報ステーションと碩学館で共通）。
+   色・影・角丸はここ 1 か所で決め、画面側では直書きしない。面と背景は同系色にし、2方向の影（明＋暗）で浮き出し・へこみを表す。
    `@theme static`: 使われていないトークンも CSS 変数（:root）として出す */
 @theme static {
   --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
 
-  /* 背景とカードは同じ色。浮き出し・へこみは影だけで作る */
-  --color-bg: #EDF0F7;
-  --color-surface: #EDF0F7;
+  /* 背景・面（ニューモーフィズム：面と背景を同系色にする） */
+  --color-bg: #EEF1F6;
+  --color-surface: #F2F5FA;
+  --color-line: #DCE3EE;
+
+  /* 影（必ず2方向の影をセットで使う） */
   --color-shadow-hi: #FFFFFF;
-  --color-shadow-lo: #C8CFDF;
+  --color-shadow-lo: #D3DAE6;
   --shadow-raise: 6px 6px 14px var(--color-shadow-lo), -6px -6px 14px var(--color-shadow-hi);
   --shadow-raise-sm: 3px 3px 8px var(--color-shadow-lo), -3px -3px 8px var(--color-shadow-hi);
   --shadow-inset: inset 3px 3px 7px var(--color-shadow-lo), inset -3px -3px 7px var(--color-shadow-hi);
-  --shadow-primary: 4px 4px 10px rgba(91, 75, 224, .35), -4px -4px 10px #FFFFFF;
 
-  --color-text: #252B3B;
-  --color-text-sub: #5A6178;
-  --color-primary: #5B4BE0;
-  --primary-grad: linear-gradient(135deg, #6A5BEA, #5442D6);
-  --color-primary-hover: #4A3BC8;
+  /* 文字 */
+  --color-text: #23272F;
+  --color-text-sub: #5F6B7A;
 
+  /* アクセント（空色）。紫は使わない。塗りに白文字を載せるのは accent-strong のみ */
+  --color-accent: #3FB6DC;        /* 装飾のみ（リング・細いバー・強調アイコン）。文字を載せない */
+  --color-accent-strong: #17789F; /* 白文字を載せる塗り（primary ボタン・選択中セグメント）4.97:1 */
+  --color-accent-text: #12688C;   /* 文字・リンク */
+  --color-accent-soft: #D9EEF6;   /* アイコン枠の背景 */
+  --color-primary: #17789F;       /* accent-strong の別名（既存の text-primary 等を空色にする） */
+  --color-primary-hover: #12688C;
+  --primary-grad: linear-gradient(135deg, #17789F, #12688C);
+
+  /* ステータス */
   --color-ok-fg: #1E7A3E;
   --color-ok-bg: #E3F3E8;
   --color-run-fg: #2F5FC4;
@@ -29,15 +40,18 @@
   --color-err-bg: #FBE6E6;
   --color-warn-fg: #7A4B00;
   --color-warn-bg: #FFF6E0;
+  --color-neu-fg: #5F6B7A;
+  --color-neu-bg: #E3E8F0;
 
-  --color-field-border: #7A8399; /* 入力欄の 1px 線。影だけだと見えないので必須 */
-  --color-row-line: #DCE1EC;
-  --color-card-edge: rgba(255, 255, 255, .6);
+  --color-field-border: #C7D0DE; /* 入力欄の 1px 線。影だけだと見えないので必須 */
+  --color-row-line: #DCE3EE;
 
+  --radius-input: 12px;
   --radius-card: 24px;
   --radius-button: 14px;
   --radius-field: 12px;
   --radius-drop: 18px;
+  --radius-icon: 16px;
   --radius-pill: 999px;
 }
 
@@ -49,27 +63,28 @@
 
 @layer components {
   /* カード：浮き出し。枠線で区切らず影で区切る */
-  .card { @apply rounded-card bg-surface shadow-raise px-8 py-7; border: 1px solid var(--color-card-edge); }
+  .card { @apply rounded-card bg-surface shadow-raise px-8 py-7; }
   .page-title { @apply text-[30px] leading-tight font-bold text-text; }
   .section-title { @apply text-[22px] font-bold text-text; }
   .caption { @apply text-base text-text-sub; }
   .label { @apply block text-lg font-bold text-text mb-1.5; }
 
-  /* ボタン：押せるもの＝浮き出し、押している間はへこむ。primary は 1 画面 1 つ */
+  /* ボタン：押せるもの＝浮き出し、押している間はへこむ。primary は 1 画面 1 つ。
+     白文字を載せる塗りは accent-strong（#17789F・4.97:1）のみ */
   .btn-primary, .btn-secondary, .btn-danger {
     @apply inline-flex items-center justify-center gap-2 h-[52px] px-6 rounded-button text-[19px] font-bold whitespace-nowrap cursor-pointer select-none
-           disabled:opacity-[.55] disabled:cursor-not-allowed;
+           shadow-raise-sm disabled:opacity-[.55] disabled:cursor-not-allowed;
   }
-  .btn-primary { background-image: var(--primary-grad); @apply text-white shadow-primary; }
-  .btn-primary:hover:not(:disabled) { background-image: none; background-color: var(--color-primary-hover); }
-  .btn-primary:active:not(:disabled) { box-shadow: inset 3px 3px 7px rgba(0, 0, 0, .3); }
-  .btn-secondary { @apply bg-bg text-text shadow-raise-sm; }
-  .btn-danger { @apply bg-bg text-err-fg shadow-raise-sm; }
+  .btn-primary { @apply bg-accent-strong text-white; }
+  .btn-primary:hover:not(:disabled) { @apply bg-primary-hover; }
+  .btn-primary:active:not(:disabled) { @apply shadow-inset; }
+  .btn-secondary { @apply bg-surface text-text; }
+  .btn-danger { @apply bg-surface text-err-fg; }
   .btn-secondary:active:not(:disabled), .btn-danger:active:not(:disabled) { @apply shadow-inset; }
   .btn-sm { @apply h-11 px-4 text-[17px]; }
 
-  /* 入力：へこみ＋ 1px の線 */
-  .input { @apply block w-full max-w-[420px] h-[52px] px-4 rounded-field bg-bg text-[19px] text-text shadow-inset; border: 1px solid var(--color-field-border); }
+  /* 入力：へこみ（inset）＋ 1px の線 */
+  .input { @apply block w-full max-w-[420px] h-[52px] px-4 rounded-field bg-surface text-[19px] text-text shadow-inset; border: 1px solid var(--color-field-border); }
   .input[aria-invalid="true"], .input.is-invalid { border-color: var(--color-err-fg); }
   textarea.input { @apply h-auto py-3; }
 
@@ -78,7 +93,34 @@
   .pill-ok { @apply text-ok-fg bg-ok-bg; }
   .pill-busy { @apply text-run-fg bg-run-bg; }
   .pill-ng { @apply text-err-fg bg-err-bg; }
-  .pill-neutral { @apply text-text-sub bg-bg; }
+  .pill-neutral { @apply text-neu-fg bg-neu-bg; }
+
+  /* セグメント（絞り込み）：選択中＝accent-strong の塗り＋白文字、非選択＝浮き出し */
+  .seg { @apply inline-flex items-center justify-center h-11 min-w-11 px-5 rounded-pill text-lg whitespace-nowrap cursor-pointer bg-surface text-text shadow-raise-sm; }
+  .seg:hover { @apply text-accent-text; }
+  .seg[aria-pressed="true"], .seg.is-on { @apply bg-accent-strong text-white font-bold; }
+
+  /* アイコン枠：統計カードなどの 48・角丸16・accent-soft 背景・accent-strong アイコン */
+  .icon-frame { @apply inline-flex items-center justify-center size-12 rounded-icon bg-accent-soft text-accent-strong shrink-0; }
+
+  /* 統計カード：アイコン枠＋数値（36 bold）＋ラベル（16） */
+  .stat-card { @apply rounded-card bg-surface shadow-raise px-6 py-5 flex items-center gap-4; }
+  .stat-value { @apply text-[36px] leading-none font-bold text-text; font-variant-numeric: tabular-nums; }
+  .stat-label { @apply text-base text-text-sub; }
+
+  /* ステッパー・円形の小さなボタン：浮き出し、押下時はへこみ */
+  .icon-btn { @apply inline-flex items-center justify-center size-11 rounded-pill bg-surface text-text shadow-raise-sm cursor-pointer select-none; }
+  .icon-btn:active { @apply shadow-inset; }
+
+  /* 進捗リング：accent の線（太さ 8〜12） */
+  .ring-track { stroke: var(--color-shadow-lo); }
+  .ring-fill { stroke: var(--color-accent); }
+
+  /* トグル：オン＝accent-strong、オフ＝へこみ */
+  .toggle { @apply relative inline-flex items-center h-7 w-12 rounded-pill bg-bg shadow-inset cursor-pointer; }
+  .toggle-knob { @apply absolute left-1 size-5 rounded-pill bg-surface shadow-raise-sm transition-transform; }
+  .toggle[aria-checked="true"] { @apply bg-accent-strong; }
+  .toggle[aria-checked="true"] .toggle-knob { @apply translate-x-5; }
 
   /* 表：外枠なし、行区切りだけ、行高 64 */
   .table-console { @apply w-full text-lg text-text; }
@@ -95,13 +137,13 @@
   .station-seen.is-offline { @apply text-err-fg; }
   .station-actions { @apply flex flex-wrap items-center gap-2; }
   .station-panel-row td { @apply px-4 pb-4; border-bottom: 1px solid var(--color-row-line); }
-  .station-panel { @apply rounded-card bg-surface shadow-raise px-8 py-7; border: 1px solid var(--color-card-edge); }
+  .station-panel { @apply rounded-card bg-surface shadow-raise px-8 py-7; }
   .station:not(:last-of-type) .station-row td { border-bottom: 0; }
   @media (max-width: 1199px) {
     .station-table thead { @apply sr-only; }
     .station-table, .station-table tbody, .station-table tr, .station-table td { display: block; width: 100%; }
     .station-table colgroup { display: none; }
-    .station { @apply rounded-card bg-surface shadow-raise px-6 py-4 mb-4; border: 1px solid var(--color-card-edge); }
+    .station { @apply rounded-card bg-surface shadow-raise px-6 py-4 mb-4; }
     .station-row td { @apply flex items-start gap-3 px-0 py-2; height: auto; border: 0 !important; }
     .station-row td::before { content: attr(data-label); @apply shrink-0 w-28 font-bold text-text-sub; }
     .station-row td.station-actions { display: flex; }
@@ -112,7 +154,7 @@
   .alert-ok { @apply text-lg rounded-field bg-ok-bg text-ok-fg px-4 py-3 font-bold; }
   .alert-err { @apply text-lg rounded-field bg-err-bg text-err-fg px-4 py-3 font-bold; }
   .alert-warn { @apply text-lg rounded-field bg-warn-bg text-warn-fg px-4 py-3 font-bold shadow-raise-sm; }
-  .link { @apply text-lg font-bold text-primary hover:underline; }
+  .link { @apply text-lg font-bold text-accent-text hover:underline; }
   .tnum { font-variant-numeric: tabular-nums; }
 }
 

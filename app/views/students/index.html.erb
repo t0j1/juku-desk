@@ -1,38 +1,63 @@
 <% content_for :title, "生徒データベース" %>
-<div class="flex items-center">
+<% show_empty = @students.empty? && params[:weekday].blank? %>
+<div class="flex items-center mb-6">
   <h1 class="page-title">生徒データベース</h1>
-  <% if current_user.can_write? %><%= link_to new_student_path, class: "btn-primary ml-auto" do %><%= console_icon(:plus) %>生徒を登録<% end %><% end %>
+  <% if current_user.can_write? && !show_empty %><%= link_to new_student_path, class: "btn-primary ml-auto" do %><%= console_icon(:plus) %>生徒を登録<% end %><% end %>
 </div>
-<% if @students.empty? && params[:weekday].blank? %>
+
+<%# 統計カード（§6-6: アイコン枠 48・accent-soft 背景・accent-strong アイコン）。実データのある項目だけ出す %>
+<div class="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
+  <div class="stat-card">
+    <span class="icon-frame"><%= console_icon(:users, size: 24) %></span>
+    <div class="min-w-0"><div class="stat-value"><%= @stats[:enrolled] %></div><div class="stat-label">在籍生徒数</div></div>
+  </div>
+  <div class="stat-card">
+    <span class="icon-frame"><%= console_icon(:printer, size: 24) %></span>
+    <div class="min-w-0"><div class="stat-value"><%= @stats[:print_waiting] %></div><div class="stat-label">印刷待ち</div></div>
+  </div>
+  <div class="stat-card">
+    <span class="icon-frame"><%= console_icon(:scissors, size: 24) %></span>
+    <div class="min-w-0"><div class="stat-value"><%= @stats[:pdf_active] %></div><div class="stat-label">処理中のPDF</div></div>
+  </div>
+  <div class="stat-card">
+    <span class="icon-frame"><%= console_icon(:upload, size: 24) %></span>
+    <div class="min-w-0"><div class="stat-value"><%= @stats[:wordbooks] %></div><div class="stat-label">登録済みの単語帳</div></div>
+  </div>
+</div>
+
+<% if show_empty %>
   <div id="students-empty" class="card flex flex-col items-center justify-center py-16 text-center">
-    <span class="flex items-center justify-center size-16 rounded-full bg-bg shadow-inset text-primary mb-4"><%= console_icon(:users, size: 32) %></span>
+    <span class="flex items-center justify-center size-16 rounded-full bg-bg shadow-inset text-accent-text mb-4"><%= console_icon(:users, size: 32) %></span>
     <p class="text-text-sub mb-6">まだ生徒が登録されていません</p>
-    <%= link_to new_student_path, class: "btn-secondary" do %><%= console_icon(:plus) %>生徒を登録<% end %>
+    <%= link_to new_student_path, class: "btn-primary" do %><%= console_icon(:plus) %>生徒を登録<% end if current_user.can_write? %>
   </div>
 <% else %>
-<div class="card">
-  <div class="mb-5 flex flex-wrap gap-3" role="group" aria-label="通い曜日で絞り込み">
-    <% seg = ->(on) { "inline-flex items-center h-10 px-5 rounded-pill text-lg #{on ? 'bg-bg shadow-inset text-primary font-bold' : 'bg-bg shadow-raise-sm text-text hover:text-primary'}" } %>
-    <%= link_to "全員", students_path, class: seg.(params[:weekday].blank?), aria: { pressed: params[:weekday].blank? } %>
-    <% StudentWeekday::NAMES.each_with_index do |n, i| %>
-      <%= link_to n, students_path(weekday: i), class: seg.(params[:weekday] == i.to_s), aria: { pressed: params[:weekday] == i.to_s } %>
+  <div class="card">
+    <div class="mb-5 flex flex-wrap gap-3" role="group" aria-label="通い曜日で絞り込み">
+      <%= link_to "全員", students_path, class: "seg", aria: { pressed: params[:weekday].blank? } %>
+      <% StudentWeekday::NAMES.each_with_index do |n, i| %>
+        <%= link_to n, students_path(weekday: i), class: "seg", aria: { pressed: params[:weekday] == i.to_s } %>
+      <% end %>
+    </div>
+    <% if @students.empty? %>
+      <p class="py-10 text-center text-text-sub"><%= StudentWeekday::NAMES[params[:weekday].to_i] %>曜日に通う生徒はいません</p>
+    <% else %>
+      <table id="students" class="table-console">
+        <thead>
+          <tr><th>氏名</th><th>学年</th><th>通い曜日</th><th>状態</th><% if current_user.can_write? %><th>操作</th><% end %></tr>
+        </thead>
+        <tbody>
+          <% @students.each do |student| %>
+            <tr>
+              <td><%= link_to student.name, student, class: "font-bold text-text hover:text-accent-text hover:underline" %></td>
+              <td><%= student.grade %></td>
+              <td><%= student.student_weekdays.map(&:label).join("・") %></td>
+              <td><%= student.left_on ? status_pill("退塾（#{l student.left_on}）", :neutral) : status_pill("在籍", :ok) %></td>
+              <% if current_user.can_write? %><td><%= link_to "編集", edit_student_path(student), class: "btn-secondary btn-sm" %></td><% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
     <% end %>
   </div>
-  <table id="students" class="table-console">
-    <thead>
-      <tr><th>氏名</th><th>学年</th><th>通い曜日</th><th>状態</th></tr>
-    </thead>
-    <tbody>
-      <% @students.each do |student| %>
-        <tr>
-          <td><%= link_to student.name, student, class: "font-bold text-text hover:text-primary hover:underline" %></td>
-          <td><%= student.grade %></td>
-          <td><%= student.student_weekdays.map(&:label).join("・") %></td>
-          <td><%= student.left_on ? status_pill("退塾（#{l student.left_on}）", :neutral) : status_pill("在籍", :ok) %></td>
-        </tr>
-      <% end %>
-      <% if @students.empty? %><tr><td colspan="4" class="text-center text-text-sub">該当する生徒はいません</td></tr><% end %>
-    </tbody>
-  </table>
-</div>
 <% end %>

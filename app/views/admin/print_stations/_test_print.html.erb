@@ -15,7 +15,7 @@
         <div class="flex items-center gap-2"><span class="w-20"><%= label %></span>
           <%= f.select key, [ [ "選んでください", "" ], [ "はい（正しい）", "yes" ], [ "いいえ（おかしい）", "no" ] ], {}, class: "input !w-auto", "aria-label": "#{label}の結果" %></div>
       <% end %>
-      <%= f.submit "結果を保存", class: "btn-primary btn-sm cursor-pointer" %>
+      <%= f.submit "結果を保存", class: "btn-secondary btn-sm cursor-pointer" %>
     <% end %>
   <% elsif job&.pending? || job&.leased? %>
     <p class="caption mb-2">印刷待ちです。刷れたら結果を入力できます。</p>

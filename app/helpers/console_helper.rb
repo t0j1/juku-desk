@@ -29,7 +29,7 @@ module ConsoleHelper
   end
 
   def nav_item(label, path, icon, active:)
-    classes = "flex items-center gap-3 h-16 px-4 rounded-button text-lg " +
+    classes = "flex items-center gap-3 h-12 px-4 rounded-button text-lg " +
       (active ? "bg-bg font-bold text-text shadow-inset" : "text-text-sub hover:text-text")
     link_to path, class: classes, aria: { current: (active ? "page" : nil) } do
       safe_join([ console_icon(icon), tag.span(label) ])
