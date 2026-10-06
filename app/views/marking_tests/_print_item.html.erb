@@ -32,9 +32,9 @@
         <div class="mt-source"><%= p["source"] %></div>
         <div class="mt-ruled mt-ruled-translate" aria-label="解答欄"></div>
       <% else %>
-        <div class="mt-text"><%= q.question_text %></div>
+        <div class="mt-text"><%= q.math_text(q.question_text) %></div>
         <% if q.options.any? %>
-          <ol class="mt-options"><% q.options.each.with_index(1) do |o, i| %><li><span class="mt-opt-no"><%= i %></span><%= o %></li><% end %></ol>
+          <ol class="mt-options"><% q.options.each.with_index(1) do |o, i| %><li><span class="mt-opt-no"><%= i %></span><%= q.math_text(o) %></li><% end %></ol>
         <% else %>
           <div class="mt-ruled" aria-label="解答欄"></div>
         <% end %>
@@ -47,9 +47,9 @@
           <% end %>
         </ol>
       <% else %>
-        <div class="mt-answer"><%= q.answer_text %></div>
+        <div class="mt-answer"><%= q.math_text(q.answer_text) %></div>
       <% end %>
-      <% if q.explanation.present? %><div class="mt-expl"><%= q.explanation %></div><% end %>
+      <% if q.explanation.present? %><div class="mt-expl"><%= q.math_text(q.explanation) %></div><% end %>
     <% end %>
   </div>
 </li>

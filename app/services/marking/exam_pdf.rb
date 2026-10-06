@@ -85,7 +85,7 @@ class Marking::ExamPdf
         para p["ja"]
         para reorder_line(p)
       when "passage"
-        para q.question_text if q.question_text.present? && ![ p["body"] ].include?(q.question_text)
+        para q.math_text(q.question_text) if q.question_text.present? && ![ p["body"] ].include?(q.question_text)
         para strip_markup(p["body"])
         subs = Array(p["sub_questions"]).grep(Hash)
         if subs.any?
@@ -100,9 +100,9 @@ class Marking::ExamPdf
         para p["source"]
         ruled(3)
       else
-        para q.question_text
+        para q.math_text(q.question_text)
         if q.options.any?
-          q.options.each.with_index(1) { |o, i| para "#{i}　#{o}" }
+          q.options.each.with_index(1) { |o, i| para "#{i}　#{q.math_text(o)}" }
         else
           ruled(2)
         end
@@ -115,9 +115,9 @@ class Marking::ExamPdf
       if layout(q) == "passage" && subs.any? { |sq| sq["answer"].present? }
         subs.each.with_index(1) { |sq, i| para "(#{i}) #{sq["answer"]}" }
       else
-        para q.answer_text
+        para q.math_text(q.answer_text)
       end
-      para "解説：#{q.explanation}", size: 9 if q.explanation.present?
+      para "解説：#{q.math_text(q.explanation)}", size: 9 if q.explanation.present?
     end
 
     def para(text, **opts)

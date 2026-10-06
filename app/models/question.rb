@@ -1,6 +1,10 @@
 # Gemini が赤枠の領域から作った問題。subject が null（または 5 科目以外だったもの）は「要確認」。
 class Question < ApplicationRecord
   SUBJECTS = %w[英語 数学 国語 理科 社会].freeze
+  MATH_SUBJECTS = %w[数学 理科].freeze
+
+  # 数学・理科は、$ で囲まれていない数式を囲んでから描く（古いデータや AI の囲み忘れ向け）
+  def math_text(text) = MATH_SUBJECTS.include?(subject) ? Marking::MathAutoWrap.call(text) : text.to_s
   NEEDS_CONFIRMATION_TAG = "要確認".freeze
   # 問題形式（今は英語だけ判定する。英語以外は null）と、形式ごとの payload のキー
   TYPES = %w[reorder translate_en_ja compose_ja_en passage fill_blank choice free].freeze
