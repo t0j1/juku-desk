@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_06_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_06_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -77,6 +77,47 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_100000) do
     t.boolean "generate_answers", default: true, null: false
     t.index ["status"], name: "index_crop_regions_on_status"
     t.index ["upload_id"], name: "index_crop_regions_on_upload_id"
+  end
+
+  create_table "daily_schedule_executions", force: :cascade do |t|
+    t.bigint "daily_schedule_task_id", null: false
+    t.datetime "scheduled_at", null: false
+    t.datetime "executed_at"
+    t.string "status", null: false
+    t.text "message"
+    t.bigint "print_job_id"
+    t.text "draft_text"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["daily_schedule_task_id", "scheduled_at"], name: "index_daily_schedule_executions_once", unique: true
+    t.index ["daily_schedule_task_id"], name: "index_daily_schedule_executions_on_daily_schedule_task_id"
+    t.index ["print_job_id"], name: "index_daily_schedule_executions_on_print_job_id"
+  end
+
+  create_table "daily_schedule_tasks", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "execution_time", null: false
+    t.string "repeat_type", null: false
+    t.integer "custom_weekdays", default: [], null: false, array: true
+    t.date "once_date"
+    t.string "execution_type", null: false
+    t.boolean "enabled", default: true, null: false
+    t.bigint "created_by_id"
+    t.bigint "print_station_id"
+    t.string "tray"
+    t.string "duplex"
+    t.integer "copies", default: 1, null: false
+    t.string "r2_key"
+    t.binary "pdf_data"
+    t.string "sha256"
+    t.integer "byte_size"
+    t.string "template_key"
+    t.string "save_destination"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_daily_schedule_tasks_on_created_by_id"
+    t.index ["print_station_id"], name: "index_daily_schedule_tasks_on_print_station_id"
+    t.index ["r2_key"], name: "index_daily_schedule_tasks_on_r2_key", unique: true
   end
 
   create_table "gemini_quotas", force: :cascade do |t|
@@ -469,6 +510,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_100000) do
   add_foreign_key "audit_logs", "users"
   add_foreign_key "audit_logs", "users", column: "impersonator_id"
   add_foreign_key "crop_regions", "uploads", on_delete: :cascade
+  add_foreign_key "daily_schedule_executions", "daily_schedule_tasks"
+  add_foreign_key "daily_schedule_executions", "print_jobs"
+  add_foreign_key "daily_schedule_tasks", "print_stations"
+  add_foreign_key "daily_schedule_tasks", "users", column: "created_by_id"
   add_foreign_key "job_progresses", "users", on_delete: :nullify
   add_foreign_key "login_events", "users", on_delete: :nullify
   add_foreign_key "mail_templates", "users", column: "updated_by_id", on_delete: :nullify
