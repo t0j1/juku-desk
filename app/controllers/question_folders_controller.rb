@@ -18,7 +18,7 @@ class QuestionFoldersController < ApplicationController
 
   def show
     @uploads = @folder.uploads.includes(crop_regions: :questions).order("question_folder_uploads.id")
-    @addable = Upload.where.not(id: @folder.upload_ids).order(id: :desc).limit(200)
+    @addable = Upload.where.not(id: @folder.folder_uploads.select(:upload_id)).order(id: :desc).limit(200)
     @approved = @folder.approved_questions.includes(region: :upload).order(:id)
   end
 
