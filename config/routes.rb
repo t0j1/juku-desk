@@ -129,6 +129,12 @@ Rails.application.routes.draw do
 
   # schedule-web を juku-desk のレイアウト（サイドバー）の中に iframe で埋め込む（SCHEDULE_WEB_URL が必要）
   get "schedule" => "schedule#index", as: :schedule
+  # 1日のスケジュール（定時に動くタスク: 印刷・書類の原案）。実行は DailyScheduleJob
+  get "schedule/daily" => "daily_schedule#index", as: :daily_schedule
+  resources :daily_schedule_tasks, only: %i[ create update destroy ] do
+    post :toggle, on: :member
+    post :duplicate, on: :member
+  end
   get "schedule/admin" => "schedule#admin", as: :schedule_admin
   get "schedule/pickup" => "schedule#pickup", as: :schedule_pickup
   post "schedule/token" => "schedule_tokens#create", as: :schedule_token

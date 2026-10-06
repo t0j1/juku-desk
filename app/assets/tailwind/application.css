@@ -92,6 +92,7 @@
   .pill { @apply inline-flex items-center gap-1.5 h-[34px] px-3.5 rounded-pill text-base font-bold whitespace-nowrap shadow-raise-sm; }
   .pill-ok { @apply text-ok-fg bg-ok-bg; }
   .pill-busy { @apply text-run-fg bg-run-bg; }
+  .pill-warn { @apply text-warn-fg bg-warn-bg; }
   .pill-ng { @apply text-err-fg bg-err-bg; }
   .pill-neutral { @apply text-neu-fg bg-neu-bg; }
 

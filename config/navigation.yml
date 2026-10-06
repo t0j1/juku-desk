@@ -4,7 +4,7 @@
 #                controllers = 現在地とみなす画面。"名前*" は前方一致、"名前#アクション" はアクションまで指定。
 #                except = 上のうち、除外する画面
 # スケジュール: schedule-web は juku-desk のレイアウトに iframe で埋め込む（ScheduleController）ので、ここも route で書く。
-#              env の URL が未設定ならグループごと出さない（直接開いた /schedule では「未設定」と表示する）。
+#              env を持つ項目は、その URL が未設定なら出さない（項目が 1 つも残らないグループは出さない）。「1日のスケジュール」は juku-desk 内なので env なし（直接開いた /schedule では「未設定」と表示する）。
 #              schedule-web のナビ（apps/schedule-web/public/js/nav-config.js）と並びをそろえる。
 groups:
   - label: 塾日報ステーション
@@ -15,8 +15,8 @@ groups:
       - { label: 小テスト作成, route: new_quiz, icon: pencil, controllers: [ quizzes ] }
       - { label: マーキング検出, route: uploads, icon: upload, controllers: [ uploads, crop_regions, questions, marking_tests, section_templates ] }
   - label: スケジュール
-    env: SCHEDULE_WEB_URL
     items:
-      - { label: 年間スケジュール, route: schedule, icon: calendar, controllers: [ "schedule#index" ] }
-      - { label: 管理画面, route: schedule_admin, icon: settings, controllers: [ "schedule#admin" ] }
-      - { label: 生徒ページ, route: schedule_pickup, icon: car, controllers: [ "schedule#pickup" ] }
+      - { label: 1日のスケジュール, route: daily_schedule, icon: clock, controllers: [ daily_schedule, daily_schedule_tasks ] }
+      - { label: 年間スケジュール, route: schedule, icon: calendar, env: SCHEDULE_WEB_URL, controllers: [ "schedule#index" ] }
+      - { label: 管理画面, route: schedule_admin, icon: settings, env: SCHEDULE_WEB_URL, controllers: [ "schedule#admin" ] }
+      - { label: 生徒ページ, route: schedule_pickup, icon: car, env: SCHEDULE_WEB_URL, controllers: [ "schedule#pickup" ] }

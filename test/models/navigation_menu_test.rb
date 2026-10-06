@@ -7,15 +7,16 @@ class NavigationMenuTest < ActiveSupport::TestCase
 
   def active_labels(groups) = groups.flat_map(&:items).select(&:active).map(&:label)
 
-  test "without SCHEDULE_WEB_URL only the juku-desk group is shown" do
+  test "without SCHEDULE_WEB_URL the schedule group only has the juku-desk daily schedule" do
     groups = menu
-    assert_equal [ "塾日報ステーション" ], groups.map(&:label)
+    assert_equal [ "塾日報ステーション", "スケジュール" ], groups.map(&:label)
     assert_equal %w[生徒データベース PDF分割 印刷 小テスト作成 マーキング検出], groups.first.items.map(&:label)
+    assert_equal [ "1日のスケジュール" ], groups.last.items.map(&:label)
   end
 
-  test "a blank or invalid SCHEDULE_WEB_URL hides the group too" do
+  test "a blank or invalid SCHEDULE_WEB_URL hides the embedded schedule pages" do
     [ "", "  ", "javascript:alert(1)", "not a url", "ftp://example.com" ].each do |value|
-      assert_equal 1, menu(env: { "SCHEDULE_WEB_URL" => value }).size, value.inspect
+      assert_equal [ "1日のスケジュール" ], menu(env: { "SCHEDULE_WEB_URL" => value }).last.items.map(&:label), value.inspect
     end
   end
 
@@ -23,8 +24,8 @@ class NavigationMenuTest < ActiveSupport::TestCase
     groups = menu(env: { "SCHEDULE_WEB_URL" => "https://sekigaku.example.pages.dev/" })
     assert_equal [ "塾日報ステーション", "スケジュール" ], groups.map(&:label)
     items = groups.last.items
-    assert_equal %w[年間スケジュール 管理画面 生徒ページ], items.map(&:label)
-    assert_equal %w[/schedule /schedule/admin /schedule/pickup], items.map(&:href)
+    assert_equal %w[1日のスケジュール 年間スケジュール 管理画面 生徒ページ], items.map(&:label)
+    assert_equal %w[/schedule/daily /schedule /schedule/admin /schedule/pickup], items.map(&:href)
     assert items.none?(&:external)
   end
 
@@ -33,6 +34,10 @@ class NavigationMenuTest < ActiveSupport::TestCase
     { "index" => "年間スケジュール", "admin" => "管理画面", "pickup" => "生徒ページ" }.each do |action, label|
       assert_equal [ label ], active_labels(menu(controller_path: "schedule", action_name: action, env:))
     end
+  end
+
+  test "the daily schedule is highlighted" do
+    assert_equal [ "1日のスケジュール" ], active_labels(menu(controller_path: "daily_schedule"))
   end
 
   test "the current screen is highlighted" do
