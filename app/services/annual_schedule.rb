@@ -10,10 +10,24 @@ class AnnualSchedule
       return nil if start_time.blank?
       [ start_time, end_time ].compact_blank.map { |t| t[0, 5] }.join("〜")
     end
+
+    def timed? = start_time.present?
+
+    def starts_at(date) = Time.zone.parse("#{date.iso8601} #{start_time}")
+
+    def ends_at(date) = end_time.present? ? Time.zone.parse("#{date.iso8601} #{end_time}") : nil
+
+    # 授業中（開始 ≦ いま < 終了）。終了時刻がなければ進行中とは言わない
+    def ongoing?(date, now) = timed? && ends_at(date).present? && starts_at(date) <= now && now < ends_at(date)
   end
 
   # error が true のときは「取得できません」を出す（events は空）
-  Result = Struct.new(:events, :error, keyword_init: true)
+  Result = Struct.new(:events, :error, keyword_init: true) do
+    # 時刻つきはタスクと同じタイムラインに混ぜ、時刻なし（休暇・休講など）は上部のブロックに残す
+    def timed = events.select(&:timed?)
+
+    def untimed = events.reject(&:timed?)
+  end
 
   CACHE_TTL = 5.minutes
   TIMEOUT = 3 # 秒

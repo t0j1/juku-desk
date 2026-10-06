@@ -25,8 +25,8 @@ class DailyScheduleAnnualTest < ActionDispatch::IntegrationTest
     respond_with 200, [ { type: "高2授業", title: "数学", start_time: "18:30:00", end_time: "21:40:00" } ]
     get daily_schedule_path(date: DAY.iso8601)
     assert_response :success
-    assert_select "#annual-events .annual-event", count: 1, text: /18:30〜21:40.*高2授業.*数学/m
-    assert_select "#annual-events a, #annual-events button, #annual-events form", count: 0
+    assert_select "#timeline .annual-timed", count: 1, text: /18:30〜21:40.*年間.*高2授業.*数学/m
+    assert_select "#timeline .annual-timed a, #timeline .annual-timed button, #timeline .annual-timed form", count: 0
     assert_select ".btn-primary", count: 1, text: "タスクを追加"
   end
 
@@ -96,5 +96,58 @@ class DailyScheduleAnnualTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_empty @calls
     assert_select "#annual-events", count: 0
+  end
+
+  def make_task(name, time)
+    DailyScheduleTask.create!(name: name, execution_time: time, repeat_type: "daily", execution_type: "create_draft", template_key: "daily_report", save_destination: "drafts", enabled: true)
+  end
+
+  def timeline_labels
+    css_select("#timeline ol > li").map { |li| li["id"] == "now-line" ? "now" : (li["data-annual-at"] ? "annual:#{li["data-annual-at"]}" : "task") }
+  end
+
+  test "timed annual events are mixed into the timeline in time order, with a task at the same time shown too, and untimed ones stay on top" do
+    make_task("朝の日報", "08:00")
+    make_task("同時刻の日報", "19:20")
+    respond_with 200, [ { type: "高2授業", title: "数学", start_time: "19:20:00", end_time: "22:00:00" }, { type: "休講", title: "台風", start_time: nil, end_time: nil } ]
+    travel_to(Time.zone.local(2026, 10, 7, 23, 0)) { get daily_schedule_path(date: DAY.iso8601) }
+    assert_equal [ "task", "task", "annual:19:20", "now" ], timeline_labels
+    assert_select "#timeline ol > li:nth-child(2)", /同時刻の日報/
+    assert_select "#annual-events .annual-event", count: 1, text: /時間なし.*休講/m
+    assert_select "#timeline ol .annual-timed", /19:20〜22:00/
+  end
+
+  test "the now line sits at the right place among mixed rows and a lesson in progress is marked" do
+    make_task("朝の日報", "08:00")
+    respond_with 200, [ { type: "高2授業", title: "数学", start_time: "19:20:00", end_time: "22:00:00" } ]
+    travel_to Time.zone.local(2026, 10, 7, 20, 0) do
+      get daily_schedule_path(date: DAY.iso8601)
+      assert_equal [ "task", "annual:19:20", "now" ], timeline_labels
+      assert_select ".annual-timed .annual-ongoing", text: "進行中"
+    end
+    travel_to Time.zone.local(2026, 10, 7, 19, 0) do
+      get daily_schedule_path(date: DAY.iso8601)
+      assert_equal [ "task", "now", "annual:19:20" ], timeline_labels
+      assert_select ".annual-ongoing", count: 0
+    end
+    travel_to Time.zone.local(2026, 10, 7, 22, 0) do
+      get daily_schedule_path(date: DAY.iso8601)
+      assert_select ".annual-ongoing", count: 0
+    end
+  end
+
+  test "when the fetch fails the notice stays and the tasks still show" do
+    make_task("朝の日報", "08:00")
+    AnnualSchedule.transport = ->(_d) { [ 500, "" ] }
+    get daily_schedule_path(date: DAY.iso8601)
+    assert_select "#annual-events", /取得できません/
+    assert_select "#task_#{DailyScheduleTask.last.id}"
+    assert_select ".annual-timed", count: 0
+  end
+
+  test "no text on the annual rows is smaller than 16px" do
+    respond_with 200, [ { type: "高2授業", title: "数学", start_time: "19:20:00", end_time: nil }, { type: "休暇", title: "", start_time: nil, end_time: nil } ]
+    get daily_schedule_path(date: DAY.iso8601)
+    assert_select "#annual-events .text-sm, #annual-events .text-xs, .annual-timed .text-sm, .annual-timed .text-xs", count: 0
   end
 end

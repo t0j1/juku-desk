@@ -1,0 +1,12 @@
+<%# タイムラインの 1 行（時刻つきの年間予定・読み取り専用）。event, date, now。タスクの行とは「年間」ラベルと種別色の帯で区別する %>
+<% color = AnnualSchedule.color_for(event.type) %>
+<% ongoing = event.ongoing?(date, now) %>
+<li class="annual-event annual-timed flex items-center gap-4 py-4 border-l-4 pl-3 -ml-3" style="border-left-color: <%= color %>" data-annual-at="<%= event.start_time[0, 5] %>">
+  <span class="text-[19px] font-bold tnum shrink-0"><%= event.time_label %></span>
+  <span class="min-w-0 flex-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+    <span class="text-base font-bold text-text-sub border border-row-line rounded-pill px-2">年間</span>
+    <span class="text-base font-bold shrink-0" style="color: <%= color %>"><%= event.type %></span>
+    <span class="min-w-0 truncate text-[19px] font-bold text-text"><%= event.title %></span>
+    <% if ongoing %><span class="annual-ongoing text-base font-bold text-primary">進行中</span><% end %>
+  </span>
+</li>
