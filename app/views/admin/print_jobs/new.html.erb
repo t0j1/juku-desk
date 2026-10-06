@@ -3,7 +3,7 @@
 <% if @stations.empty? %>
   <p class="card max-w-xl">先に<%= link_to "印刷ステーションを登録", new_admin_print_station_path, class: "link" %>してください。</p>
 <% else %>
-  <%= form_with model: [ :admin, @job ], multipart: true, class: "card max-w-xl space-y-4" do |f| %>
+  <%= form_with model: [ :admin, @job ], multipart: true, class: "card max-w-xl space-y-4", data: { controller: "driver-preset" } do |f| %>
     <% if @error %><div id="error_explanation" class="alert-err" role="alert"><%= @error %></div><% end %>
     <div><%= f.label :output_id, "印刷する PDF（PDF 分割の出力から）", class: "label" %>
       <%= select_tag "print_job[output_id]", options_for_select(@outputs.map { |o| [ "#{o.display_name}（#{o.pdf_split_job.original_filename} #{o.pages_label}）", o.id ] }), include_blank: "選んでください", id: "print_job_output_id", class: "input mt-1 !w-auto" %></div>
@@ -19,7 +19,12 @@
     <div><%= f.label :duplex, "とじ方（両面の長辺・短辺）", class: "label" %><%= f.select :duplex, PrintJobsHelper::DUPLEXES, {}, class: "input mt-1 !w-auto" %>
       <p class="caption mt-1">教室PCで両面の向きを指定します。指定なしならドライバーの設定のままです。</p></div>
     <div><%= f.label :staple, "ホチキス（表示用）", class: "label" %><%= f.select :staple, PrintJobsHelper::STAPLES, { include_blank: false }, class: "input mt-1 !w-auto" %></div>
-    <div><%= f.label :driver_preset, "ドライバーの印刷設定の名前", class: "label" %><%= f.text_field :driver_preset, maxlength: 100, class: "input mt-1" %>
+    <div><%= f.label :driver_preset, "ドライバーの印刷設定の名前", class: "label" %>
+      <div class="relative" data-driver-preset-target="select">
+        <%= f.select :driver_preset, PrintPreset.for_select, { include_blank: true }, class: "input mt-1", "aria-label": "ドライバーの印刷設定の名前", data: { driver_preset_target: "select", action: "driver-preset#handleChange" } %>
+        <%= f.text_field :driver_preset, maxlength: PrintPreset::MAX_NAME_LENGTH, placeholder: "新しいプリセット名", class: "input mt-1", hidden: true, "aria-label": "新しいプリセット名", data: { driver_preset_target: "input" } %>
+        <%= f.hidden_field :driver_preset, data: { driver_preset_target: "hidden" } %>
+      </div>
       <p class="caption mt-1">教室PCのプリンターに作っておいた設定（例：A4両面・左上ホチキス）。ホチキスは、この設定で指定します。</p></div>
     <%= f.submit "作る", class: "btn-primary cursor-pointer" %>
   <% end %>
