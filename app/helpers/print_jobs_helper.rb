@@ -25,9 +25,9 @@ module PrintJobsHelper
     options << [ "#{selected}（現在の値）", selected ] if selected.present? && names.exclude?(selected)
     options << [ "新しく追加する…", DriverPreset::NEW ]
     selected = names.first.to_s if selected.blank? && blank_label.nil?
-    tag.span(data: { controller: "preset-select" }, class: "inline-flex flex-wrap items-center gap-2") do
-      select_tag("#{scope}[#{field}]", options_for_select(options, selected), class: "#{input_class} !w-auto", "aria-label": "ドライバーの設定名", data: { preset_select_target: "select", action: "preset-select#toggle" }) +
-        text_field_tag("#{scope}[#{field}_new]", nil, maxlength: DriverPreset::NAME_MAX, placeholder: "新しい設定名", hidden: true, class: "#{input_class} !w-56", "aria-label": "新しいドライバー設定名", data: { preset_select_target: "input" })
+    tag.span(data: { controller: "preset-select" }, class: "inline-flex flex-wrap items-center gap-2 max-w-full min-w-0") do
+      select_tag("#{scope}[#{field}]", options_for_select(options, selected), class: [ input_class, ("!w-auto" unless input_class.include?("!w-")), "max-w-full min-w-0" ].compact.join(" "), "aria-label": "ドライバーの設定名", data: { preset_select_target: "select", action: "preset-select#toggle" }) +
+        text_field_tag("#{scope}[#{field}_new]", nil, maxlength: DriverPreset::NAME_MAX, placeholder: "新しい設定名", hidden: true, class: "#{input_class} !w-56 max-w-full min-w-0", "aria-label": "新しいドライバー設定名", data: { preset_select_target: "input" })
     end
   end
 end
