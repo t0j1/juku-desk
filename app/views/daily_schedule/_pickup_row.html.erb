@@ -1,0 +1,9 @@
+<%# タイムラインの 1 行（承認済みの送迎の便・読み取り専用・生徒名なし）。pickup: ApprovedPickups::Pickup %>
+<li class="pickup-row flex items-center gap-4 py-4 border-l-4 pl-3 -ml-3" style="border-left-color: #0f766e" data-pickup-at="<%= pickup.time_label %>">
+  <span class="text-[19px] font-bold tnum shrink-0"><%= pickup.time_label %></span>
+  <span class="min-w-0 flex-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+    <span class="text-base font-bold text-text-sub border border-row-line rounded-pill px-2">送迎</span>
+    <span class="text-[19px] font-bold text-text tnum">送迎 <%= pickup.time_label %>／乗車 <%= pickup.party_count %>/<%= pickup.max_capacity %></span>
+    <% if pickup.place.present? %><span class="min-w-0 truncate text-base text-text-sub"><%= pickup.place %></span><% end %>
+  </span>
+</li>

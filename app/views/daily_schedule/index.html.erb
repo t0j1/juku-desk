@@ -19,8 +19,8 @@
 <div class="grid grid-cols-1 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
   <section id="timeline" class="card !px-6 min-w-0" aria-label="タイムライン">
     <%= render "daily_schedule/annual", annual: @annual if @annual && (@annual.error || @annual.untimed.any?) %>
-    <%# タスクと、時刻つきの年間予定を、時刻順に混ぜる（同時刻はタスクが先。どちらも出す） %>
-    <% entries = @tasks.map { |task| [ task.scheduled_at_on(@date), 0, task ] } + (@annual && !@annual.error ? @annual.timed : []).map { |event| [ event.starts_at(@date), 1, event ] } %>
+    <%# タスクと、時刻つきの年間予定・送迎を、時刻順に混ぜる（同時刻はタスク→年間→送迎の順。すべて出す） %>
+    <% entries = @tasks.map { |task| [ task.scheduled_at_on(@date), 0, task ] } + (@annual && !@annual.error ? @annual.timed : []).map { |event| [ event.starts_at(@date), 1, event ] } + (@pickups || []).map { |pickup| [ pickup.starts_at(@date), 2, pickup ] } %>
     <% entries = entries.each_with_index.sort_by { |(at, rank, _), i| [ at, rank, i ] }.map(&:first) %>
     <% if entries.empty? %>
       <div class="py-10 text-center">
@@ -39,6 +39,8 @@
           <% end %>
           <% if item.is_a?(AnnualSchedule::Event) %>
             <%= render "daily_schedule/annual_row", event: item, date: @date, now: now %>
+          <% elsif item.is_a?(ApprovedPickups::Pickup) %>
+            <%= render "daily_schedule/pickup_row", pickup: item %>
           <% else %>
             <%= render "daily_schedule/row", task: item, at: at, execution: @executions[item.id], now: now %>
           <% end %>

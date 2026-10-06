@@ -5,6 +5,7 @@ class DailyScheduleController < ApplicationController
   def index
     load_day(parse_date(params[:date]), selected_id: params[:task])
     @annual = AnnualSchedule.new.events_on(@date) if AnnualSchedule.configured?
+    @pickups = ApprovedPickups.new.on(@date)
     if params[:new].present?
       @form_task = DailyScheduleTask.new(execution_type: "print", repeat_type: "daily", execution_time: "08:00", copies: 1, enabled: true)
     elsif params[:edit].present?
