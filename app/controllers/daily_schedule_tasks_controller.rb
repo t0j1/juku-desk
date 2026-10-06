@@ -2,7 +2,7 @@
 class DailyScheduleTasksController < ApplicationController
   include DailySchedulePage
 
-  PERMITTED = %i[ name execution_time repeat_type once_date execution_type enabled print_station_id duplex copies template_key save_destination ].freeze
+  PERMITTED = %i[ name execution_time repeat_type once_date execution_type enabled print_station_id duplex copies driver_preset template_key save_destination ].freeze
 
   before_action :set_task, only: %i[ update destroy toggle duplicate ]
 

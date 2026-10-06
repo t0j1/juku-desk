@@ -38,6 +38,7 @@ class DailyScheduleTask < ApplicationRecord
     self.custom_weekdays = [] unless repeat_type == "custom"
     self.once_date = nil unless repeat_type == "once"
     self.duplex = duplex.presence
+    self.driver_preset = driver_preset.presence
   end
   after_destroy_commit { PdfStorage.r2.delete(r2_key) if r2_key.present? }
   after_save_commit do
@@ -153,6 +154,7 @@ class DailyScheduleTask < ApplicationRecord
       return [ "skipped", "ステーション「#{station.name}」の用紙がないため、印刷していません" ] if station.paper_status == "empty"
 
       job = PrintJob.create_with_pdf!(station: station, title: name, data: pdf_bytes, copies: copies, duplex: duplex,
+                                      driver_preset: driver_preset.presence,
                                       scheduled_at: at, expires_at: at + DailyScheduleJob::GRACE, created_by: created_by)
       execution.update!(print_job: job)
       [ "executed", "印刷ジョブを作りました（ステーションに渡しました）" ]
