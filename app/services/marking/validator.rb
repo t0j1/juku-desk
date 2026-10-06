@@ -52,10 +52,13 @@ module Marking
       valid_subject = Question::SUBJECTS.include?(subject)
       type = question_type(item, valid_subject ? subject : nil)
 
+      wrap = valid_subject && Question::MATH_SUBJECTS.include?(subject) ? MathAutoWrap.method(:call) : :itself.to_proc
+      question, answer = wrap.(question), wrap.(answer)
+      options = Array(options).map { |o| wrap.(o.strip) }
       [ {
-        subject: valid_subject ? subject : nil, source_label: item["source_label"].to_s.strip.presence, question_text: question, options: Array(options).map(&:strip),
+        subject: valid_subject ? subject : nil, source_label: item["source_label"].to_s.strip.presence, question_text: question, options: options,
         question_type: type, payload: Question.normalize_payload(type, item["payload"]),
-        answer_text: answer, answer_source: answer.present? && !from_material ? "ai" : "material", explanation: item["explanation"].to_s.strip, tags: tags, raw_ai: { "response" => item, "model" => GeminiConfig.model }
+        answer_text: answer, answer_source: answer.present? && !from_material ? "ai" : "material", explanation: wrap.(item["explanation"].to_s.strip), tags: tags, raw_ai: { "response" => item, "model" => GeminiConfig.model }
       }, nil ]
     end
 

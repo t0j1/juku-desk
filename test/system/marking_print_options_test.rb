@@ -53,6 +53,19 @@ class MarkingPrintOptionsTest < ApplicationSystemTestCase
     end
   end
 
+  test "bare math in the answer print is rendered with KaTeX (superscripts and fractions); wrapped math and dollar prose are unchanged" do
+    region = make_regions(1, status: :extracted).first
+    region.questions.create!(question_text: "三角関数の問題", answer_text: "$a^2$ と cos^2 x、7/6π", explanation: "(1/2) sin 2x = 1/4 で、価格は $5 です。",
+                             answer_source: "material", subject: "数学", reviewed_at: Time.current)
+    open_print("解答用を印刷") do
+      assert_selector ".mt-answer .katex", minimum: 3
+      assert_selector ".mt-answer .msupsub"
+      assert_selector ".mt-expl .mfrac"
+      assert_text "価格は $5 です"
+      assert_no_text "cos^2"
+    end
+  end
+
   test "no-lines keeps the normal height and only drops the ruled background, and going back restores it" do
     open_print do
       normal = ruled_height
