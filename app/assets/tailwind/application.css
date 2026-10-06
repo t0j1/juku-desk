@@ -221,6 +221,17 @@
 .mt-ruled-1 { height: 8mm; margin-top: 1mm; }
 .mt-ruled-translate { height: 24mm; }
 .mt-item-passage { break-inside: auto; page-break-inside: auto; }
+/* 解答欄の広さ（印刷画面で選ぶ。既定の「ふつう」は上の値のまま） */
+.mt-sheet[data-answer-size="narrow"] .mt-ruled { height: 8mm; }
+.mt-sheet[data-answer-size="narrow"] .mt-ruled-translate { height: 16mm; }
+.mt-sheet[data-answer-size="wide"] .mt-ruled { height: 32mm; }
+.mt-sheet[data-answer-size="wide"] .mt-ruled-translate { height: 40mm; }
+.mt-sheet[data-answer-size="wide"] .mt-ruled-1 { height: 14mm; }
+/* ページ内の配置：問題を 1 ページ分ずつに分けた <ol>。「等間隔」は 1 ページの高さに広げて、問題の間をそろえて空ける */
+.mt-page { display: flex; flex-direction: column; }
+.mt-page[data-even] { justify-content: space-between; }
+.mt-page[data-even] .mt-item { margin-bottom: 0; }
+.mt-page-break { break-after: page; page-break-after: always; }
 @media print {
   .mt-sheet { padding: 0; box-shadow: none; border: 0; max-width: none; }
   .marking-print, .mt-sheet { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
