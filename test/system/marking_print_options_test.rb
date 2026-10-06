@@ -54,6 +54,7 @@ class MarkingPrintOptionsTest < ApplicationSystemTestCase
   end
 
   test "bare math in the answer print is rendered with KaTeX (superscripts and fractions); wrapped math and dollar prose are unchanged" do
+    Question.delete_all # setup の 5 問のうち 1 問だけが選ばれると、数式の問題が出ないことがある
     region = make_regions(1, status: :extracted).first
     region.questions.create!(question_text: "三角関数の問題", answer_text: "$a^2$ と cos^2 x、7/6π", explanation: "(1/2) sin 2x = 1/4 で、価格は $5 です。",
                              answer_source: "material", subject: "数学", reviewed_at: Time.current)
