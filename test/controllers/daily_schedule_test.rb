@@ -17,6 +17,18 @@ class DailyScheduleTest < ActionDispatch::IntegrationTest
     Rack::Test::UploadedFile.new(StringIO.new(PDF_BYTES), "application/pdf", original_filename: "a.pdf")
   end
 
+  test "an invalid date is rejected with a message instead of silently showing today" do
+    get daily_schedule_path(date: "2026-02-31")
+    assert_redirected_to daily_schedule_path
+    follow_redirect!
+    assert_select "[role=alert], .alert-err, .flash", /日付の形式が正しくありません/
+  end
+
+  test "a blank date still shows today" do
+    get daily_schedule_path
+    assert_response :success
+  end
+
   test "empty day shows the empty state and exactly one primary button" do
     get daily_schedule_path(date: @day.iso8601)
     assert_response :success
