@@ -98,12 +98,15 @@ Rails.application.routes.draw do
   resources :question_folders, path: "marking/folders", only: %i[ index create show update destroy ] do
     resources :uploads, controller: "question_folder_uploads", only: %i[ create destroy ]
     resource :random_test, only: %i[ new create ], controller: "folder_random_tests"
+    # 未承認も含む全問題を形式別に並べて、確認→承認→作成→印刷へ一気に進む
+    resource :one_stop_test, only: %i[ new create ], controller: "folder_one_stop_tests"
   end
   resources :uploads, path: "marking", only: %i[ index new create show ] do
     get :image, on: :member
     post :extract, on: :member
     # 画像内の承認済みの問題からランダムに小テストを作る（プレビューで確認・選び直し）
     resource :random_test, only: %i[ new create ], controller: "upload_random_tests"
+    resource :one_stop_test, only: %i[ new create ], controller: "upload_one_stop_tests"
   end
   resources :crop_regions, path: "marking/regions", only: [] do
     get :image, on: :member

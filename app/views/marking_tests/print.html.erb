@@ -38,7 +38,8 @@
       <% stations = PrintStation.active.order(:name).to_a %>
       <% if stations.any? %>
         <%= form_with url: print_job_marking_test_path(@test), scope: :print_job, class: "w-full border-t border-gray-200 pt-3" do |f| %>
-          <%= hidden_field_tag :kind, @kind %>
+          <label class="flex items-center gap-1 mb-2"><span class="caption whitespace-nowrap">印刷する内容</span>
+            <%= select_tag :kind, options_for_select([ [ "このページと同じ（#{@kind == :answer ? "解答用" : "問題用"}）", @kind ], [ "問題と解答を続けて印刷", "both" ] ], params[:both] == "1" ? "both" : @kind), class: "input !w-auto", "aria-label": "印刷する内容" %></label>
           <%= f.hidden_field :sub_numbers, value: "original", data: { print_options_target: "numberingJob" } %>
           <h2 class="text-[14px] font-semibold mb-2">② 印刷ジョブ作成 <span class="caption font-normal">管理者のみ</span></h2>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-2">

@@ -7,5 +7,7 @@ class QuestionFolder < ApplicationRecord
   validates :name, presence: true, length: { maximum: 100 }
 
   # 出題の対象になる承認済みの問題（フォルダ内の全画像ぶん）
+  def reviewable_questions = Question.reviewable.where(region_id: CropRegion.where(upload_id: folder_uploads.select(:upload_id)).select(:id))
+
   def approved_questions = Question.approved.where(region_id: CropRegion.where(upload_id: folder_uploads.select(:upload_id)).select(:id))
 end
