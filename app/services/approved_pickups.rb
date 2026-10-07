@@ -28,7 +28,7 @@ class ApprovedPickups
     cached = Rails.cache.read(key)
     return cached if cached
 
-    pickups = fetch(date)
+    pickups = fetch_with_reason(date)
     Rails.cache.write(key, pickups, expires_in: CACHE_TTL)
     pickups
   rescue StandardError => e
@@ -37,19 +37,50 @@ class ApprovedPickups
   end
 
   private
-    def fetch(date)
+    def fetch_with_reason(date)
       status, body = @transport.call(date)
-      raise "Supabase が #{status} を返しました" unless status == 200
 
-      JSON.parse(body).filter_map do |row|
-        next if row["approved_time"].blank?
-        Pickup.new(time: row["approved_time"], party_count: row["party_count"].to_i, max_capacity: row["max_capacity"].to_i, place: row["pickup_place"].to_s)
+      case status
+      when 200
+        JSON.parse(body).filter_map do |row|
+          next if row["approved_time"].blank?
+          Pickup.new(time: row["approved_time"], party_count: row["party_count"].to_i, max_capacity: row["max_capacity"].to_i, place: row["pickup_place"].to_s)
+        end
+      when 404
+        log_with_host("HTTP 404")
+        []
+      when 401, 403
+        log_with_host("HTTP #{status}")
+        []
+      when 0
+        log_with_host("Timeout")
+        []
+      else
+        log_with_host("HTTP #{status}")
+        []
       end
+    rescue Net::ReadTimeout, Net::OpenTimeout, Net::WriteTimeout
+      log_with_host("Timeout")
+      []
+    rescue JSON::ParserError
+      log_with_host("Invalid JSON")
+      []
+    rescue StandardError => e
+      log_with_host("Error: #{e.class}")
+      []
+    end
+
+    def log_with_host(msg)
+      url = AnnualSchedule.sanitized_url
+      host = URI.parse(url).host rescue "unknown"
+      Rails.logger.warn("[ApprovedPickups] #{msg} (host=#{host})")
     end
 
     def http_post(date)
-      uri = URI.join(ENV["SUPABASE_URL"].to_s.chomp("/") + "/", "rest/v1/rpc/get_approved_pickups_for_date")
-      req = Net::HTTP::Post.new(uri, "apikey" => ENV["SUPABASE_ANON_KEY"], "Authorization" => "Bearer #{ENV["SUPABASE_ANON_KEY"]}", "Content-Type" => "application/json", "Accept" => "application/json")
+      base_url = AnnualSchedule.sanitized_url
+      key = AnnualSchedule.sanitized_key
+      uri = URI.join(base_url + "/", "rest/v1/rpc/get_approved_pickups_for_date")
+      req = Net::HTTP::Post.new(uri, "apikey" => key, "Authorization" => "Bearer #{key}", "Content-Type" => "application/json", "Accept" => "application/json")
       req.body = { p_date: date.iso8601 }.to_json
       res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT) { |http| http.request(req) }
       [ res.code.to_i, res.body.to_s ]

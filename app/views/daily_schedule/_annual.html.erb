@@ -2,7 +2,14 @@
 <div id="annual-events" class="pb-4 mb-2 border-b border-row-line" aria-label="年間スケジュール">
   <h2 class="text-base font-bold text-text-sub mb-2">年間スケジュール<span class="font-normal">（読み取り専用）</span></h2>
   <% if annual.error %>
-    <p class="text-base text-text-sub">年間スケジュールを取得できません。</p>
+    <% reason_label =
+       case annual.error_reason
+       when :not_found then "HTTP 404"
+       when :timeout then "タイムアウト"
+       when :config_error then "設定の誤り"
+       else "設定の誤り"
+       end %>
+    <p class="text-base text-text-sub">年間スケジュールを取得できません。（<%= reason_label %>）</p>
   <% else %>
     <ul class="flex flex-col gap-2">
       <% annual.untimed.each do |event| %>
