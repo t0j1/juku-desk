@@ -22,7 +22,8 @@ class AnnualSchedule
   end
 
   # error が true のときは「取得できません」を出す（events は空）
-  Result = Struct.new(:events, :error, keyword_init: true) do
+  # error_reason で失敗理由の種別を持つ: :not_found, :timeout, :config_error, :unknown
+  Result = Struct.new(:events, :error, :error_reason, keyword_init: true) do
     # 時刻つきはタスクと同じタイムラインに混ぜ、時刻なし（休暇・休講など）は上部のブロックに残す
     def timed = events.select(&:timed?)
 
@@ -37,7 +38,23 @@ class AnnualSchedule
   DEFAULT_COLOR = "#5b6472".freeze
 
   def self.configured?
-    ENV["SUPABASE_URL"].present? && ENV["SUPABASE_ANON_KEY"].present?
+    sanitized_url.present? && sanitized_key.present?
+  end
+
+  def self.sanitized_url
+    raw = ENV["SUPABASE_URL"].to_s.strip
+    # 末尾の / を除去
+    raw = raw.chomp("/")
+    # 末尾が /rest/v1 または /rest/v1/ なら除去（二重になって 404 になるため）
+    raw = raw.sub(%r{/rest/v1/?$}, "")
+    raw
+  end
+
+  def self.sanitized_key
+    raw = ENV["SUPABASE_ANON_KEY"].to_s.strip
+    # 前後の引用符を除去
+    raw = raw.gsub(/\A["']|["']\z/, "")
+    raw
   end
 
   def self.color_for(type) = TYPE_COLORS.fetch(type, DEFAULT_COLOR)
@@ -56,27 +73,65 @@ class AnnualSchedule
     cached = Rails.cache.read(key)
     return Result.new(events: cached, error: false) if cached
 
-    events = fetch(date)
-    Rails.cache.write(key, events, expires_in: CACHE_TTL) # 失敗はキャッシュしない
-    Result.new(events: events, error: false)
+    events, error_reason = fetch_with_reason(date)
+    if error_reason
+      # 失敗はキャッシュしない
+      Result.new(events: [], error: true, error_reason: error_reason)
+    else
+      Rails.cache.write(key, events, expires_in: CACHE_TTL)
+      Result.new(events: events, error: false)
+    end
   rescue StandardError => e
     Rails.logger.warn("[AnnualSchedule] #{e.class}: #{e.message}")
-    Result.new(events: [], error: true)
+    Result.new(events: [], error: true, error_reason: :unknown)
   end
 
   private
-    def fetch(date)
+    def fetch_with_reason(date)
       status, body = @transport.call(date)
-      raise "Supabase が #{status} を返しました" unless status == 200
 
-      JSON.parse(body).map { |row| Event.new(type: row["type"].to_s, title: row["title"].to_s, start_time: row["start_time"], end_time: row["end_time"]) }
+      case status
+      when 200
+        events = JSON.parse(body).map { |row| Event.new(type: row["type"].to_s, title: row["title"].to_s, start_time: row["start_time"], end_time: row["end_time"]) }
+        [ events, nil ]
+      when 404
+        log_with_host("HTTP 404")
+        [ [], :not_found ]
+      when 401, 403
+        log_with_host("HTTP #{status}")
+        [ [], :config_error ]
+      when 0
+        # Net::ReadTimeout などで status が 0 になることがある
+        log_with_host("Timeout")
+        [ [], :timeout ]
+      else
+        log_with_host("HTTP #{status}")
+        [ [], :unknown ]
+      end
+    rescue Net::ReadTimeout, Net::OpenTimeout, Net::WriteTimeout
+      log_with_host("Timeout")
+      [ [], :timeout ]
+    rescue JSON::ParserError
+      log_with_host("Invalid JSON")
+      [ [], :config_error ]
+    rescue StandardError => e
+      log_with_host("Error: #{e.class}")
+      [ [], :unknown ]
+    end
+
+    def log_with_host(msg)
+      url = self.class.sanitized_url
+      host = URI.parse(url).host rescue "unknown"
+      Rails.logger.warn("[AnnualSchedule] #{msg} (host=#{host})")
     end
 
     # anon キーはヘッダーでだけ送る（URL・ログには出さない）
     def http_get(date)
-      uri = URI.join(ENV["SUPABASE_URL"].to_s.chomp("/") + "/", "rest/v1/events")
+      base_url = self.class.sanitized_url
+      key = self.class.sanitized_key
+      uri = URI.join(base_url + "/", "rest/v1/events")
       uri.query = URI.encode_www_form(select: "type,title,start_time,end_time", is_published: "eq.true", event_date: "eq.#{date.iso8601}", order: "start_time.asc.nullsfirst")
-      req = Net::HTTP::Get.new(uri, "apikey" => ENV["SUPABASE_ANON_KEY"], "Authorization" => "Bearer #{ENV["SUPABASE_ANON_KEY"]}", "Accept" => "application/json")
+      req = Net::HTTP::Get.new(uri, "apikey" => key, "Authorization" => "Bearer #{key}", "Accept" => "application/json")
       res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT) { |http| http.request(req) }
       [ res.code.to_i, res.body.to_s ]
     end
