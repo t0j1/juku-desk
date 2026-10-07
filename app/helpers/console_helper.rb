@@ -44,8 +44,10 @@ module ConsoleHelper
     classes = "flex items-center gap-3 h-12 px-4 rounded-button text-lg " +
       (active ? "bg-bg font-bold text-text shadow-inset" : "text-text-sub hover:text-text")
     options = { class: classes, aria: { current: (active ? "page" : nil) } }
-    options[:target] = "_blank"
-    options[:rel] = "noopener" if external
+    if external
+      options[:target] = "_blank"
+      options[:rel] = "noopener"
+    end
     link_to path, options do
       safe_join([ console_icon(icon), tag.span(label) ])
     end
