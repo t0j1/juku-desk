@@ -7,9 +7,10 @@
   <nav class="flex items-center gap-2 ml-auto" aria-label="日付の切り替え">
     <%= link_to "‹", daily_schedule_path_for(@date - 1), class: "btn-secondary btn-sm", aria: { label: "前の日" } %>
     <%= form_with url: daily_schedule_path, method: :get, local: true, id: "daily-date-form", class: "relative", data: { controller: "date-jump", date_jump_selected_value: @date.iso8601, date_jump_today_value: today.iso8601, action: "keydown->date-jump#keydown" } do %>
-      <button type="button" id="daily-date" class="inline-flex items-center gap-2 min-h-11 text-[19px] font-bold tnum min-w-[7.5em] justify-center cursor-pointer rounded-field border border-line px-3 py-1 hover:bg-bg" aria-label="<%= day_label %>（日付を選ぶ）" aria-haspopup="dialog" aria-expanded="false" data-date-jump-target="button" data-action="date-jump#toggle">
+      <button type="button" id="daily-date" class="inline-flex items-center gap-2 h-11 text-base font-bold tnum justify-center cursor-pointer rounded-field bg-white border border-field-border shadow-raise-sm px-4 text-text hover:bg-bg active:shadow-inset focus-visible:outline-2 focus-visible:outline-primary" aria-label="<%= day_label %>（日付を選ぶ）" aria-haspopup="dialog" aria-expanded="false" data-date-jump-target="button" data-action="date-jump#toggle">
         <svg aria-hidden="true" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
         <span><%= day_label %></span>
+        <svg aria-hidden="true" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
       </button>
       <input type="hidden" name="date" value="<%= @date.iso8601 %>" data-date-jump-target="input">
       <div hidden role="dialog" aria-label="日付を選ぶ" data-date-jump-target="panel" class="absolute right-0 top-full mt-2 z-30 w-[22rem] max-w-[90vw] rounded-field border border-line bg-white p-3 shadow-lg">
@@ -38,8 +39,13 @@
     <% entries = entries.each_with_index.sort_by { |(at, rank, _), i| [ at, rank, i ] }.map(&:first) %>
     <% if entries.empty? %>
       <div class="py-10 text-center">
-        <p class="text-[19px] font-bold mb-4"><%= @date == today ? "今日" : "この日" %>のタスクはありません</p>
-        <%= link_to "タスクを追加", daily_schedule_path_for(@date, new: 1), class: "btn-secondary" %>
+        <p id="empty-tasks" class="text-[19px] font-bold">タスク: なし</p>
+        <% if @annual && !@annual.error && @annual.events.empty? %>
+          <p id="empty-annual" class="text-[19px] font-bold mt-2">年間予定: この日は登録なし</p>
+          <p class="text-base text-text-sub mt-1">年間スケジュールは、公開済みの予定だけを表示します。</p>
+          <%= link_to "年間スケジュールを開く", schedule_path, id: "open-annual", class: "inline-block mt-1 text-base font-bold text-primary underline" %>
+        <% end %>
+        <%= link_to "タスクを追加", daily_schedule_path_for(@date, new: 1), class: "btn-secondary mt-4" %>
       </div>
     <% else %>
       <% now_line_done = (@date != today) %>

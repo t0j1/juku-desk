@@ -32,7 +32,7 @@ class DailyScheduleTest < ActionDispatch::IntegrationTest
   test "empty day shows the empty state and exactly one primary button" do
     get daily_schedule_path(date: @day.iso8601)
     assert_response :success
-    assert_select "#timeline", /この日のタスクはありません/
+    assert_select "#timeline", /タスク: なし/
     assert_select ".btn-primary", count: 1, text: "タスクを追加"
   end
 
