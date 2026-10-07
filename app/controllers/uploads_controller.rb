@@ -4,7 +4,7 @@ class UploadsController < ApplicationController
   before_action :require_writer!, only: %i[ new extract_whole extract_whole_bulk ]
 
   def index
-    @uploads = Upload.includes(:user, :crop_regions).order(created_at: :desc).limit(100)
+    @uploads = Upload.includes(:user, crop_regions: :questions).order(created_at: :desc).limit(100)
   end
 
   def new
@@ -34,7 +34,7 @@ class UploadsController < ApplicationController
   def extract_whole
     upload = Upload.find(params[:id])
     return redirect_to upload_path(upload), alert: "GEMINI_API_KEY が設定されていません。" unless GeminiConfig.configured?
-    return redirect_to upload_path(upload), alert: "この画像には、すでに領域があります。" if upload.crop_regions.exists?
+    return redirect_to upload_path(upload), alert: "この画像は、ページ全体で構造化し直す対象ではありません（構造化済み・処理中の領域があります）。" unless upload.whole_page_candidate?
 
     result = Marking::WholePage.enqueue([ upload ], user: current_user, title: "画像 ##{upload.id} の構造化（ページ全体）", subject: upload, generate_answers: generate_answers?)
     AuditLog.record!(:update, upload, metadata: { resource: "Upload", whole_page: true })

@@ -1,7 +1,7 @@
 <%# 領域が 0 件の画像を選んで、まとめてページ全体で構造化する。uploads: 領域 0 件の Upload、url: 送り先 %>
 <% if current_user.can_write? && uploads.any? %>
   <%= form_with url: url, method: :post, id: "extract-whole", class: "mb-6 rounded-xl bg-surface p-4", data: { controller: "bulk-select" } do |f| %>
-    <p class="text-lg font-bold mb-2">赤枠がなく領域が 0 件の画像（<%= uploads.size %> 枚）</p>
+    <p class="text-lg font-bold mb-2">ページ全体で構造化できる画像（<%= uploads.size %> 枚：領域が 0 件、または構造化結果が空・失敗）</p>
     <ul id="whole-candidates" class="mb-3 grid gap-2 sm:grid-cols-2">
       <% uploads.each do |u| %>
         <li><label class="flex items-center gap-3 min-h-11 text-lg cursor-pointer">
@@ -17,6 +17,6 @@
       <label class="flex items-center gap-1 text-lg"><%= hidden_field_tag :generate_answers, "0", id: nil %><%= check_box_tag :generate_answers, "1", true, id: "generate_answers_whole" %>教材に解答が無いときは AI で解答を作る</label>
       <%= button_tag type: "submit", id: "extract-whole-submit", class: "btn-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed", data: { bulk_select_target: "button" } do %><span>選んだ画像をページ全体で構造化する（<span data-bulk-select-target="count"><%= uploads.size %></span> 枚を構造化）</span><% end %>
     </div>
-    <p class="mt-2 text-lg text-text-sub">ページ全体を 1 つの領域として読み取ります。Gemini の日次上限を超えた分は、翌日に自動で再開します。</p>
+    <p class="mt-2 text-lg text-text-sub">ページ全体を 1 つの領域として読み取ります（今の領域は「除外」にし、作られた問題は消しません）。Gemini の日次上限を超えた分は、翌日に自動で再開します。</p>
   <% end %>
 <% end %>

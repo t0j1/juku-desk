@@ -29,7 +29,7 @@ module ProgressReporting
 
   def start!(total: nil)
     raise Cancelled if cancel_requested?
-    update!(status: :running, total: total, done: 0, started_at: Time.current, finished_at: nil)
+    update!(status: :running, total: total, done: 0, started_at: Time.current, finished_at: nil, message: nil) # 再実行されたら、止まったと見なされた失敗の表示を戻す
     @saved_at = monotonic_now
   end
 

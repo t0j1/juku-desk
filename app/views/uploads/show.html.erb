@@ -15,11 +15,12 @@
     <% end %>
   <% end %>
 </div>
-<% if current_user.can_write? && @regions.empty? %>
+<% if current_user.can_write? && @upload.whole_page_candidate? %>
   <%= form_with url: extract_whole_upload_path(@upload), method: :post, id: "extract-whole", class: "mb-4 flex flex-wrap items-center gap-3" do |f| %>
-    <p class="text-lg">赤枠がないため領域が 0 件です。</p>
+    <p class="text-lg"><%= @regions.empty? ? "赤枠がないため領域が 0 件です。" : "領域の構造化結果が空・失敗です（赤枠の誤検出など）。" %></p>
     <label class="flex items-center gap-1 text-lg"><%= f.hidden_field :generate_answers, value: "0", id: nil %><%= f.check_box :generate_answers, { checked: true, id: "generate_answers_whole" }, "1", nil %>教材に解答が無いときは AI で解答を作る</label>
-    <%= f.submit "ページ全体で構造化する", class: "btn-primary cursor-pointer" %>
+    <%= f.submit(@regions.empty? ? "ページ全体で構造化する" : "領域を捨ててページ全体で構造化する", class: "btn-primary cursor-pointer") %>
+    <% unless @regions.empty? %><span class="text-lg text-text-sub">今の領域は「除外」にします（作られた問題は消えません）。</span><% end %>
   <% end %>
 <% end %>
 <% if current_user.can_write? %>
