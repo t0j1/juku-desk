@@ -106,22 +106,79 @@ class WholePageExtractTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
-  test "the folder button structures every zero-region image of the folder as a whole page" do
-    with_gemini(gemini_json)
+  def folder_with_empty_uploads(count)
     folder = QuestionFolder.create!(name: "10月")
-    empty_a, empty_b = zero_region_upload("a"), zero_region_upload("b")
+    uploads = %w[a b c d e f].first(count).map { |seed| zero_region_upload(seed) }
+    uploads.each { |u| folder.folder_uploads.create!(upload: u) }
+    [ folder, uploads ]
+  end
+
+  test "the folder lists the zero-region images, all checked, and one run queues all four" do
+    with_gemini(gemini_json)
+    folder, uploads = folder_with_empty_uploads(4)
     framed = make_regions(1, status: :confirmed).first.upload
-    [ empty_a, empty_b, framed ].each { |u| folder.folder_uploads.create!(upload: u) }
+    folder.folder_uploads.create!(upload: framed)
     get question_folder_path(folder)
-    assert_select "form#extract-whole", text: /2 枚/
-    assert_difference "CropRegion.count", 2 do
+    assert_select "#whole-candidates input[type=checkbox][checked]", 4
+    assert_select "#extract-whole-submit", text: /4 枚を構造化/
+    assert_select "#extract-whole button", text: "全部選ぶ"
+    assert_select "#extract-whole button", text: "全部外す"
+    assert_difference "CropRegion.count", 4 do
       assert_enqueued_jobs 1, only: Marking::StructureJob do
-        post extract_whole_question_folder_path(folder)
+        post extract_whole_question_folder_path(folder), params: { upload_ids: uploads.map(&:id) + [ framed.id ] }
       end
     end
-    assert_equal [ true, true ], [ empty_a, empty_b ].map { |u| u.crop_regions.sole.whole? }
-    assert_equal 1, framed.crop_regions.count
+    assert_redirected_to question_folder_path(folder)
+    assert_match "4 枚を順番待ちに入れました", flash[:notice]
+    assert_match "翌日", flash[:notice]
+    assert uploads.all? { |u| u.crop_regions.sole.whole? && u.crop_regions.sole.queued? }
+    assert_equal 1, framed.crop_regions.count # すでに領域がある画像は積まない
     get question_folder_path(folder)
-    assert_select "form#extract-whole", count: 0
+    assert_select "#extract-whole", count: 0 # 領域 0 件の画像が無ければ出さない
+  end
+
+  test "only the chosen images are queued, and a second run does not duplicate regions or questions" do
+    with_gemini(gemini_json)
+    folder, uploads = folder_with_empty_uploads(4)
+    chosen = uploads.first(2)
+    assert_difference "CropRegion.count", 2 do
+      post extract_whole_question_folder_path(folder), params: { upload_ids: chosen.map(&:id) }
+    end
+    assert_equal [ 0, 0 ], uploads.last(2).map { |u| u.crop_regions.count }
+    perform_enqueued_jobs(only: Marking::StructureJob)
+    questions = Question.count
+    assert_no_difference [ "CropRegion.count", "Question.count" ] do
+      post extract_whole_question_folder_path(folder), params: { upload_ids: chosen.map(&:id) }
+    end
+    assert_equal questions, Question.count
+    assert_match "構造化する画像がありません", flash[:alert]
+  end
+
+  test "the folder form is hidden from viewers and the action is refused" do
+    with_gemini(gemini_json)
+    folder, uploads = folder_with_empty_uploads(2)
+    sign_in_as users(:viewer)
+    get question_folder_path(folder)
+    assert_select "#extract-whole", count: 0
+    assert_no_difference "CropRegion.count" do
+      post extract_whole_question_folder_path(folder), params: { upload_ids: uploads.map(&:id) }
+    end
+    assert_response :forbidden
+  end
+
+  test "the uploads list also offers the bulk form, for writers only" do
+    with_gemini(gemini_json)
+    uploads = %w[a b c].map { |seed| zero_region_upload(seed) }
+    get uploads_path
+    assert_select "#whole-candidates input[type=checkbox][checked]", 3
+    assert_difference "CropRegion.count", 3 do
+      post extract_whole_bulk_uploads_path, params: { upload_ids: uploads.map(&:id) }
+    end
+    assert_match "3 枚を順番待ちに入れました", flash[:notice]
+    sign_in_as users(:viewer)
+    get uploads_path
+    assert_select "#extract-whole", count: 0
+    post extract_whole_bulk_uploads_path, params: { upload_ids: uploads.map(&:id) }
+    assert_response :forbidden
   end
 end

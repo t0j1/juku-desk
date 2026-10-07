@@ -108,7 +108,7 @@ class FolderDeviceUploadTest < ApplicationSystemTestCase
   end
 
   test "the existing dropdown still works" do
-    upload = Upload.create!(user: users(:staff), sha256: "a" * 64, content_type: "image/jpeg", byte_size: 10, width: 10, height: 10, r2_key: "x")
+    upload = make_regions(1, status: :confirmed).first.upload
     visit question_folder_path(@folder)
     find("select[aria-label='追加する画像']").find("option", text: "画像 ##{upload.id}").select_option
     click_on "画像を入れる"

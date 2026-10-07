@@ -1,7 +1,7 @@
 # マーキング検出：教材画像（ブラウザで縮小・赤枠検出済み）と、切り出した領域の保存。
 # サーバーでは画像をデコードしない（種類は先頭バイト、寸法はブラウザの申告、sha256 はストリーミングで計算）。
 class UploadsController < ApplicationController
-  before_action :require_writer!, only: %i[ new extract_whole ]
+  before_action :require_writer!, only: %i[ new extract_whole extract_whole_bulk ]
 
   def index
     @uploads = Upload.includes(:user, :crop_regions).order(created_at: :desc).limit(100)
@@ -36,11 +36,23 @@ class UploadsController < ApplicationController
     return redirect_to upload_path(upload), alert: "GEMINI_API_KEY が設定されていません。" unless GeminiConfig.configured?
     return redirect_to upload_path(upload), alert: "この画像には、すでに領域があります。" if upload.crop_regions.exists?
 
-    region = upload.add_whole_region!
-    progress = Marking::Enqueuer.call(upload.crop_regions.where(id: region.id), generate_answers: generate_answers?, user: current_user, title: "画像 ##{upload.id} の構造化（ページ全体）", subject: upload)
+    result = Marking::WholePage.enqueue([ upload ], user: current_user, title: "画像 ##{upload.id} の構造化（ページ全体）", subject: upload, generate_answers: generate_answers?)
     AuditLog.record!(:update, upload, metadata: { resource: "Upload", whole_page: true })
-    open_progress(progress) if progress
+    open_progress(result[:progress]) if result[:progress]
     redirect_to upload_path(upload), notice: "ページ全体を構造化の順番待ちに入れました。", status: :see_other
+  end
+
+  # 一覧で選んだ（領域が 0 件の）画像を、まとめてページ全体で構造化の順番待ちに積む
+  def extract_whole_bulk
+    return redirect_to uploads_path, alert: "GEMINI_API_KEY が設定されていません。", status: :see_other unless GeminiConfig.configured?
+
+    uploads = Upload.where(id: Array(params[:upload_ids]).map(&:to_i)).to_a
+    result = Marking::WholePage.enqueue(uploads, user: current_user, title: "取り込み画像の構造化（ページ全体）", generate_answers: generate_answers?)
+    return redirect_to uploads_path, alert: "構造化する画像がありません（選んでいないか、すでに領域がある画像です）。", status: :see_other if result[:count].zero?
+
+    AuditLog.record!(:update, uploads.first, metadata: { resource: "Upload", whole_page: result[:count] })
+    open_progress(result[:progress]) if result[:progress]
+    redirect_to uploads_path, notice: "#{result[:count]} 枚を順番待ちに入れました。Gemini の日次上限を超えた分は、翌日に自動で再開します。", status: :see_other
   end
 
   def image

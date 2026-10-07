@@ -22,19 +22,18 @@ class QuestionFoldersController < ApplicationController
     @approved = @folder.approved_questions.includes(region: :upload).order(:id)
   end
 
-  # フォルダ内の、領域が 0 件の画像を、ページ全体を 1 領域にして構造化の順番待ちに積む
+  # 選んだ（領域が 0 件の）画像を、ページ全体を 1 領域にして構造化の順番待ちに積む
   def extract_whole
     return redirect_to question_folder_path(@folder), alert: "GEMINI_API_KEY が設定されていません。", status: :see_other unless GeminiConfig.configured?
 
-    uploads = @folder.uploads.where.not(id: CropRegion.select(:upload_id)).to_a
-    regions = uploads.filter_map(&:add_whole_region!)
-    return redirect_to question_folder_path(@folder), alert: "領域が 0 件の画像はありません。", status: :see_other if regions.empty?
+    uploads = @folder.uploads.where(id: Array(params[:upload_ids]).map(&:to_i)).to_a
+    result = Marking::WholePage.enqueue(uploads, user: current_user, title: "フォルダ「#{@folder.name}」の構造化（ページ全体）", subject: @folder,
+                                        generate_answers: params[:generate_answers].nil? || ActiveModel::Type::Boolean.new.cast(params[:generate_answers]))
+    return redirect_to question_folder_path(@folder), alert: "構造化する画像がありません（選んでいないか、すでに領域がある画像です）。", status: :see_other if result[:count].zero?
 
-    progress = Marking::Enqueuer.call(CropRegion.where(id: regions.map(&:id)), generate_answers: params[:generate_answers].nil? || ActiveModel::Type::Boolean.new.cast(params[:generate_answers]),
-                                      user: current_user, title: "フォルダ「#{@folder.name}」の構造化（ページ全体）", subject: @folder)
-    AuditLog.record!(:update, @folder, metadata: { whole_page: regions.size })
-    open_progress(progress) if progress
-    redirect_to question_folder_path(@folder), notice: "領域が 0 件の画像 #{regions.size} 枚を、ページ全体で構造化の順番待ちに入れました。", status: :see_other
+    AuditLog.record!(:update, @folder, metadata: { whole_page: result[:count] })
+    open_progress(result[:progress]) if result[:progress]
+    redirect_to question_folder_path(@folder), notice: "#{result[:count]} 枚を順番待ちに入れました。Gemini の日次上限を超えた分は、翌日に自動で再開します。", status: :see_other
   end
 
   def update
