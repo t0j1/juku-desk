@@ -11,6 +11,9 @@ export default class extends Controller {
     this.update()
   }
 
+  checkAll() { this.itemTargets.forEach((input) => { input.checked = true }); this.update() }
+  uncheckAll() { this.itemTargets.forEach((input) => { input.checked = false }); this.update() }
+
   update() {
     const checked = this.itemTargets.filter((input) => input.checked).length
     if (this.hasButtonTarget) this.buttonTarget.disabled = checked === 0

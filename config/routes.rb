@@ -106,6 +106,7 @@ Rails.application.routes.draw do
     get :image, on: :member
     post :extract, on: :member
     post :extract_whole, on: :member
+    post :extract_whole_bulk, on: :collection
     # 画像内の承認済みの問題からランダムに小テストを作る（プレビューで確認・選び直し）
     resource :random_test, only: %i[ new create ], controller: "upload_random_tests"
     resource :one_stop_test, only: %i[ new create ], controller: "upload_one_stop_tests"
