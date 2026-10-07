@@ -12,7 +12,7 @@ class Gemini::ClientTest < ActiveSupport::TestCase
 
   teardown do
     @server.close
-    %w[GEMINI_ENDPOINT GEMINI_API_KEY GEMINI_MODEL GEMINI_TIMEOUT_SECONDS].each { |k| ENV.delete(k) }
+    %w[GEMINI_ENDPOINT GEMINI_API_KEY GEMINI_MODEL GEMINI_TIMEOUT_SECONDS GEMINI_THINKING_BUDGET GEMINI_MAX_RETRIES].each { |k| ENV.delete(k) }
   end
 
   # 1 回だけ受けて、status と body を返す
@@ -98,5 +98,40 @@ class Gemini::ClientTest < ActiveSupport::TestCase
     serve 200, "{}", delay: 3
     assert_raises(Gemini::Retryable) { generate }
     @thread.kill
+  end
+
+  test "thinking is not configured unless GEMINI_THINKING_BUDGET is set, and 0 is sent as 0" do
+    serve 200, { candidates: [ { content: { parts: [ { text: gemini_json } ] } } ] }.to_json
+    generate
+    @thread.join
+    assert_not JSON.parse(@requests.last[:body])["generationConfig"].key?("thinkingConfig")
+
+    ENV["GEMINI_THINKING_BUDGET"] = "0"
+    serve 200, { candidates: [ { content: { parts: [ { text: gemini_json } ] } } ] }.to_json
+    generate
+    @thread.join
+    assert_equal({ "thinkingBudget" => 0 }, JSON.parse(@requests.last[:body])["generationConfig"]["thinkingConfig"])
+  end
+
+  test "each call logs seconds, token counts and the finish reason, without the key" do
+    body = { candidates: [ { content: { parts: [ { text: gemini_json } ] }, finishReason: "STOP" } ],
+             usageMetadata: { promptTokenCount: 1300, candidatesTokenCount: 210, thoughtsTokenCount: 850, totalTokenCount: 2360 } }.to_json
+    serve 200, body
+    io = StringIO.new
+    original = Rails.logger
+    Rails.logger = ActiveSupport::Logger.new(io)
+    begin
+      generate
+    ensure
+      Rails.logger = original
+    end
+    @thread.join
+    line = io.string.lines.grep(/\[Gemini\]/).sole
+    assert_match(/status=200 seconds=\d+\.\d+ prompt_tokens=1300 output_tokens=210 thoughts_tokens=850 total_tokens=2360 finish="STOP"/, line)
+    assert_no_match(/#{ENV["GEMINI_API_KEY"]}/, line)
+  end
+
+  test "the defaults are a 30 second timeout and 3 retries" do
+    assert_equal [ 30, 3, nil ], [ GeminiConfig.timeout, GeminiConfig.max_retries, GeminiConfig.thinking_budget ]
   end
 end
