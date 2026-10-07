@@ -16,6 +16,7 @@
   <% end %>
 </div>
 <% if current_user.can_write? %>
+  <%= link_to "この画像から小テストを作る", new_upload_one_stop_test_path(@upload), id: "one-stop-link", class: "btn-primary mb-4 inline-flex" %>
   <%= form_with url: new_upload_random_test_path(@upload), method: :get, id: "random-test-form", class: "mb-4 flex flex-wrap items-center gap-3" do |f| %>
     <label class="flex items-center gap-1 text-lg"><span class="label">問題数</span><%= f.number_field :count, value: 5, min: 1, max: Marking::QuestionPicker.max_count, class: "input !w-24", "aria-label": "ランダムで作る問題数" %></label>
     <%= f.submit "ランダムで作る", class: "btn-secondary cursor-pointer" %>

@@ -29,6 +29,9 @@
   <% end %>
   <% if @uploads.empty? %><li class="text-lg">画像がありません。上から追加してください。</li><% end %>
 </ul>
+<% if current_user.can_write? && @uploads.any? %>
+  <%= link_to "この画像から小テストを作る", new_question_folder_one_stop_test_path(@folder), id: "one-stop-link", class: "btn-primary mb-6 inline-flex" %>
+<% end %>
 <% if current_user.can_write? && @approved.any? %>
   <h2 class="font-bold text-xl mb-2">小テストを作る（承認済みの問題 <%= @approved.size %> 問）</h2>
   <%= form_with url: new_question_folder_random_test_path(@folder), method: :get, id: "random-test-form", class: "mb-4 flex flex-wrap items-center gap-3" do |f| %>

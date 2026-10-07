@@ -22,7 +22,11 @@ class Marking::ExamPdf
   def initialize(exam, kind: :question, sub_numbers: "original")
     @sub_numbers = Marking::SubNumbering.mode(sub_numbers)
     @exam = exam
-    @kind = kind == :answer ? :answer : :question
+    @kinds = case kind.to_s
+    when "answer" then [ :answer ]
+    when "both" then [ :question, :answer ] # 問題用のあとに解答用を、同じ PDF（同じジョブ）で続ける
+    else [ :question ]
+    end
   end
 
   def render_to(path)
@@ -34,14 +38,18 @@ class Marking::ExamPdf
     @pdf.font_families.update("J" => { normal: FONT_PATH.to_s, bold: FONT_PATH.to_s })
     @pdf.font "J"
     @pdf.font_size 10.5
-    header
-    section = nil
-    items.each do |item|
-      if @exam.sectioned? && item.section != section
-        section = item.section
-        section_head(item)
+    @kinds.each.with_index do |kind, i|
+      @kind = kind
+      @pdf.start_new_page if i.positive?
+      header
+      section = nil
+      items.each do |item|
+        if @exam.sectioned? && item.section != section
+          section = item.section
+          section_head(item)
+        end
+        item_block(item)
       end
-      item_block(item)
     end
     footer
     @pdf.render_file(path)

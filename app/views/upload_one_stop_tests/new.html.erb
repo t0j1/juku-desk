@@ -1,0 +1,46 @@
+<% content_for :title, "この画像から小テストを作る（#{source_label}）" %>
+<% content_for :head do %><%= stylesheet_link_tag "katex/katex" %><% end %>
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <h1 class="page-title mr-auto">小テストを作る（<%= source_label %>）</h1>
+  <%= link_to "戻る", back_path, class: "btn-secondary" %>
+</div>
+<% if alert %><p id="alert" class="mb-4 text-lg font-bold text-err-fg"><%= alert %></p><% end %>
+<% if @entries.empty? %>
+  <p id="no-questions" class="text-lg">問題がありません。</p>
+<% else %>
+  <p class="mb-2 text-lg">形式別に並べた最終の並びです。チェックを外した問題は含めません。未承認の問題は、作成するときに承認されます。</p>
+  <p id="ai-answer-notice" class="mb-4 text-lg font-bold text-err-fg">「AI作成の解答」の印がある問題は、解答が正しいか確認してください（自動では正しいと扱いません）。</p>
+  <%= form_with url: create_path, id: "one-stop-form", class: "max-w-4xl space-y-4" do |f| %>
+    <div id="one-stop-sections" class="space-y-5">
+      <% @entries.chunk_while { |a, b| a.section == b.section }.each do |group| %>
+        <section id="one_stop_section_<%= group.first.section %>">
+          <h2 class="text-xl font-bold mb-2"><span class="tnum">【<%= group.first.section %>】</span><%= @instructions[group.first.question_type] %></h2>
+          <ol class="space-y-2">
+            <% group.each do |e| %>
+              <% q = e.question %>
+              <% usable = q.approved? || q.approvable? %>
+              <li class="rounded-xl bg-surface p-3" id="one_stop_q_<%= q.id %>">
+                <label class="flex items-start gap-3 text-lg">
+                  <%= check_box_tag "question_ids[]", q.id, usable, id: "question_ids_#{q.id}", disabled: !usable, class: "mt-1 w-6 h-6" %>
+                  <span class="min-w-0">
+                    <span class="tnum font-bold mr-2">(<%= e.sub_position %>)</span>
+                    <span class="text-base text-text-sub mr-2" data-origin="<%= q.region.upload_id %>">画像 #<%= q.region.upload_id %></span>
+                    <% if q.approved? %><span class="text-base text-ok-fg font-bold mr-2">承認済み</span><% else %><span class="text-base text-err-fg font-bold mr-2">未承認</span><% end %>
+                    <% unless usable %><span class="text-base text-err-fg font-bold mr-2">科目・問題文・解答のどれかが未入力のため含められません</span><% end %>
+                    <span class="block whitespace-pre-wrap" data-controller="math"><%= q.question_text %></span>
+                    <span class="block mt-1 whitespace-pre-wrap text-ok-fg" data-controller="math">解答：<%= q.answer_text.presence || "（なし）" %></span>
+                    <% if q.ai_answer? %><span class="ai-answer-mark inline-block mt-1 rounded-lg bg-err-bg px-2 py-0.5 text-base font-bold text-err-fg">AI作成の解答</span><% end %>
+                  </span>
+                </label>
+              </li>
+            <% end %>
+          </ol>
+        </section>
+      <% end %>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-lg"><span class="label">タイトル</span><%= text_field_tag :title, @title, class: "input !w-72", maxlength: 100, required: true, "aria-label": "タイトル" %></label>
+      <%= f.submit "作成して印刷へ", class: "btn-primary cursor-pointer" %>
+    </div>
+  <% end %>
+<% end %>
