@@ -73,14 +73,14 @@ class Marking::ExtractorTest < ActiveSupport::TestCase
     assert @sleeps[1].between?(4.0, 6.0), @sleeps.inspect   # 2^1 × base 2
   end
 
-  test "gives up after 5 retries and fails only that region; the next one still runs" do
-    with_gemini(*([ Gemini::Retryable.new("503") ] * 6), gemini_json)
+  test "gives up after 3 retries (the default) and fails only that region; the next one still runs" do
+    with_gemini(*([ Gemini::Retryable.new("503") ] * 4), gemini_json)
     a, b = make_regions(2)
     Marking::Extractor.call(a)
     assert_equal "failed", a.reload.status
-    assert_match(/5 回/, a.error_message)
-    assert_equal 6, @gemini.calls
-    assert_equal 5, @sleeps.size
+    assert_match(/3 回/, a.error_message)
+    assert_equal 4, @gemini.calls
+    assert_equal 3, @sleeps.size
 
     Marking::Extractor.call(b)
     assert_equal "extracted", b.reload.status

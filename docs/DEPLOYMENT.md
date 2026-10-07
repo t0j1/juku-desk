@@ -139,7 +139,7 @@ Neon Free は月 100 CU-hours で、5 分間アクセスがないと compute が
 
 **人間の作業**: `GEMINI_API_KEY` を Render に登録する（無料枠を使う。未設定の間は、取り込んだ領域は構造化されずに「確定」のまま残り、画像の画面の「構造化を開始・やり直す」で後から始められる）。
 
-環境変数（`GEMINI_API_KEY` 以外は任意）: `GEMINI_MODEL`（gemini-3.8-flash）、`GEMINI_RPM`（10）、`GEMINI_RPD`（250）、`GEMINI_BURST`（1。トークンバケットの容量）、`GEMINI_MAX_CONCURRENCY`（1）、`GEMINI_TIMEOUT_SECONDS`（60）、`GEMINI_MAX_RETRIES`（5）、`GEMINI_RETRY_BASE_SECONDS`（2）、`GEMINI_ENDPOINT`（テスト用に差し替える場合）。RPM / RPD は契約中の無料枠の値に合わせて設定する。
+環境変数（`GEMINI_API_KEY` 以外は任意）: `GEMINI_MODEL`（gemini-3.8-flash）、`GEMINI_RPM`（10）、`GEMINI_RPD`（250）、`GEMINI_BURST`（1。トークンバケットの容量）、`GEMINI_MAX_CONCURRENCY`（1）、`GEMINI_TIMEOUT_SECONDS`（30）、`GEMINI_MAX_RETRIES`（3）、`GEMINI_RETRY_BASE_SECONDS`（2）、`GEMINI_THINKING_BUDGET`（未設定＝モデルの既定。0 で thinking を無効、数値で上限トークン。速度の調査・改善用）、`GEMINI_ENDPOINT`（テスト用に差し替える場合）。Gemini を呼ぶたびに、所要秒・トークン数（入力・出力・thinking）・終了理由を `[Gemini] …` の 1 行でログに残す（キー・URL・本文は出さない）。RPM / RPD は契約中の無料枠の値に合わせて設定する。
 
 - RPM はトークンバケット、RPD は太平洋時間 0 時にリセットする日次カウンタ（`gemini_quotas` の 1 行を全プロセスで共有）。429（分あたり）・5xx・タイムアウトは、指数バックオフ + ジッターで最大 5 回までやり直し、だめなら **その領域だけ** `failed`（ほかは続行）。
 - **モデルの廃止・利用不可**（Gemini が 404 を返す）は通常のエラーと分けて `model_unavailable` にし、「モデルが利用できません：GEMINI_MODELを更新してください」と表示する。`GEMINI_MODEL` を更新して再デプロイしたあと、画像ごとの「構造化を開始・やり直す」で再投入する。

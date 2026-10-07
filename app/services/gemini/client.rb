@@ -13,7 +13,9 @@ module Gemini
 
     # 画像（バイト列）を渡し、構造化された JSON の本文（String）を返す
     def generate(image_bytes, mime_type:, prompt: Gemini::Prompt::TEXT)
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       status, body = @transport.call(path: "/v1beta/models/#{GeminiConfig.model}:generateContent", body: request_body(image_bytes, mime_type, prompt))
+      log_call(status, body, Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
       case status
       when 200 then extract_text(body)
       when 429 then raise daily_quota?(body) ? DailyQuotaExceeded.new("Gemini の 1 日の上限に達しました") : Retryable.new("Gemini が 429（分あたりの上限）を返しました")
@@ -22,19 +24,38 @@ module Gemini
       else raise Error, "Gemini が #{status} を返しました（#{error_message(body)}）"
       end
     rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error, Errno::ECONNRESET, SocketError, OpenSSL::SSL::SSLError => e
+      log_failure(e, Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
       raise Retryable, "Gemini への接続に失敗しました（#{e.class}）"
     end
 
     private
       def request_body(image_bytes, mime_type, prompt)
+        config = { response_mime_type: "application/json", response_schema: Gemini::Schema::RESPONSE, temperature: 0 }
+        config[:thinkingConfig] = { thinkingBudget: GeminiConfig.thinking_budget } if GeminiConfig.thinking_budget
         {
           contents: [ { parts: [ { text: prompt }, { inline_data: { mime_type: mime_type, data: Base64.strict_encode64(image_bytes) } } ] } ],
-          generationConfig: {
-            response_mime_type: "application/json",
-            response_schema: Gemini::Schema::RESPONSE,
-            temperature: 0
-          }
+          generationConfig: config
         }
+      end
+
+      # 速度の調査用に、1 回の呼び出しを 1 行で残す（所要秒・トークン数・終了理由。キー・URL・本文は出さない）
+      def log_call(status, body, seconds)
+        usage, finish = usage_and_finish(body)
+        Rails.logger.info("[Gemini] model=#{GeminiConfig.model} status=#{status} seconds=#{seconds.round(2)} " \
+                          "prompt_tokens=#{usage["promptTokenCount"].inspect} output_tokens=#{usage["candidatesTokenCount"].inspect} " \
+                          "thoughts_tokens=#{usage["thoughtsTokenCount"].inspect} total_tokens=#{usage["totalTokenCount"].inspect} " \
+                          "finish=#{finish.inspect} thinking_budget=#{GeminiConfig.thinking_budget.inspect}")
+      end
+
+      def log_failure(error, seconds)
+        Rails.logger.info("[Gemini] model=#{GeminiConfig.model} error=#{error.class} seconds=#{seconds.round(2)} timeout=#{GeminiConfig.timeout}")
+      end
+
+      def usage_and_finish(body)
+        parsed = JSON.parse(body)
+        [ parsed["usageMetadata"] || {}, parsed.dig("candidates", 0, "finishReason") ]
+      rescue JSON::ParserError, TypeError
+        [ {}, nil ]
       end
 
       def extract_text(body)
