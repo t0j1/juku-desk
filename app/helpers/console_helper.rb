@@ -40,10 +40,13 @@ module ConsoleHelper
     NavigationMenu.build(controller_path:, action_name:)
   end
 
-  def nav_item(label, path, icon, active:)
+  def nav_item(label, path, icon, active:, external: false)
     classes = "flex items-center gap-3 h-12 px-4 rounded-button text-lg " +
       (active ? "bg-bg font-bold text-text shadow-inset" : "text-text-sub hover:text-text")
-    link_to path, class: classes, aria: { current: (active ? "page" : nil) } do
+    options = { class: classes, aria: { current: (active ? "page" : nil) } }
+    options[:target] = "_blank"
+    options[:rel] = "noopener" if external
+    link_to path, options do
       safe_join([ console_icon(icon), tag.span(label) ])
     end
   end
@@ -66,7 +69,8 @@ module ConsoleHelper
     mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
     shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
     devices: '<rect x="2" y="4" width="14" height="11" rx="2"/><path d="M8 19h2M18 9h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2"/>',
-    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+    map: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12"/><path d="M9 12l-6-4.5"/><path d="M9 12l6-4.5"/>'
   }.freeze
 
   def console_icon(name, size: 20)

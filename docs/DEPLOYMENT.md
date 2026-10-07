@@ -31,6 +31,7 @@ SOLID_QUEUE_IN_PUMA = true
 WEB_CONCURRENCY     = 0   # 512MB プランでは single mode（ワーカープロセスを増やさない）
 RAILS_MAX_THREADS   = 3
 SCHEDULE_WEB_URL    = https://<project>.pages.dev   # 任意。サイドバーの「スケジュール」（/schedule 以下）が schedule-web を iframe で埋め込む。未設定ならサイドバーに出さず、/schedule は「未設定」と表示
+ROADMAP_SHEET_URL   = https://docs.google.com/spreadsheets/d/.../edit   # 任意。サイドバーの「学習ロードマップ」外部リンク。未設定ならサイドバーに出さない。Google スプレッドシートの共有URL（編集権限）を指定
 ```
 Settings → Deploy Hook の URL を控える。
 

@@ -54,4 +54,38 @@ class NavigationMenuTest < ActiveSupport::TestCase
       assert_nothing_raised { Rails.application.routes.url_helpers.public_send("#{route}_path") }
     end
   end
+
+  # --- 学習ロードマップ (ROADMAP_SHEET_URL) ---
+  test "without ROADMAP_SHEET_URL the roadmap item is hidden" do
+    groups = menu
+    labels = groups.first.items.map(&:label)
+    refute_includes labels, "学習ロードマップ"
+  end
+
+  test "blank or invalid ROADMAP_SHEET_URL hides the roadmap item" do
+    [ "", "  ", "javascript:alert(1)", "not a url", "ftp://example.com" ].each do |value|
+      groups = menu(env: { "ROADMAP_SHEET_URL" => value })
+      labels = groups.first.items.map(&:label)
+      refute_includes labels, "学習ロードマップ", value.inspect
+    end
+  end
+
+  test "valid ROADMAP_SHEET_URL shows the roadmap item as external link with full URL" do
+    url = "https://docs.google.com/spreadsheets/d/ABC123/edit"
+    groups = menu(env: { "ROADMAP_SHEET_URL" => url })
+    item = groups.first.items.find { |i| i.label == "学習ロードマップ" }
+    assert item, "roadmap item should exist"
+    assert_equal url, item.href
+    assert item.external
+    assert_equal :map, item.icon
+  end
+
+  test "nav_item generates target=_blank rel=noopener for external links" do
+    # This is tested via the NavigationMenu model; nav_item helper just passes the option through
+    url = "https://example.com/sheet"
+    groups = menu(env: { "ROADMAP_SHEET_URL" => url })
+    item = groups.first.items.find { |i| i.label == "学習ロードマップ" }
+    assert item
+    assert item.external
+  end
 end

@@ -14,6 +14,7 @@ groups:
       - { label: 印刷, route: print_library, icon: printer, controllers: [ print_library, "tools/pdf_splitter/jobs#print" ] }
       - { label: 小テスト作成, route: new_quiz, icon: pencil, controllers: [ quizzes ] }
       - { label: マーキング検出, route: uploads, icon: upload, controllers: [ uploads, crop_regions, questions, marking_tests, section_templates ] }
+      - { label: 学習ロードマップ, icon: map, env: ROADMAP_SHEET_URL }
   - label: スケジュール
     items:
       - { label: 1日のスケジュール, route: daily_schedule, icon: clock, controllers: [ daily_schedule, daily_schedule_tasks ] }

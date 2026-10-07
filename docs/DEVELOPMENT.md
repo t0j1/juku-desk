@@ -13,6 +13,7 @@ make test       # bin/rails test + schedule-web の node --test
 
 ## 2 つのアプリを行き来するナビ
 - juku-desk のサイドバーの項目は `config/navigation.yml` の 1 か所（ルート名・現在地の判定・アイコン）。「スケジュール」のグループは `SCHEDULE_WEB_URL`（例 `https://<project>.pages.dev`）が設定されているときだけ出て、`/schedule`・`/schedule/admin`・`/schedule/pickup` が schedule-web を本文の iframe に埋め込む（サイドバーは残る。`ScheduleController`、未設定なら「未設定」と表示。schedule-web 側は `public/_headers` の CSP `frame-ancestors` で埋め込みを許可し、埋め込み中は schedule-web のナビを隠す）。ログイン画面と共用 iPad の印刷画面（`/print/<token>`）には出さない。768px 未満は ☰ で開閉する（`sidebar_controller.js`）。
+- 「塾日報ステーション」の「学習ロードマップ」は `ROADMAP_SHEET_URL`（Google スプレッドシートの共有URL）が設定されているときだけ表示され、外部リンクとして `target="_blank" rel="noopener"` で開く。
 - schedule-web 側は `apps/schedule-web/public/js/nav-config.js`（定義。juku-desk の URL は `JUKU_DESK_URL` の 1 か所）と `unified-nav.js`（描画）。**管理画面（admin.html）だけ**に置いてある（講師・事務向け。保護者・生徒向けの index / pickup には出さない。テストで確認）。juku-desk の URL を入れるまでは、juku-desk のグループは出ない。
 - 並びや名前を変えるときは、`config/navigation.yml` と `nav-config.js` の両方を直す。
 - 画面確認用の画像: `SCREENSHOTS=1 bin/rails test test/system/layout_test.rb`（`tmp/nav_shots/`）。
