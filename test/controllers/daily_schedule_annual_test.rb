@@ -10,10 +10,12 @@ class DailyScheduleAnnualTest < ActionDispatch::IntegrationTest
     ENV["SUPABASE_URL"] = "https://example.supabase.co"
     ENV["SUPABASE_ANON_KEY"] = "anon-key"
     @calls = []
+    ApprovedPickups.transport = ->(_date) { [ 200, "[]" ] }
   end
 
   teardown do
     AnnualSchedule.transport = nil
+    ApprovedPickups.transport = nil
     %w[ SUPABASE_URL SUPABASE_ANON_KEY ].each { |k| @env.key?(k) ? ENV[k] = @env[k] : ENV.delete(k) }
   end
 
@@ -149,5 +151,68 @@ class DailyScheduleAnnualTest < ActionDispatch::IntegrationTest
     respond_with 200, [ { type: "高2授業", title: "数学", start_time: "19:20:00", end_time: nil }, { type: "休暇", title: "", start_time: nil, end_time: nil } ]
     get daily_schedule_path(date: DAY.iso8601)
     assert_select "#annual-events .text-sm, #annual-events .text-xs, .annual-timed .text-sm, .annual-timed .text-xs", count: 0
+  end
+
+  def pickup_rows(*rows) = ApprovedPickups.transport = ->(_date) { [ 200, rows.to_json ] }
+
+  test "approved pickups are mixed into the timeline by time, shown as 送迎 HH:MM／乗車 n/定員 without any name" do
+    make_task("朝の日報", "08:00")
+    respond_with 200, [ { type: "高2授業", title: "数学", start_time: "19:20:00", end_time: "22:00:00" } ]
+    pickup_rows({ approved_time: "21:40:00", party_count: 3, max_capacity: 8, pickup_place: "駅前ロータリー", student_name: "山田" })
+    travel_to(Time.zone.local(2026, 10, 7, 23, 0)) { get daily_schedule_path(date: DAY.iso8601) }
+    assert_select "#timeline .pickup-row", count: 1, text: /送迎 21:40／乗車 3\/8.*駅前ロータリー/m
+    assert_select ".pickup-row", text: /山田/, count: 0
+    labels = css_select("#timeline ol > li").map { |li| li["data-pickup-at"] ? "pickup" : (li["data-annual-at"] ? "annual" : (li["id"] == "now-line" ? "now" : "task")) }
+    assert_equal %w[ task annual pickup now ], labels
+    assert_select ".pickup-row .text-sm, .pickup-row .text-xs", count: 0
+  end
+
+  test "a pickup at the same time as a task shows both" do
+    make_task("同時刻の日報", "21:40")
+    pickup_rows({ approved_time: "21:40:00", party_count: 1, max_capacity: 4, pickup_place: "" })
+    get daily_schedule_path(date: DAY.iso8601)
+    assert_select "#timeline ol .pickup-row", count: 1
+    assert_select "#timeline ol", text: /同時刻の日報/
+  end
+
+  test "an unapplied function (404), an error or bad json hides only the pickup rows and the screen stays 200" do
+    make_task("朝の日報", "08:00")
+    respond_with 200, []
+    [ -> { [ 404, "{}" ] }, -> { [ 500, "" ] }, -> { raise Net::ReadTimeout }, -> { [ 200, "oops" ] } ].each do |failure|
+      ApprovedPickups.transport = ->(_d) { failure.call }
+      get daily_schedule_path(date: DAY.iso8601)
+      assert_response :success
+      assert_select ".pickup-row", count: 0
+      assert_select "#timeline", text: /朝の日報/
+      assert_select "#annual-events", count: 0
+    end
+  end
+
+  test "the pickup request is an rpc POST with the date, anon key in headers, and 3 second timeouts" do
+    req = opts = nil
+    http = Object.new
+    http.define_singleton_method(:request) { |r| req = r; Struct.new(:code, :body).new("200", "[]") }
+    original = Net::HTTP.method(:start)
+    Net::HTTP.define_singleton_method(:start) { |_host, _port, **o, &blk| opts = o; blk.call(http) }
+    begin
+      ApprovedPickups.transport = nil
+      ApprovedPickups.new.on(DAY)
+    ensure
+      Net::HTTP.define_singleton_method(:start, original)
+    end
+    assert_equal "POST", req.method
+    assert_equal "/rest/v1/rpc/get_approved_pickups_for_date", req.path
+    assert_equal({ "p_date" => DAY.iso8601 }, JSON.parse(req.body))
+    assert_equal "anon-key", req["apikey"]
+    assert_equal 3, opts[:read_timeout]
+  end
+
+  test "without the environment variables no pickup is requested" do
+    ENV.delete("SUPABASE_URL")
+    called = false
+    ApprovedPickups.transport = ->(_d) { called = true; [ 200, "[]" ] }
+    get daily_schedule_path(date: DAY.iso8601)
+    assert_response :success
+    assert_not called
   end
 end
