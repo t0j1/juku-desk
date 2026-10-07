@@ -13,6 +13,15 @@
     <% end %>
     <%= button_to "フォルダを削除", question_folder_path(@folder), method: :delete, class: "btn-secondary cursor-pointer", form: { id: "delete-folder", data: { turbo_confirm: "フォルダ「#{@folder.name}」を削除しますか？（画像と問題は消えません）" } } %>
   </div>
+  <div id="device-upload" class="mb-6" data-controller="folder-files" data-folder-files-config-value="<%= MarkingConfig.to_h.to_json %>" data-folder-files-url-value="<%= uploads_path %>" data-folder-files-folder-id-value="<%= @folder.id %>">
+    <label class="btn-primary inline-flex cursor-pointer">
+      <%= console_icon(:upload) %>ファイルを選ぶ
+      <input type="file" id="folder-files" multiple accept="image/jpeg,image/png,application/pdf" class="sr-only" data-folder-files-target="input" data-action="change->folder-files#pick" aria-label="画像・PDF のファイルを選ぶ（スマホではカメラも使えます）">
+    </label>
+    <span class="text-lg text-text-sub ml-2">JPEG / PNG / PDF・複数OK（スマホはカメラ撮影も選べます）。PDF は 1 ページずつ画像にして入れます。</span>
+    <p role="status" data-folder-files-target="progress" class="mt-2 text-lg font-bold text-text-sub"></p>
+    <div id="device-upload-result" data-folder-files-target="result" class="mt-2 space-y-1" hidden></div>
+  </div>
   <%= form_with url: question_folder_uploads_path(@folder), id: "add-upload", class: "mb-6 flex flex-wrap items-center gap-3" do |f| %>
     <%= f.select :upload_id, @addable.map { |u| [ "画像 ##{u.id}（#{u.created_at.strftime("%Y-%m-%d")}）", u.id ] }, { include_blank: "追加する画像を選ぶ" }, class: "input !w-auto", "aria-label": "追加する画像" %>
     <%= f.submit "画像を入れる", class: "btn-secondary cursor-pointer" %>

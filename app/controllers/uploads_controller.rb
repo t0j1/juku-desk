@@ -46,7 +46,7 @@ class UploadsController < ApplicationController
 
     sha256 = Digest::SHA256.file(file.tempfile.path).hexdigest
     if (existing = Upload.find_by(sha256:))
-      return render json: { id: existing.id, duplicate: true, regions: existing.crop_regions.count, url: upload_path(existing) }
+      return render json: duplicate_json(existing)
     end
 
     regions = region_params
@@ -55,13 +55,26 @@ class UploadsController < ApplicationController
 
     upload = save_upload(file, content_type, sha256, regions)
     Marking::Enqueuer.call(upload.crop_regions.order(:id), generate_answers: generate_answers?, user: current_user, title: "画像 ##{upload.id} の構造化", subject: upload) # 構造化は順番待ちに積むだけ（すぐ返す）
-    render json: { id: upload.id, duplicate: false, regions: upload.crop_regions.size, url: upload_path(upload) }, status: :created
+    render json: { id: upload.id, duplicate: false, regions: upload.crop_regions.size, url: upload_path(upload), folder: add_to_folder(upload) }, status: :created
   rescue ActiveRecord::RecordNotUnique
-    existing = Upload.find_by!(sha256:)
-    render json: { id: existing.id, duplicate: true, regions: existing.crop_regions.count, url: upload_path(existing) }
+    render json: duplicate_json(Upload.find_by!(sha256:))
   end
 
   private
+    # 重複（同じ sha256 が取り込み済み）のときも、folder_id があればそのフォルダへ入れる
+    def duplicate_json(existing)
+      { id: existing.id, duplicate: true, regions: existing.crop_regions.count, url: upload_path(existing), folder: add_to_folder(existing) }
+    end
+
+    # 問題フォルダ画面からの取り込み（folder_id つき）なら、取り込んだ画像をそのフォルダに入れる。入れたら true
+    def add_to_folder(upload)
+      return false if params[:folder_id].blank? || !current_user.can_write?
+
+      folder = QuestionFolder.find_by(id: params[:folder_id]) or return false
+      folder.folder_uploads.find_or_create_by!(upload: upload)
+      true
+    end
+
     # 「解答を AI で作る」チェックボックス（初期値 ON。送られてこなければ ON とみなす）
     def generate_answers?
       params[:generate_answers].nil? || ActiveModel::Type::Boolean.new.cast(params[:generate_answers])

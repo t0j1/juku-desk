@@ -9,3 +9,6 @@ pin_all_from "app/javascript/lib", under: "lib"
 # KaTeX 0.19.0（CDN は使わず vendor に同梱。数式の描画はブラウザだけで行う）
 pin "katex", to: "katex.js"
 pin "katex-auto-render", to: "katex-auto-render.js"
+# pdf.js 6.4.299（Apache-2.0。CDN は使わず vendor に同梱。PDF はブラウザだけで 1 ページずつ画像にする）
+pin "pdfjs", to: "pdfjs.js"
+pin "pdfjs-worker", to: "pdfjs-worker.js"
