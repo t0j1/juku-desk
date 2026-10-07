@@ -48,6 +48,23 @@ class DailyScheduleAnnualTest < ActionDispatch::IntegrationTest
     assert_select "#annual-events", count: 0
   end
 
+  test "an empty day shows the task and annual lines separately, with the published-only note and a text link" do
+    respond_with 200, []
+    get daily_schedule_path(date: DAY.iso8601)
+    assert_select "#empty-tasks", text: "タスク: なし"
+    assert_select "#empty-annual", text: "年間予定: この日は登録なし"
+    assert_select "#timeline", /公開済みの予定だけ/
+    assert_select "a#open-annual[href=?]", schedule_path
+    assert_select ".btn-primary", count: 1, text: "タスクを追加"
+  end
+
+  test "the annual line is not shown when the annual schedule could not be read" do
+    respond_with 500, []
+    get daily_schedule_path(date: DAY.iso8601)
+    assert_select "#empty-tasks"
+    assert_select "#empty-annual", count: 0
+  end
+
   test "the real request asks only for published events of the day, with the anon key in headers and a 3 second timeout" do
     req = opts = nil
     http = Object.new
