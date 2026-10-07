@@ -23,6 +23,9 @@ class CropRegion < ApplicationRecord
   validates :confidence, numericality: { in: 0..1 }, allow_nil: true
   validate :bbox_has_geometry
 
+  # 赤枠が無い画像の、ページ全体を 1 領域にしたもの（bbox は画像全体）
+  def whole? = bbox["whole"] == true
+
   def self.object_key(upload_sha256, index)
     "marking/crops/#{upload_sha256}/#{index}.jpg"
   end

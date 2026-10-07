@@ -1,7 +1,7 @@
 # マーキング検出：教材画像（ブラウザで縮小・赤枠検出済み）と、切り出した領域の保存。
 # サーバーでは画像をデコードしない（種類は先頭バイト、寸法はブラウザの申告、sha256 はストリーミングで計算）。
 class UploadsController < ApplicationController
-  before_action :require_writer!, only: :new
+  before_action :require_writer!, only: %i[ new extract_whole ]
 
   def index
     @uploads = Upload.includes(:user, :crop_regions).order(created_at: :desc).limit(100)
@@ -28,6 +28,19 @@ class UploadsController < ApplicationController
     count = progress&.total || 0
     open_progress(progress) if progress
     redirect_to upload_path(upload), notice: "#{count} 件を構造化の順番待ちに入れました。", status: :see_other
+  end
+
+  # 領域が 0 件の画像（赤枠が見つからなかったもの）を、ページ全体を 1 領域にして構造化の順番待ちに積む（再取り込み不要）
+  def extract_whole
+    upload = Upload.find(params[:id])
+    return redirect_to upload_path(upload), alert: "GEMINI_API_KEY が設定されていません。" unless GeminiConfig.configured?
+    return redirect_to upload_path(upload), alert: "この画像には、すでに領域があります。" if upload.crop_regions.exists?
+
+    region = upload.add_whole_region!
+    progress = Marking::Enqueuer.call(upload.crop_regions.where(id: region.id), generate_answers: generate_answers?, user: current_user, title: "画像 ##{upload.id} の構造化（ページ全体）", subject: upload)
+    AuditLog.record!(:update, upload, metadata: { resource: "Upload", whole_page: true })
+    open_progress(progress) if progress
+    redirect_to upload_path(upload), notice: "ページ全体を構造化の順番待ちに入れました。", status: :see_other
   end
 
   def image
@@ -98,7 +111,12 @@ class UploadsController < ApplicationController
           keys << ImageStorage.put_file(key, region[:image].tempfile.path, content_type: "image/jpeg")
           upload.crop_regions.create!(bbox: region[:bbox], confidence: region[:confidence], r2_key: key, status: :confirmed)
         end
-        AuditLog.record!(:create, upload, metadata: { resource: "Upload", regions: regions.size, bytes: file.size })
+        if regions.empty? # 赤枠なし：ページ全体を 1 領域にする（切り出し画像は元画像そのもの）
+          key = CropRegion.object_key(sha256, 0)
+          keys << ImageStorage.put_file(key, file.tempfile.path, content_type:)
+          upload.crop_regions.create!(bbox: upload.whole_bbox, r2_key: key, status: :confirmed)
+        end
+        AuditLog.record!(:create, upload, metadata: { resource: "Upload", regions: regions.size, whole_page: regions.empty?, bytes: file.size })
         upload
       end
     rescue StandardError

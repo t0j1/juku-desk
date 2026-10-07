@@ -96,6 +96,7 @@ Rails.application.routes.draw do
   end
   # 問題フォルダ（複数の取り込み画像をまとめる）。/marking/:id より先に書く
   resources :question_folders, path: "marking/folders", only: %i[ index create show update destroy ] do
+    post :extract_whole, on: :member # 領域が 0 件の画像を、まとめてページ全体で構造化する
     resources :uploads, controller: "question_folder_uploads", only: %i[ create destroy ]
     resource :random_test, only: %i[ new create ], controller: "folder_random_tests"
     # 未承認も含む全問題を形式別に並べて、確認→承認→作成→印刷へ一気に進む
@@ -104,6 +105,7 @@ Rails.application.routes.draw do
   resources :uploads, path: "marking", only: %i[ index new create show ] do
     get :image, on: :member
     post :extract, on: :member
+    post :extract_whole, on: :member
     # 画像内の承認済みの問題からランダムに小テストを作る（プレビューで確認・選び直し）
     resource :random_test, only: %i[ new create ], controller: "upload_random_tests"
     resource :one_stop_test, only: %i[ new create ], controller: "upload_one_stop_tests"

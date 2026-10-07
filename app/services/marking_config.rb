@@ -31,6 +31,7 @@ module MarkingConfig
         openKernel: int("MARKING_OPEN_KERNEL", 3), openIterations: int("MARKING_OPEN_ITERATIONS", 1),
         minAreaRatio: float("MARKING_MIN_AREA_RATIO", 0.005), maxAreaRatio: float("MARKING_MAX_AREA_RATIO", 0.9),
         maxAspectRatio: float("MARKING_MAX_ASPECT_RATIO", 20), maxFillRatio: float("MARKING_MAX_FILL_RATIO", 0.95),
+        maxInnerFillRatio: float("MARKING_MAX_INNER_FILL_RATIO", 0.3), edgeMargin: int("MARKING_EDGE_MARGIN", 4), tabAspectRatio: float("MARKING_TAB_ASPECT_RATIO", 3),
         mergeGap: int("MARKING_MERGE_GAP", 12), iouThreshold: float("MARKING_IOU_THRESHOLD", 0.5),
         tiltThreshold: float("MARKING_TILT_THRESHOLD", 0.5)
       }

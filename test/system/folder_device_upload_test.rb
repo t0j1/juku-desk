@@ -47,6 +47,13 @@ class FolderDeviceUploadTest < ApplicationSystemTestCase
     assert Upload.all.all? { |u| u.crop_regions.size == 1 } # 赤枠が検出されて保存されている
   end
 
+  test "a picture without red frames is saved as one whole-page region and the result says so" do
+    pick write_marking_png("plain.png", frames: [], seed: 9)
+    assert_selector "#device-upload-result", text: "赤枠なし→ページ全体を読み取り：1 枚"
+    assert_equal 1, Upload.last.crop_regions.count
+    assert Upload.last.crop_regions.sole.whole?
+  end
+
   test "a multi-page PDF becomes one image per page" do
     pick pdf_path("two.pdf", pages: 3)
     assert_selector "#device-upload-result", text: "追加 3 枚", wait: 30

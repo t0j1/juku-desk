@@ -129,3 +129,36 @@ test("paddedBox は8pxの余白を付け、画像の外にははみ出さない"
   assert.deepEqual(paddedBox({ x: 100, y: 100, w: 50, h: 40 }, 800, 600), { x: 92, y: 92, w: 66, h: 56 })
   assert.deepEqual(paddedBox({ x: 2, y: 3, w: 50, h: 40 }, 800, 600), { x: 0, y: 0, w: 60, h: 51 })
 })
+
+// 白抜き文字入りの赤い見出しタブ（塗りブロックに、白い小さな四角で文字を表す）
+function tab(image, x, y, w, h) {
+  rect(image, x, y, w, h, [220, 30, 30], true)
+  for (let ty = y + 20; ty < y + h - 20; ty += 24) rect(image, x + 8, ty, w - 16, 10, [255, 255, 255], true)
+}
+
+test("ページ右端の、文字入りの赤い見出しタブだけの画像は0件（誤検出しない）", () => {
+  const image = paper(800, 600)
+  tab(image, 760, 120, 40, 260)
+  assert.equal(detectMarkings(image).length, 0)
+})
+
+test("枠と端の見出しタブがあるときは、枠だけ検出する", () => {
+  const image = paper(800, 600)
+  rect(image, 80, 100, 400, 200, [220, 30, 30])
+  tab(image, 760, 120, 40, 260)
+  const found = detectMarkings(image)
+  assert.equal(found.length, 1)
+  assert.ok(Math.abs(found[0].x - 80) <= 10 && Math.abs(found[0].w - 400) <= 20)
+})
+
+test("端に接していなくても、中が詰まった文字入りの塗りブロックは枠ではない", () => {
+  const image = paper(800, 600)
+  tab(image, 300, 200, 160, 120)
+  assert.equal(detectMarkings(image).length, 0)
+})
+
+test("端の判定・中の詰まり具合のしきい値は options で変えられる", () => {
+  const image = paper(800, 600)
+  tab(image, 760, 120, 40, 260)
+  assert.ok(detectMarkings(image, { maxInnerFillRatio: 1, tabAspectRatio: 100 }).length >= 1)
+})

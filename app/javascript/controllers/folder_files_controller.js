@@ -67,7 +67,7 @@ export default class extends Controller {
     if (!body.folder) throw new Error("フォルダに入れられませんでした（書き込み権限がありません）")
     if (body.duplicate) summary.duplicate++
     else summary.added++
-    if (body.regions === 0) summary.noRegion++
+    if (!body.duplicate && regions.length === 0) summary.noRegion++ // 赤枠なし：サーバーがページ全体を 1 領域にして保存する
   }
 
   async importPdf(file, summary) {
@@ -125,7 +125,7 @@ export default class extends Controller {
     const line = (text, cls) => { const p = document.createElement("p"); p.className = cls; p.textContent = text; box.append(p) }
     line(`追加 ${s.added} 枚・重複 ${s.duplicate} 枚・失敗 ${s.failed.length} 件`, "text-lg font-bold " + (s.failed.length ? "text-err-fg" : "text-ok-fg"))
     if (s.duplicate) line("重複は取り込み済みの画像です。新しく作らず、そのままフォルダに入れました。", "text-lg text-text-sub")
-    if (s.noRegion) line(`赤枠が見つからなかった画像が ${s.noRegion} 枚あります（領域 0 件）。`, "text-lg text-text-sub")
+    if (s.noRegion) line(`赤枠なし→ページ全体を読み取り：${s.noRegion} 枚（赤枠が見つからなかったので、画像全体を 1 つの領域にしました）。`, "text-lg text-text-sub")
     if (s.added) line("構造化は順次行います（Gemini 無料枠の上限を超えた分は翌日になります）。", "text-lg text-text-sub")
     if (s.failed.length) {
       const ul = document.createElement("ul"); ul.className = "list-disc pl-6 text-lg text-err-fg"; ul.dataset.failures = ""
