@@ -36,6 +36,10 @@ class NavigationMenu
       if item[:route]
         Item.new(label: item[:label], href: Rails.application.routes.url_helpers.public_send("#{item[:route]}_path"),
                  icon: item[:icon]&.to_sym, active: active?(item), external: false)
+      elsif item[:env] && !item[:path]
+        # 完全な URL を環境変数から直接使う（ROADMAP_SHEET_URL など）
+        url = full_external_url(item[:env]) or return
+        Item.new(label: item[:label], href: url, icon: item[:icon]&.to_sym, active: false, external: true)
       else
         Item.new(label: item[:label], href: "#{base}#{item.fetch(:path)}", icon: item[:icon]&.to_sym, active: false, external: true)
       end
@@ -53,13 +57,24 @@ class NavigationMenu
       controller.end_with?("*") ? @controller_path.start_with?(controller.delete_suffix("*")) : @controller_path == controller
     end
 
-    # http(s) の URL だけ受け付ける。末尾の / は取る
+    # http(s) の URL だけ受け付ける。末尾の / は取る（schedule-web 用）
     def schedule_base_url(name)
       value = @env[name].to_s.strip
       return if value.empty?
       uri = URI.parse(value)
       return unless uri.is_a?(URI::HTTP) && uri.host.present?
       value.delete_suffix("/")
+    rescue URI::InvalidURIError
+      nil
+    end
+
+    # http(s) の完全な URL だけ受け付ける。末尾スラッシュは触らない（学習ロードマップ用）
+    def full_external_url(name)
+      value = @env[name].to_s.strip
+      return if value.empty?
+      uri = URI.parse(value)
+      return unless uri.is_a?(URI::HTTP) && uri.host.present?
+      value
     rescue URI::InvalidURIError
       nil
     end

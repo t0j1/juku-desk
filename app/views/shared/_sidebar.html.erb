@@ -22,7 +22,7 @@
       <div role="group" aria-label="<%= group.label %>" class="space-y-1">
         <% if i.positive? %><p class="px-4 pb-1 text-base font-bold text-text-sub"><%= group.label %></p><% end %>
         <% group.items.each do |item| %>
-          <%= nav_item item.label, item.href, item.icon, active: item.active %>
+          <%= nav_item item.label, item.href, item.icon, active: item.active, external: item.external %>
         <% end %>
       </div>
     <% end %>
