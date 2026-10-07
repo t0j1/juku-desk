@@ -15,7 +15,7 @@ class Upload < ApplicationRecord
 
   # 構造化の進み具合（領域ごとの状態から決める）: 構造化前 / 処理中 / 完了 / 一部のみ（失敗・要確認あり）/ 上限で保留
   def extraction_status
-    statuses = crop_regions.map(&:status)
+    statuses = live_regions.map(&:status)
     return :none if statuses.empty? || statuses.all? { |s| %w[confirmed pending].include?(s) }
     return :model_unavailable if statuses.include?("model_unavailable")
     return :quota_exceeded if statuses.include?("quota_exceeded")
@@ -27,19 +27,31 @@ class Upload < ApplicationRecord
 
   EXTRACTION_LABELS = { none: "構造化前", processing: "処理中", completed: "完了", partial: "一部のみ（失敗・要確認あり）", quota_exceeded: "上限で保留（自動で再開）", model_unavailable: "モデルが利用できません（GEMINI_MODEL を更新）" }.freeze
 
-  # 赤枠が無い画像を、ページ全体を 1 領域（bbox＝画像全体、whole）にして保存する。切り出し画像は元画像そのもの。
-  # すでに領域がある画像には何もしない。作った領域を返す
+  # 構造化の対象にする領域（除外した領域は数えない）
+  def live_regions = crop_regions.reject(&:rejected?)
+
+  # ページ全体で構造化し直せる画像：生きている領域が無い、または全部が使えない（失敗・中身が空）。処理中・順番待ち・構造化済みのものがあれば対象外
+  def whole_page_candidate? = live_regions.all?(&:unusable?)
+
+  # 領域を捨てて（除外にして。問題は消さない）、ページ全体を 1 領域にして保存する。切り出し画像は元画像そのもの。
+  # 対象でない画像には何もしない。作った領域を返す
   def add_whole_region!
-    return if crop_regions.exists?
+    return unless whole_page_candidate?
 
     Tempfile.create([ "whole-", ".jpg" ], binmode: true) do |file|
       file.write(ImageStorage.read(r2_key))
       file.flush
-      key = CropRegion.object_key(sha256, 0)
+      key = CropRegion.whole_key(sha256, crop_regions.size)
       ImageStorage.put_file(key, file.path, content_type: content_type)
-      crop_regions.create!(bbox: whole_bbox, r2_key: key, status: :confirmed)
+      transaction do
+        live_regions.each { |region| region.update!(status: :rejected) }
+        crop_regions.reset
+        crop_regions.create!(bbox: whole_bbox, r2_key: key, status: :confirmed)
+      end
     end
   end
+
+  def structure_regions = crop_regions
 
   def whole_bbox = { "x" => 0, "y" => 0, "w" => width, "h" => height, "angle" => 0, "manual" => false, "whole" => true }
 

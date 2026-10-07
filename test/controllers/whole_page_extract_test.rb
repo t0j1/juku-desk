@@ -91,7 +91,7 @@ class WholePageExtractTest < ActionDispatch::IntegrationTest
     assert_no_difference "CropRegion.count" do
       post extract_whole_upload_path(upload)
     end
-    assert_match "すでに領域", flash[:alert]
+    assert_match "対象ではありません", flash[:alert]
   end
 
   test "viewers cannot use it and do not see the button" do
@@ -180,5 +180,75 @@ class WholePageExtractTest < ActionDispatch::IntegrationTest
     assert_select "#extract-whole", count: 0
     post extract_whole_bulk_uploads_path, params: { upload_ids: uploads.map(&:id) }
     assert_response :forbidden
+  end
+
+  # 誤検出の見出しタブ：領域は extracted だが、問題文が空
+  def tab_upload
+    region = make_regions(1, status: :extracted).first
+    region.questions.create!(question_text: "", answer_text: "", raw_ai: { "response" => {} })
+    path = File.join(@dir, "orig-tab.jpg")
+    File.binwrite(path, "\xFF\xD8\xFF\xE0".b + "page")
+    ImageStorage.put_file(region.upload.r2_key, path, content_type: "image/jpeg")
+    region.upload
+  end
+
+  test "an image whose only region came out empty can be redone as a whole page, keeping the old region's questions" do
+    with_gemini(gemini_json)
+    upload = tab_upload
+    old_region = upload.crop_regions.sole
+    get upload_path(upload)
+    assert_select "form#extract-whole input[type=submit][value=領域を捨ててページ全体で構造化する]"
+    assert_difference "CropRegion.count", 1 do
+      assert_enqueued_jobs 1, only: Marking::StructureJob do
+        post extract_whole_upload_path(upload)
+      end
+    end
+    assert_equal "rejected", old_region.reload.status
+    assert_equal 1, old_region.questions.count # 既存の問題は消さない
+    whole = upload.crop_regions.where.not(id: old_region.id).sole
+    assert whole.whole?
+    assert_equal "queued", whole.status
+    assert_not_equal old_region.r2_key, whole.r2_key
+    get upload_path(upload)
+    assert_select "form#extract-whole", count: 0
+  end
+
+  test "an image with a usable region is not offered the whole-page redo" do
+    region = make_regions(1, status: :extracted).first
+    region.questions.create!(subject: "英語", question_text: "問題", answer_text: "答え")
+    assert_not region.upload.whole_page_candidate?
+    get upload_path(region.upload)
+    assert_select "form#extract-whole", count: 0
+  end
+
+  test "a progress marked stale-failed shows as finished when every region is actually done" do
+    upload = make_regions(2, status: :extracted).first.upload
+    progress = JobProgress.create!(user: users(:staff), kind: "marking_structure", title: "構造化", subject: upload, status: :failed,
+                                   finished_at: 1.minute.ago, message: JobProgress::STALE_MESSAGE)
+    get progresses_path(format: :json)
+    row = response.parsed_body["progresses"].find { |p| p["id"] == progress.id }
+    assert_equal "succeeded", row["status"]
+    assert_not row["stale"]
+    assert_match "完了", progress.reload.message
+  end
+
+  test "a stale progress stays failed while regions are still waiting, and a re-run clears the failure" do
+    upload = make_regions(2, status: :extracted).first.upload
+    upload.crop_regions.first.update!(status: :queued)
+    progress = JobProgress.create!(user: users(:staff), kind: "marking_structure", title: "構造化", subject: upload, status: :failed,
+                                   finished_at: 1.minute.ago, message: JobProgress::STALE_MESSAGE)
+    progress.fail_if_stale!
+    assert progress.reload.failed?
+    progress.start!(total: 1) # ジョブが再実行された
+    assert_equal [ "running", nil ], [ progress.status, progress.message ]
+  end
+
+  test "regions left processing by a killed worker are put back in the queue when the job runs again" do
+    with_gemini(gemini_json)
+    upload = make_regions(1, status: :processing).first.upload
+    progress = JobProgress.create!(user: users(:staff), kind: "marking_structure", title: "構造化", subject: upload)
+    Marking::StructureJob.perform_now(progress.id, upload.crop_regions.pluck(:id))
+    assert_equal "extracted", upload.crop_regions.sole.reload.status
+    assert progress.reload.succeeded?
   end
 end

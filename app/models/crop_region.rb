@@ -26,6 +26,15 @@ class CropRegion < ApplicationRecord
   # 赤枠が無い画像の、ページ全体を 1 領域にしたもの（bbox は画像全体）
   def whole? = bbox["whole"] == true
 
+  # 構造化の結果が使えない領域：失敗、または問題にできた（できなかった）のに問題文が空（誤検出の見出しタブなど）
+  def unusable?
+    return true if failed? || model_unavailable?
+
+    (extracted? || needs_review?) && questions.none? { |q| q.question_text.present? }
+  end
+
+  def self.whole_key(upload_sha256, number) = "marking/crops/#{upload_sha256}/whole-#{number}.jpg"
+
   def self.object_key(upload_sha256, index)
     "marking/crops/#{upload_sha256}/#{index}.jpg"
   end

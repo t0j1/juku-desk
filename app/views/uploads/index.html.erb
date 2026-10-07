@@ -5,7 +5,7 @@
   <%= link_to "問題のレビュー", questions_path, class: "btn-secondary" %>
   <%= link_to new_upload_path, class: "btn-primary" do %><%= console_icon(:upload) %>画像を取り込む<% end if current_user.can_write? %>
 </div>
-<%= render "uploads/whole_page_form", uploads: @uploads.select { |u| u.crop_regions.empty? }, url: extract_whole_bulk_uploads_path %>
+<%= render "uploads/whole_page_form", uploads: @uploads.select(&:whole_page_candidate?), url: extract_whole_bulk_uploads_path %>
 <table id="uploads" class="table-console">
   <thead><tr><th>画像</th><th>サイズ</th><th>領域</th><th>構造化</th><th>取り込んだ人</th><th>日時</th></tr></thead>
   <tbody>

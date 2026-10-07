@@ -27,7 +27,7 @@
     <%= f.submit "画像を入れる", class: "btn-secondary cursor-pointer" %>
   <% end %>
 <% end %>
-<%= render "uploads/whole_page_form", uploads: @uploads.select { |u| u.crop_regions.empty? }, url: extract_whole_question_folder_path(@folder) %>
+<%= render "uploads/whole_page_form", uploads: @uploads.select(&:whole_page_candidate?), url: extract_whole_question_folder_path(@folder) %>
 <h2 class="font-bold text-xl mb-2">フォルダ内の画像（<%= @uploads.size %> 枚）</h2>
 <ul id="folder-uploads" class="mb-6 max-w-2xl space-y-2">
   <% @uploads.each do |u| %>

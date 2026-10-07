@@ -14,6 +14,8 @@ module Marking
     def perform(progress_id, region_ids, label = "構造化中")
       progress = JobProgress.find(progress_id)
       progress.start!(total: region_ids.size)
+      # Gemini への同時実行は 1 本なので、この時点で processing のまま残っている領域は、再起動などで落ちた処理の取り残し。順番待ちに戻して続きを処理する
+      CropRegion.where(id: region_ids, status: :processing).update_all(status: "queued", updated_at: Time.current)
       region_ids.each_with_index do |id, i|
         progress.flush! # 1 件の Gemini 待ちが長くても、止まったとは見なされないように
         region = CropRegion.find_by(id: id)
