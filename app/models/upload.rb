@@ -27,6 +27,22 @@ class Upload < ApplicationRecord
 
   EXTRACTION_LABELS = { none: "構造化前", processing: "処理中", completed: "完了", partial: "一部のみ（失敗・要確認あり）", quota_exceeded: "上限で保留（自動で再開）", model_unavailable: "モデルが利用できません（GEMINI_MODEL を更新）" }.freeze
 
+  # 赤枠が無い画像を、ページ全体を 1 領域（bbox＝画像全体、whole）にして保存する。切り出し画像は元画像そのもの。
+  # すでに領域がある画像には何もしない。作った領域を返す
+  def add_whole_region!
+    return if crop_regions.exists?
+
+    Tempfile.create([ "whole-", ".jpg" ], binmode: true) do |file|
+      file.write(ImageStorage.read(r2_key))
+      file.flush
+      key = CropRegion.object_key(sha256, 0)
+      ImageStorage.put_file(key, file.path, content_type: content_type)
+      crop_regions.create!(bbox: whole_bbox, r2_key: key, status: :confirmed)
+    end
+  end
+
+  def whole_bbox = { "x" => 0, "y" => 0, "w" => width, "h" => height, "angle" => 0, "manual" => false, "whole" => true }
+
   # サーバーでは画像をデコードしない。先頭のバイト列（マジックナンバー）だけで種類を判定する
   def self.sniff_content_type(path)
     head = File.binread(path, 8).to_s.b

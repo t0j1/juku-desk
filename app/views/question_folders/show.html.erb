@@ -27,6 +27,13 @@
     <%= f.submit "画像を入れる", class: "btn-secondary cursor-pointer" %>
   <% end %>
 <% end %>
+<% if current_user.can_write? && (empty_ids = @uploads.select { |u| u.crop_regions.empty? }.map(&:id)).any? %>
+  <%= form_with url: extract_whole_question_folder_path(@folder), method: :post, id: "extract-whole", class: "mb-4 flex flex-wrap items-center gap-3" do |f| %>
+    <p class="text-lg">赤枠がなく領域が 0 件の画像が <%= empty_ids.size %> 枚あります。</p>
+    <label class="flex items-center gap-1 text-lg"><%= f.hidden_field :generate_answers, value: "0", id: nil %><%= f.check_box :generate_answers, { checked: true, id: "generate_answers_whole" }, "1", nil %>教材に解答が無いときは AI で解答を作る</label>
+    <%= f.submit "ページ全体で構造化する", class: "btn-primary cursor-pointer" %>
+  <% end %>
+<% end %>
 <h2 class="font-bold text-xl mb-2">フォルダ内の画像（<%= @uploads.size %> 枚）</h2>
 <ul id="folder-uploads" class="mb-6 max-w-2xl space-y-2">
   <% @uploads.each do |u| %>

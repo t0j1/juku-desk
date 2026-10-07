@@ -8,6 +8,9 @@ export const DEFAULTS = {
   hueLow: 10, hueHigh: 170, minSaturation: 70, minValue: 50, // 赤は H 0-10 と 170-179
   closeKernel: 5, closeIterations: 2, openKernel: 3, openIterations: 1,
   minAreaRatio: 0.005, maxAreaRatio: 0.9, maxAspectRatio: 20, maxFillRatio: 0.95,
+  maxInnerFillRatio: 0.3, // 枠は中が空いている。中央 70% の赤画素率がこれを超える塗りブロック（文字入りの見出しタブなど）は枠ではない
+  edgeMargin: 4,          // 画像の端とみなす距離（px）
+  tabAspectRatio: 3,      // 端に接し、端に沿って細長い（縦横比がこれ以上）ブロックは、見出しタブとして除外する
   mergeGap: 12,        // 近接とみなす枠どうしの隙間（px）
   iouThreshold: 0.5,
   tiltThreshold: 0.5,  // これを超える傾き（度）だけ補正対象にする
@@ -34,6 +37,8 @@ export function detectMarkings(image, options = {}) {
     if (area < imageArea * o.minAreaRatio || area > imageArea * o.maxAreaRatio) continue
     if (Math.max(w / h, h / w) > o.maxAspectRatio) continue
     if (c.count / area > o.maxFillRatio) continue // 塗りつぶし
+    if (innerFillRatio(labels, width, c) > o.maxInnerFillRatio) continue // 枠ではない（中が詰まった塗りブロック）
+    if (isEdgeTab(c, w, h, width, height, o)) continue // ページ端の細長いタブ
     boxes.push({ x: c.minX, y: c.minY, w, h, ids: [c.id] })
   }
 
@@ -44,6 +49,26 @@ export function detectMarkings(image, options = {}) {
   return boxes
     .map((b) => ({ x: b.x, y: b.y, w: b.w, h: b.h, confidence: round(b.confidence), angle: estimateTilt(labels, width, b, o) }))
     .sort((a, b) => b.confidence - a.confidence)
+}
+
+// 成分の外接矩形の中央 70% のうち、その成分の画素が占める割合。枠なら 0 に近く、塗りブロックは高い
+function innerFillRatio(labels, width, c) {
+  const w = c.maxX - c.minX + 1, h = c.maxY - c.minY + 1
+  const x0 = c.minX + Math.floor(w * 0.15), x1 = c.maxX - Math.floor(w * 0.15)
+  const y0 = c.minY + Math.floor(h * 0.15), y1 = c.maxY - Math.floor(h * 0.15)
+  if (x1 < x0 || y1 < y0) return 0
+  let n = 0
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (labels[y * width + x] === c.id) n++
+  return n / ((x1 - x0 + 1) * (y1 - y0 + 1))
+}
+
+// 画像の左右の端に接して縦長、または上下の端に接して横長（端に沿って細長い）で、反対側の端には届かないもの
+function isEdgeTab(c, w, h, width, height, o) {
+  const m = o.edgeMargin
+  const left = c.minX <= m, right = c.maxX >= width - 1 - m, top = c.minY <= m, bottom = c.maxY >= height - 1 - m
+  if ((left !== right) && h / w >= o.tabAspectRatio) return true
+  if ((top !== bottom) && w / h >= o.tabAspectRatio) return true
+  return false
 }
 
 const round = (v) => Math.round(v * 1000) / 1000

@@ -15,6 +15,13 @@
     <% end %>
   <% end %>
 </div>
+<% if current_user.can_write? && @regions.empty? %>
+  <%= form_with url: extract_whole_upload_path(@upload), method: :post, id: "extract-whole", class: "mb-4 flex flex-wrap items-center gap-3" do |f| %>
+    <p class="text-lg">赤枠がないため領域が 0 件です。</p>
+    <label class="flex items-center gap-1 text-lg"><%= f.hidden_field :generate_answers, value: "0", id: nil %><%= f.check_box :generate_answers, { checked: true, id: "generate_answers_whole" }, "1", nil %>教材に解答が無いときは AI で解答を作る</label>
+    <%= f.submit "ページ全体で構造化する", class: "btn-primary cursor-pointer" %>
+  <% end %>
+<% end %>
 <% if current_user.can_write? %>
   <%= link_to "この画像から小テストを作る", new_upload_one_stop_test_path(@upload), id: "one-stop-link", class: "btn-primary mb-4 inline-flex" %>
   <%= form_with url: new_upload_random_test_path(@upload), method: :get, id: "random-test-form", class: "mb-4 flex flex-wrap items-center gap-3" do |f| %>
@@ -37,7 +44,7 @@
   <ul id="regions" class="min-w-0 space-y-3 lg:basis-1/3">
     <% @regions.each_with_index do |region, i| %>
       <li class="rounded-xl bg-surface p-3" id="region_<%= region.id %>">
-        <p class="font-bold mb-2">領域 <%= i + 1 %> <span class="text-base font-normal text-text-sub"><%= t("crop_region_status.#{region.status}", default: region.status) %><%= region.confidence ? "・自動 #{(region.confidence * 100).round}%" : "・手動" %></span></p>
+        <p class="font-bold mb-2"><%= region.whole? ? "ページ全体" : "領域 #{i + 1}" %> <span class="text-base font-normal text-text-sub"><%= t("crop_region_status.#{region.status}", default: region.status) %><%= region.confidence ? "・自動 #{(region.confidence * 100).round}%" : "・手動" %></span></p>
         <img src="<%= image_crop_region_path(region) %>" alt="領域 <%= i + 1 %> の切り出し" loading="lazy" class="max-w-full h-auto rounded">
         <% if region.error_message.present? %><p class="mt-1 text-base text-err-fg"><%= region.error_message %></p><% end %>
         <% if %w[extracted needs_review].include?(region.status) %>

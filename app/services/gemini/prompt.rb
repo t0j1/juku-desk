@@ -35,9 +35,19 @@ module Gemini
       画像に書かれていない問題の内容を作り足さないでください。
     PROMPT
 
+    # 赤枠が無く、ページ全体を送るときだけ先頭に足す
+    WHOLE_PAGE = <<~PROMPT.freeze
+      【重要】この画像は赤枠で切り出したものではなく、教材のページ全体です。ページの中の問題だけを、上から順に 1 問ずつ questions の配列にしてください。
+      章見出し・節見出し・ページ番号・柱（ページの上下の見出し）・解説文・コラム・図の説明文は、問題にしないでください。問題が 1 つも無ければ空の配列にしてください。
+
+    PROMPT
+
     TEXT = (BASE + WITH_ANSWERS + TAIL).freeze
     TEXT_WITHOUT_ANSWERS = (BASE + WITHOUT_ANSWERS + TAIL).freeze
 
-    def self.for(generate_answers:) = generate_answers ? TEXT : TEXT_WITHOUT_ANSWERS
+    def self.for(generate_answers:, whole: false)
+      text = generate_answers ? TEXT : TEXT_WITHOUT_ANSWERS
+      whole ? WHOLE_PAGE + text : text
+    end
   end
 end

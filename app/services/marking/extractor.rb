@@ -56,7 +56,7 @@ module Marking
         attempts = 0
         begin
           wait_for_slot
-          self.class.client.generate(image, mime_type: "image/jpeg", prompt: Gemini::Prompt.for(generate_answers: @region.generate_answers))
+          self.class.client.generate(image, mime_type: "image/jpeg", prompt: Gemini::Prompt.for(generate_answers: @region.generate_answers, whole: @region.whole?))
         rescue GeminiQuota::DailyLimit, Gemini::DailyQuotaExceeded
           hold_for_daily_quota
           nil
