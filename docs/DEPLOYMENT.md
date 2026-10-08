@@ -31,7 +31,7 @@ SOLID_QUEUE_IN_PUMA = true
 WEB_CONCURRENCY     = 0   # 512MB プランでは single mode（ワーカープロセスを増やさない）
 RAILS_MAX_THREADS   = 3
 SCHEDULE_WEB_URL    = https://<project>.pages.dev   # 任意。サイドバーの「スケジュール」（/schedule 以下）が schedule-web を iframe で埋め込む。未設定ならサイドバーに出さず、/schedule は「未設定」と表示
-ROADMAP_SHEET_URL   = https://docs.google.com/spreadsheets/d/.../edit   # 任意。サイドバーの「学習ロードマップ」外部リンク。未設定ならサイドバーに出さない。Google スプレッドシートの共有URL（編集権限）を指定
+ROADMAP_SHEET_URL   = https://docs.google.com/spreadsheets/d/.../edit   # 任意。サイドバーの「学習ロードマップ」外部リンク。未設定ならサイドバーに出さない。Google スプレッドシートの共有URLを指定。閲覧できる人は、Google 側の共有設定で決まる（制限付き・講師のアカウントのみ）。URL は repo・チャット・ログに貼らない
 ```
 Settings → Deploy Hook の URL を控える。
 
@@ -69,6 +69,12 @@ Settings → Secrets and variables → Actions に `RENDER_DEPLOY_HOOK_URL` を�
 - `https://<app>.onrender.com/up` が 200 を返す。
 - **デプロイ成功の確認（Render の権限が無くてもできる）**: `curl https://juku-desk.onrender.com/up/version` の `sha` が `main` の最新コミット（`git rev-parse origin/main`）と一致すれば、新しいコードで起動できている。古い SHA のままなら、デプロイ中か失敗（Render → Events で確認）。`unknown` は `RENDER_GIT_COMMIT` が無い環境（ローカルなど）。返すのは `sha` と `booted_at` だけで、認証は不要。
 - Render → Events に各デプロイが並ぶ。**Rollback** はここから（直近のデプロイに戻せる）。
+
+### ROADMAP_SHEET_URL 設定後の確認
+`ROADMAP_SHEET_URL` を設定して再デプロイしたあとは、次の手順で確認してください。
+1. サイドバー（塾日報ステーション）に「学習ロードマップ」が出ているか確認する。
+2. その項目をクリックし、別タブで Google スプレッドシートが開くか確認する。
+3. 環境変数を未設定（または不正な値）にして再デプロイすると、項目が出ないことを確認する。
 
 ## 5. スリープ防止（cron-job.org）
 - URL: `https://<app>.onrender.com/up`、間隔 10 分、**12:00〜23:00（Asia/Tokyo）のみ**。
