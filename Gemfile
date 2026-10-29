@@ -74,6 +74,6 @@ gem "rubyzip", "~> 3.7"
 gem "combine_pdf", "~> 1.0"
 gem "rqrcode", "~> 3.2"
 
-gem "aws-sdk-s3", "~> 1.233", require: false
+gem "aws-sdk-s3", "~> 1.235", require: false
 
 gem "prawn", "~> 2.5"
